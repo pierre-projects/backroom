@@ -2,11 +2,15 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router';
 import { send } from './api';
-import { Badge, Dialog, ErrorMessage, Field, Loading, PageHeader, Pager, useResource } from './components';
+import { Badge, Dialog, Empty, ErrorMessage, Field, Loading, PageHeader, Pager, useResource } from './components';
+import { Icon } from './icons';
+import type { IconName } from './icons';
 import type { Activity, CreatedInvitation, Invitation, Member, Page, Role } from './types';
 import { roleNames } from './types';
 import { useWorkspace } from './workspace';
 import { useAuth } from './auth';
+
+const invitationTone: Record<string, 'neutral' | 'success' | 'warning' | 'danger'> = { PENDING: 'warning', ACCEPTED: 'success', REVOKED: 'neutral', EXPIRED: 'neutral' };
 
 export function PeoplePage() {
   const { base, organization, refresh } = useWorkspace();
@@ -38,19 +42,92 @@ export function PeoplePage() {
       if (self) refresh();
     } catch (value) { setError(value); } finally { setPending(false); }
   }
+  const closeConfirm = () => { setRemoving(undefined); setChanging(undefined); };
   const inviteUrl = created ? new URL(created.invitePath, window.location.origin).href : '';
-  return <><PageHeader eyebrow="THE PEOPLE BEHIND IT" title="People" description="Give your team the right access to your business."><button className="button primary" onClick={() => { setShowInvite(true); setCreated(undefined); setError(undefined); setCopied(false); }}>+ Invite staff</button></PageHeader>
+  return <>
+    <PageHeader title="People" description="Who can open this business, and what they can change."><button type="button" className="button primary" onClick={() => { setShowInvite(true); setCreated(undefined); setError(undefined); setCopied(false); }}><Icon name="plus" />Invite staff</button></PageHeader>
     <ErrorMessage error={error ?? members.error} retry={members.error ? members.reload : undefined} />
-    <section className="panel table-panel"><h2 className="table-title">Team members</h2>{!members.data && !members.error && <Loading />}<table><thead><tr><th>Person</th><th>Role</th><th>Status</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{members.data?.items.map(member => <tr key={member.id}><td><strong>{member.displayName}{member.userId === auth.user?.id ? ' (you)' : ''}</strong><span className="cell-secondary">{member.email}</span></td><td>{member.active ? <select aria-label={'Role for ' + member.email} value={member.role} disabled={pending} onChange={event => { setChanging({ member, role: event.target.value as Role }); setError(undefined); }}>{Object.entries(roleNames).map(([role, label]) => <option key={role} value={role}>{label}</option>)}</select> : roleNames[member.role]}</td><td><Badge>{member.active ? 'Active' : 'Inactive'}</Badge></td><td>{member.active && <button className="text-button danger" disabled={pending} onClick={() => { setRemoving(member); setError(undefined); }}>Remove access</button>}</td></tr>)}</tbody></table>{members.data && <Pager data={members.data} onPage={setMemberPage} />}</section>
-    <section className="panel table-panel"><h2 className="table-title">Invitations</h2><ErrorMessage error={invitations.error} retry={invitations.reload} />{invitations.data?.items.length === 0 && <p className="panel-padding muted">No invitations yet. Invite an employee or manager to get started.</p>}<table><thead><tr><th>Role</th><th>Expires</th><th>Status</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{invitations.data?.items.map(invitation => <tr key={invitation.id}><td>{roleNames[invitation.role]}</td><td>{new Date(invitation.expiresAt).toLocaleDateString()}</td><td><Badge>{invitation.status.toLowerCase()}</Badge></td><td>{invitation.status === 'PENDING' && <button className="text-button danger" disabled={pending} onClick={() => { setPending(true); void send(base + '/invitations/' + invitation.id + '/revoke', 'POST').then(invitations.reload).catch(setError).finally(() => setPending(false)); }}>Revoke</button>}</td></tr>)}</tbody></table>{invitations.data && <Pager data={invitations.data} onPage={setInvitePage} />}</section>
-    {showInvite && <Dialog title="Invite staff" close={() => setShowInvite(false)}>{created ? <><p>Share this link with the person you want to join as <strong>{roleNames[created.invitation.role]}</strong>. Anyone signed in with this link can accept it once.</p><Field label="Invitation link"><input readOnly value={inviteUrl} onFocus={event => event.currentTarget.select()} /></Field><p className="field-help">Expires in seven days. Save or copy the link now; it will not be shown again.</p><ErrorMessage error={error} /><button className="button primary" onClick={() => { void navigator.clipboard.writeText(inviteUrl).then(() => setCopied(true)).catch(() => setError(new Error('Copy is unavailable. Select and copy the link above.'))); }}>{copied ? 'Copied' : 'Copy invitation link'}</button></> : <form onSubmit={invite}><p>Invite someone to {organization.name}. You can promote a member to Owner after they join.</p><ErrorMessage error={error} /><Field label="Invitation role"><select name="role"><option value="EMPLOYEE">Employee — view catalog and locations</option><option value="MANAGER">Manager — manage catalog and locations</option></select></Field><button className="button primary" disabled={pending}>{pending ? 'Creating…' : 'Create invitation'}</button></form>}</Dialog>}
-    {(removing || changing) && <Dialog title={removing ? 'Remove access' : 'Change role'} close={() => { setRemoving(undefined); setChanging(undefined); }}><p>{removing ? 'Remove access for ' + removing.displayName + '? Their past activity will remain available.' : 'Change ' + changing?.member.displayName + ' to ' + (changing ? roleNames[changing.role] : '') + '?'}</p><p className="field-help">An organization must always retain an active Owner.</p><ErrorMessage error={error} /><div className="form-actions"><button className="button secondary" onClick={() => { setRemoving(undefined); setChanging(undefined); }}>Cancel</button><button className="button primary" disabled={pending} onClick={() => void membershipChange()}>Confirm change</button></div></Dialog>}
+
+    <section className="panel table-panel" aria-labelledby="members-heading">
+      <div className="panel-header"><div><h2 id="members-heading">Team members</h2><p>Owners manage people and settings. Managers edit the catalog and locations. Employees can view both.</p></div></div>
+      {!members.data && !members.error && <Loading variant="list" label="Loading team members" />}
+      {members.data && <table className="data-table">
+        <thead><tr><th scope="col">Person</th><th scope="col">Role</th><th scope="col">Status</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
+        <tbody>{members.data.items.map(member => <tr key={member.id}>
+          <td><strong>{member.displayName}{member.userId === auth.user?.id ? ' (you)' : ''}</strong><span className="cell-secondary">{member.email}</span></td>
+          <td className="cell-inline">{member.active ? <select aria-label={'Role for ' + member.displayName} value={member.role} disabled={pending} onChange={event => { setChanging({ member, role: event.target.value as Role }); setError(undefined); }}>{Object.entries(roleNames).map(([role, label]) => <option key={role} value={role}>{label}</option>)}</select> : roleNames[member.role]}</td>
+          <td className="cell-inline">{member.active ? <Badge tone="success">Active</Badge> : <Badge>Inactive</Badge>}</td>
+          <td className="cell-actions">{member.active && <button type="button" className="text-button danger" disabled={pending} onClick={() => { setRemoving(member); setError(undefined); }}>Remove access</button>}</td>
+        </tr>)}</tbody>
+      </table>}
+      {members.data && <Pager data={members.data} onPage={setMemberPage} />}
+    </section>
+
+    <section className="panel table-panel" aria-labelledby="invitations-heading">
+      <div className="panel-header"><div><h2 id="invitations-heading">Invitations</h2><p>Links you've created. Each one works once and expires after seven days.</p></div></div>
+      <ErrorMessage error={invitations.error} retry={invitations.reload} />
+      {!invitations.data && !invitations.error && <Loading variant="list" label="Loading invitations" />}
+      {invitations.data?.items.length === 0 && <p className="panel-body muted">No invitations yet.</p>}
+      {!!invitations.data?.items.length && <table className="data-table">
+        <thead><tr><th scope="col">Role</th><th scope="col">Expires</th><th scope="col">Status</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
+        <tbody>{invitations.data.items.map(invitation => <tr key={invitation.id}>
+          <td><strong>{roleNames[invitation.role]}</strong></td>
+          <td className="numeric"><span className="mobile-only cell-secondary">Expires </span>{new Date(invitation.expiresAt).toLocaleDateString()}</td>
+          <td className="cell-inline"><Badge tone={invitationTone[invitation.status] ?? 'neutral'}>{invitation.status.charAt(0) + invitation.status.slice(1).toLowerCase()}</Badge></td>
+          <td className="cell-actions">{invitation.status === 'PENDING' && <button type="button" className="text-button danger" disabled={pending} onClick={() => { setPending(true); void send(base + '/invitations/' + invitation.id + '/revoke', 'POST').then(invitations.reload).catch(setError).finally(() => setPending(false)); }}>Revoke</button>}</td>
+        </tr>)}</tbody>
+      </table>}
+      {invitations.data && <Pager data={invitations.data} onPage={setInvitePage} />}
+    </section>
+
+    {showInvite && <Dialog title="Invite staff" close={() => setShowInvite(false)}>{created ? <>
+      <p>Send this link to the person joining as <strong>{roleNames[created.invitation.role]}</strong>. It works once, for whoever opens it while signed in.</p>
+      <Field label="Invitation link"><input readOnly value={inviteUrl} onFocus={event => event.currentTarget.select()} /><small>Copy it now — it won't be shown again. Expires in seven days.</small></Field>
+      <ErrorMessage error={error} />
+      <div className="form-actions"><button type="button" className="button secondary" onClick={() => setShowInvite(false)}>Done</button><button type="button" className="button primary" onClick={() => { void navigator.clipboard.writeText(inviteUrl).then(() => setCopied(true)).catch(() => setError(new Error('Copy isn’t available here. Select the link above and copy it.'))); }}><Icon name={copied ? 'check' : 'copy'} />{copied ? 'Copied' : 'Copy link'}</button></div>
+    </> : <form onSubmit={invite}>
+      <p>Create a one-time link to join {organization.name}. You can make someone an Owner after they join.</p>
+      <ErrorMessage error={error} />
+      <Field label="Role"><select name="role"><option value="EMPLOYEE">Employee — can view catalog and locations</option><option value="MANAGER">Manager — can edit catalog and locations</option></select></Field>
+      <div className="form-actions"><button type="button" className="button secondary" onClick={() => setShowInvite(false)}>Cancel</button><button className="button primary" disabled={pending}>{pending ? 'Creating…' : 'Create invitation'}</button></div>
+    </form>}</Dialog>}
+
+    {(removing || changing) && <Dialog title={removing ? 'Remove ' + removing.displayName + '?' : 'Change role?'} close={closeConfirm}>
+      <p>{removing ? 'They will lose access to ' + organization.name + ' right away. Their past activity stays in the history.' : 'Make ' + changing?.member.displayName + ' ' + (changing ? roleNames[changing.role] : '') + '?'}</p>
+      <p className="field-help">A business always needs at least one active Owner.</p>
+      <ErrorMessage error={error} />
+      <div className="form-actions"><button type="button" className="button secondary" data-autofocus onClick={closeConfirm}>Cancel</button><button type="button" className={'button ' + (removing ? 'danger' : 'primary')} disabled={pending} onClick={() => void membershipChange()}>{pending ? 'Saving…' : removing ? 'Remove' : 'Change role'}</button></div>
+    </Dialog>}
   </>;
+}
+
+function activityIcon(event: Activity): IconName {
+  if (event.resourceType === 'ITEM') return 'catalog';
+  if (event.resourceType === 'LOCATION') return 'location';
+  if (event.action.includes('MEMBER') || event.action.includes('INVITATION')) return 'people';
+  return 'activity';
 }
 export function ActivityPage() {
   const { base, organization } = useWorkspace();
   const [page, setPage] = useState(0);
   const events = useResource<Page<Activity>>(organization.role !== 'EMPLOYEE' ? base + '/audit-events?page=' + page : null);
   if (organization.role === 'EMPLOYEE') return <ErrorMessage error={new Error('Only Owners and Managers can view organization activity.')} />;
-  return <><PageHeader eyebrow="A SHARED HISTORY" title="Activity" description="Important changes, with the person and time behind each one." /><ErrorMessage error={events.error} retry={events.reload} />{!events.data && !events.error && <Loading />}<section className="panel"><ul className="activity-list">{events.data?.items.map(event => <li key={event.id}><span className="activity-dot" aria-hidden="true" /><div><strong>{event.action.replaceAll('_', ' ').toLowerCase()}</strong><p>{event.actorName}{event.metadata.name ? ' · ' + event.metadata.name : ''}{event.metadata.role ? ' · ' + roleNames[event.metadata.role as Role] : ''}</p>{event.resourceType === 'ITEM' && <Link to={'/app/organizations/' + organization.id + '/items/' + event.resourceId}>View item</Link>}{event.resourceType === 'LOCATION' && <Link to={'/app/organizations/' + organization.id + '/locations/' + event.resourceId}>View location</Link>}</div><time dateTime={event.occurredAt}>{new Date(event.occurredAt).toLocaleString()}</time></li>)}</ul>{events.data?.items.length === 0 && <p className="muted">Your organization's activity will appear here.</p>}</section>{events.data && <Pager data={events.data} onPage={setPage} />}</>;
+  const root = '/app/organizations/' + organization.id;
+  return <>
+    <PageHeader title="Activity" description="Changes to this business, newest first." />
+    <ErrorMessage error={events.error} retry={events.reload} />
+    {!events.data && !events.error && <div className="panel table-panel"><Loading variant="list" label="Loading activity" /></div>}
+    {events.data?.items.length === 0 && <Empty icon="activity" title="No activity yet">Changes to items, locations and people will be listed here.</Empty>}
+    {!!events.data?.items.length && <section className="panel table-panel" aria-label="Activity">
+      <ul className="activity-list">{events.data.items.map(event => <li key={event.id}>
+        <span className="activity-icon" aria-hidden="true"><Icon name={activityIcon(event)} /></span>
+        <div><strong>{event.action.replaceAll('_', ' ').toLowerCase()}</strong>
+          <p>{event.actorName}{event.metadata.name ? ' · ' + event.metadata.name : ''}{event.metadata.role ? ' · ' + roleNames[event.metadata.role as Role] : ''}</p>
+          {event.resourceType === 'ITEM' && <Link to={root + '/items/' + event.resourceId}>View item</Link>}
+          {event.resourceType === 'LOCATION' && <Link to={root + '/locations/' + event.resourceId}>View location</Link>}</div>
+        <time dateTime={event.occurredAt}>{new Date(event.occurredAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</time>
+      </li>)}</ul>
+      <Pager data={events.data} onPage={setPage} />
+    </section>}
+  </>;
 }

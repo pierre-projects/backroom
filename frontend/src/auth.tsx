@@ -3,6 +3,7 @@ import type { FormEvent, ReactNode } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router';
 import { ApiError, api, refreshCsrf, send } from './api';
 import { Brand, ErrorMessage, Field, Loading, PageHeader, useResource, Pager } from './components';
+import { Icon } from './icons';
 import type { InvitationPreview, Organization, Page, User } from './types';
 import { roleNames } from './types';
 
@@ -53,8 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 export function Protected({ children }: { children: ReactNode }) {
   const auth = useAuth();
-  if (auth.loading) return <div className="public-shell"><Loading /></div>;
-  if (auth.error) return <div className="public-shell"><Brand /><ErrorMessage error={auth.error} retry={auth.reload} /></div>;
+  if (auth.loading) return <div className="auth-shell"><Loading /></div>;
+  if (auth.error) return <div className="auth-shell"><Brand /><div className="auth-card"><ErrorMessage error={auth.error} retry={auth.reload} /></div></div>;
   if (!auth.user) return <Navigate to="/signin" replace />;
   return children;
 }
@@ -75,29 +76,28 @@ export function AuthForm({ initialMode = 'signin', invitation = false }: { initi
       await auth.login(email, password);
     } catch (value) { setError(value); } finally { setPending(false); }
   }
+  const register = mode === 'register';
   return <section className="auth-card">
-    <div className="eyebrow">{invitation ? 'Join your team' : 'Welcome to Backroom'}</div>
-    <h1>{mode === 'register' ? 'Create your account' : 'Welcome back.'}</h1>
-    <p className="muted">{invitation ? 'Sign in or create an account to review this invitation.' : 'A place for the work behind the work.'}</p>
+    <h1>{register ? 'Create your account' : 'Sign in to Backroom'}</h1>
+    <p className="auth-lead">{invitation ? 'Sign in or create an account to see your invitation.' : register ? 'You can create a business or join one after this step.' : 'Use the email and password for your account.'}</p>
     <form onSubmit={submit}>
       <ErrorMessage error={error} />
-      {mode === 'register' && <Field label="Your name"><input name="displayName" autoComplete="name" maxLength={100} required /></Field>}
-      <Field label="Email"><input name="email" type="email" autoComplete="username" maxLength={254} required /></Field>
-      <Field label="Password"><input name="password" type="password" autoComplete={mode === 'register' ? 'new-password' : 'current-password'} minLength={12} required /></Field>
-      {mode === 'register' && <p className="field-help">Use at least 12 characters. Passwords may contain up to 72 UTF-8 bytes.</p>}
-      <button className="button primary full-width" disabled={pending}>{pending ? 'Please wait…' : mode === 'register' ? 'Create account' : 'Sign in'}</button>
+      {register && <Field label="Your name"><input name="displayName" autoComplete="name" maxLength={100} required /></Field>}
+      <Field label="Email"><input name="email" type="email" autoComplete="username" inputMode="email" maxLength={254} required /></Field>
+      <Field label="Password"><input name="password" type="password" autoComplete={register ? 'new-password' : 'current-password'} minLength={12} required />{register && <small>At least 12 characters.</small>}</Field>
+      <button className="button primary full-width" disabled={pending}>{pending ? (register ? 'Creating account…' : 'Signing in…') : register ? 'Create account' : 'Sign in'}</button>
     </form>
-    <p className="auth-switch">{mode === 'register' ? 'Already have an account?' : 'New here?'}{' '}
-      {invitation ? <button className="text-button" type="button" onClick={() => { setMode(mode === 'register' ? 'signin' : 'register'); setError(undefined); }}>{mode === 'register' ? 'Sign in' : 'Create an account'}</button> :
-        <Link to={mode === 'register' ? '/signin' : '/register'}>{mode === 'register' ? 'Sign in' : 'Create an account'}</Link>}
+    <p className="auth-switch">{register ? 'Already have an account?' : 'New to Backroom?'}{' '}
+      {invitation ? <button className="text-button" type="button" onClick={() => { setMode(register ? 'signin' : 'register'); setError(undefined); }}>{register ? 'Sign in' : 'Create an account'}</button> :
+        <Link to={register ? '/signin' : '/register'}>{register ? 'Sign in' : 'Create an account'}</Link>}
     </p>
   </section>;
 }
 export function AuthPage({ mode }: { mode: 'signin' | 'register' }) {
   const auth = useAuth();
-  if (auth.loading) return <Loading />;
+  if (auth.loading) return <div className="auth-shell"><Loading /></div>;
   if (auth.user) return <Navigate to="/app" replace />;
-  return <div className="public-shell"><Brand /><AuthForm key={mode} initialMode={mode} /></div>;
+  return <div className="auth-shell"><Brand /><AuthForm key={mode} initialMode={mode} /></div>;
 }
 export function InvitationPage() {
   const auth = useAuth();
@@ -121,8 +121,13 @@ export function InvitationPage() {
       navigate('/app/organizations/' + org.id + '/items', { replace: true });
     } catch (value) { setError(value); } finally { setPending(false); }
   }
-  return <div className="public-shell"><Brand />{auth.loading ? <Loading /> : !token ? <div className="auth-card"><h1>Invitation unavailable</h1><p>Open the complete link shared by your business Owner.</p><Link to="/app">Your businesses</Link></div> : !auth.user ? <AuthForm invitation /> :
-    <section className="auth-card"><div className="eyebrow">Your team is waiting</div><h1>Join a business</h1><ErrorMessage error={error} />{!preview && !error && <Loading />}{preview && <><h2>{preview.organizationName}</h2><p>You're invited to join as <strong>{roleNames[preview.role]}</strong>.</p><p className="muted">This invitation expires {new Date(preview.expiresAt).toLocaleDateString()}.</p><button className="button primary" disabled={pending} onClick={() => void accept()}>{pending ? 'Joining…' : 'Accept invitation'}</button></>}<p><Link to="/app">Back to your businesses</Link></p></section>}</div>;
+  return <div className="auth-shell"><Brand />{auth.loading ? <Loading /> : !token
+    ? <section className="auth-card"><h1>Invitation link incomplete</h1><p className="auth-lead">Open the full link your business Owner sent you, or ask them for a new one.</p><Link className="button secondary full-width" to="/app">Go to your businesses</Link></section>
+    : !auth.user ? <AuthForm invitation />
+    : <section className="auth-card"><h1>Join a business</h1><ErrorMessage error={error} />{!preview && !error && <Loading />}
+      {preview && <><div className="invite-summary"><h2>{preview.organizationName}</h2><p>Role: <strong>{roleNames[preview.role]}</strong></p><p className="muted">Invitation expires {new Date(preview.expiresAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}</p></div>
+        <button className="button primary full-width" disabled={pending} onClick={() => void accept()}>{pending ? 'Joining…' : 'Accept invitation'}</button></>}
+      <p className="auth-switch"><Link to="/app">Not now — go to your businesses</Link></p></section>}</div>;
 }
 export function OrganizationChooser() {
   const auth = useAuth();
@@ -140,12 +145,15 @@ export function OrganizationChooser() {
       navigate('/app/organizations/' + org.id + '/items');
     } catch (value) { setError(value); } finally { setPending(false); }
   }
-  return <div className="chooser-shell"><header className="header"><Brand /><button className="text-button" onClick={() => void auth.logout().catch(setError)}>Sign out</button></header>
-    <main><PageHeader eyebrow={'Hello, ' + auth.user!.displayName} title="Your businesses" description="Choose a workspace, or make a home for your team."><button className="button primary" onClick={() => setShowCreate(v => !v)}>New organization</button></PageHeader>
+  const none = organizations.data?.totalElements === 0;
+  return <div className="public-shell">
+    <header className="public-header"><Brand to="/app" /><div className="header-actions"><span className="muted chooser-user">{auth.user!.displayName}</span><button type="button" className="button ghost" onClick={() => void auth.logout().catch(setError)}><Icon name="logout" />Sign out</button></div></header>
+    <main className="chooser-main" id="main">
+      <PageHeader title="Your businesses" description={none ? 'Create a business to start your catalog, or open an invitation link from your team.' : 'Choose a business to open its workspace.'}>{!none && <button type="button" className="button secondary" aria-expanded={showCreate} onClick={() => setShowCreate(v => !v)}><Icon name="plus" />New organization</button>}</PageHeader>
       <ErrorMessage error={organizations.error ?? error} retry={organizations.error ? organizations.reload : undefined} />
-      {(showCreate || organizations.data?.totalElements === 0) && <form className="panel organization-form" onSubmit={create}><h2>Create an organization</h2><Field label="Business name"><input name="name" maxLength={120} required /></Field><button className="button primary" disabled={pending}>{pending ? 'Creating…' : 'Create organization'}</button></form>}
-      {!organizations.data && !organizations.error && <Loading />}
-      <div className="organization-grid">{organizations.data?.items.map(org => <Link className="organization-card" key={org.id} to={'/app/organizations/' + org.id + '/items'}><div className="organization-initial">{org.name[0].toUpperCase()}</div><h2>{org.name}</h2><span className="muted">{roleNames[org.role]}</span><span className="card-arrow" aria-hidden="true">↗</span></Link>)}</div>
+      {(showCreate || none) && <form className="panel organization-form" onSubmit={create}><h2 className="section-heading">Create an organization</h2><p className="section-intro">You will be its Owner. You can rename it later in Settings.</p><Field label="Business name"><input name="name" maxLength={120} required /></Field><button className="button primary" disabled={pending}>{pending ? 'Creating…' : 'Create organization'}</button></form>}
+      {!organizations.data && !organizations.error && <div className="panel table-panel"><Loading variant="list" label="Loading businesses" /></div>}
+      {!!organizations.data?.items.length && <ul className="organization-list">{organizations.data.items.map(org => <li key={org.id}><Link className="organization-row" to={'/app/organizations/' + org.id + '/items'}><span className="business-avatar" aria-hidden="true">{org.name.trim()[0]?.toUpperCase()}</span><div><h2>{org.name}</h2><span className="muted">{roleNames[org.role]}</span></div><Icon name="chevronRight" /></Link></li>)}</ul>}
       {organizations.data && <Pager data={organizations.data} onPage={setPage} />}
     </main></div>;
 }

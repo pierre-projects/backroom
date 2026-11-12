@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backroom component reference</title>
+<!-- Uses the app's real stylesheets so this page can't drift from the product. Open from the repository checkout. -->
+<link rel="stylesheet" href="../frontend/src/styles.css">
+<link rel="stylesheet" href="../frontend/src/workspace.css">
+<style>
+  /* Page-only layout for the reference itself */
+  .ref { width: min(100% - 2rem, 64rem); margin: 0 auto; padding: var(--space-8) 0 var(--space-12); }
+  .ref header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding-bottom: var(--space-6); border-bottom: 1px solid var(--border); margin-bottom: var(--space-8); }
+  .ref header p { color: var(--text-muted); font-size: var(--text-sm); }
+  .ref section { margin-bottom: var(--space-12); }
+  .ref section > h2 { font-size: var(--text-xl); line-height: 1.75rem; margin-bottom: var(--space-1); }
+  .ref section > p { color: var(--text-muted); margin-bottom: var(--space-5); max-width: 40rem; }
+  .ref h3 { margin: var(--space-6) 0 var(--space-3); color: var(--text-muted); font-size: var(--text-sm); }
+  .row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: var(--space-3); }
+  .swatch { border: 1px solid var(--border); border-radius: var(--radius-panel); overflow: hidden; background: var(--surface); }
+  .swatch div { height: 3.5rem; border-bottom: 1px solid var(--border); }
+  .swatch p { padding: var(--space-2) var(--space-3); font-size: var(--text-sm); }
+  .swatch code { display: block; color: var(--text-muted); font-family: var(--font-code); font-size: var(--text-xs); }
+  .type-row { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: var(--space-4); align-items: baseline; padding: var(--space-3) 0; border-top: 1px solid var(--border); }
+  .type-row span:first-child { color: var(--text-muted); font-size: var(--text-sm); }
+  .specimen { width: 100%; height: auto; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--surface); }
+  .static-dialog { position: static; box-shadow: var(--shadow-overlay); animation: none; }
+  .icons .icon { width: 1.5rem; height: 1.5rem; color: var(--text); }
+  .icons figure { margin: 0; display: grid; justify-items: center; gap: var(--space-2); padding: var(--space-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-panel); font-size: var(--text-xs); color: var(--text-muted); }
+  .nav-demo { display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: var(--space-6); align-items: start; }
+  .nav-demo .primary-nav { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-panel); padding: var(--space-2) var(--space-3); }
+  .tabbar-demo { display: flex; height: var(--tabbar-height); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-panel); overflow: hidden; }
+  .tabbar-demo .nav-link { flex: 1; flex-direction: column; justify-content: center; gap: 2px; border-radius: 0; font-size: var(--text-xs); }
+  .tabbar-demo .nav-link .icon { width: 1.5rem; height: 1.5rem; }
+  .tabbar-demo .nav-link.active { background: transparent; }
+  .tabbar-demo .nav-link.active::before { left: 25%; right: 25%; top: 0; bottom: auto; width: auto; height: 3px; border-radius: 0 0 3px 3px; }
+  @media (max-width: 39.99rem) { .nav-demo { grid-template-columns: 1fr; } .type-row { grid-template-columns: 1fr; gap: var(--space-1); } }
+  @media print { .ref { width: 100%; padding: 0; } .ref section { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<main class="ref">
+  <header>
+    <span class="brand"><svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--brand-mark)"/><path d="M8 8h16v16H8zM8 14h16M14 14v10" fill="none" stroke="var(--brand-ink)" stroke-width="2.25" stroke-linejoin="round"/></svg>Backroom</span>
+    <p>Design system 2.0 · Component reference</p>
+  </header>
+
+  <section>
+    <h2>In the product</h2>
+    <p>Catalog on desktop, item detail on a phone. Screenshots of the running app.</p>
+    <img class="specimen" src="design-specimen.png" alt="Desktop catalog with sidebar navigation, and a phone showing Espresso beans with its expected locations and a bottom tab bar">
+  </section>
+
+  <section>
+    <h2>Color</h2>
+    <p>Neutrals do most of the work. Teal marks actions and the current place. Honey appears only in the logo.</p>
+    <div class="grid">
+      <div class="swatch"><div style="background:var(--bg)"></div><p>Canvas<code>--bg #F6F6F4</code></p></div>
+      <div class="swatch"><div style="background:var(--surface)"></div><p>Surface<code>--surface #FFFFFF</code></p></div>
+      <div class="swatch"><div style="background:var(--surface-sunken)"></div><p>Sunken<code>--surface-sunken #EFEFEC</code></p></div>
+      <div class="swatch"><div style="background:var(--text)"></div><p>Text<code>--text #1C1D1F</code></p></div>
+      <div class="swatch"><div style="background:var(--text-muted)"></div><p>Muted text<code>--text-muted #5E6166</code></p></div>
+      <div class="swatch"><div style="background:var(--border-strong)"></div><p>Control edge<code>--border-strong #84868B</code></p></div>
+      <div class="swatch"><div style="background:var(--accent)"></div><p>Accent<code>--accent #0E6B73</code></p></div>
+      <div class="swatch"><div style="background:var(--accent-soft)"></div><p>Accent soft<code>--accent-soft #E6F1F2</code></p></div>
+      <div class="swatch"><div style="background:var(--brand-mark)"></div><p>Brand mark<code>--brand-mark #E7AF48</code></p></div>
+      <div class="swatch"><div style="background:var(--success)"></div><p>Success<code>--success #1F6B3A</code></p></div>
+      <div class="swatch"><div style="background:var(--warning)"></div><p>Warning<code>--warning #8A4B0F</code></p></div>
+      <div class="swatch"><div style="background:var(--danger)"></div><p>Danger<code>--danger #B42318</code></p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Type</h2>
+    <p>System UI fonts, monospace for codes. Nothing smaller than 12 px.</p>
+    <div class="type-row"><span>Page title · 24/32 · 600</span><span style="font-size:var(--text-2xl);line-height:2rem;font-weight:600">Espresso beans</span></div>
+    <div class="type-row"><span>Dialog title · 20/28 · 600</span><span style="font-size:var(--text-xl);line-height:1.75rem;font-weight:600">Archive Espresso beans?</span></div>
+    <div class="type-row"><span>Section · 16/24 · 600</span><span style="font-size:var(--text-lg);font-weight:600">Expected locations</span></div>
+    <div class="type-row"><span>Body · 14/20</span><span>Where your team should find this item.</span></div>
+    <div class="type-row"><span>Supporting · 13/20</span><span style="font-size:var(--text-sm);color:var(--text-muted)">Saved in uppercase. Stays reserved after the item is archived.</span></div>
+    <div class="type-row"><span>Code · 13 mono</span><span class="mono">BEAN-01</span></div>
+  </section>
+
+  <section>
+    <h2>Buttons</h2>
+    <p>One primary per view. Danger only confirms a destructive action. Labels are verb + noun.</p>
+    <div class="row">
+      <button class="button primary" type="button"><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M10 4.5v11M4.5 10h11"/></svg>Add item</button>
+      <button class="button secondary" type="button">Edit item</button>
+      <button class="button ghost" type="button">Sign out</button>
+      <button class="button danger" type="button">Archive</button>
+      <button class="button primary" type="button" disabled>Adding…</button>
+      <button class="text-button" type="button">Reload latest version</button>
+      <button class="text-button danger" type="button">Remove</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Fields and search</h2>
+    <p>Label above, hint below, error below the hint. Inputs are 16 px on touch screens so iOS doesn't zoom.</p>
+    <div class="panel narrow">
+      <div class="field"><label for="f1">Item name</label><input id="f1" value="Espresso beans"></div>
+      <div class="field"><label for="f2">SKU (optional)</label><input id="f2" aria-invalid="true" aria-describedby="f2h f2e" value="BEAN-01"><small id="f2h">Saved in uppercase. Stays reserved after the item is archived.</small><p class="field-error" id="f2e">Another item already uses this SKU.</p></div>
+      <div class="field"><label for="f3">Base unit</label><select id="f3"><option>Kilogram</option></select></div>
+      <div class="toolbar" style="margin:0"><form class="search-form" role="search" onsubmit="return false"><div class="search-input"><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="9" cy="9" r="5.5"/><path d="m13 13 4 4"/></svg><input type="search" aria-label="Search catalog" placeholder="Search by name or SKU"></div><button class="button secondary">Search</button></form><label class="checkbox"><input type="checkbox"> Include archived</label></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Badges and notices</h2>
+    <p>Always words, never color alone. Ordinary active items get no badge.</p>
+    <div class="row" style="margin-bottom:var(--space-4)"><span class="badge">Archived</span><span class="badge">Shelf</span><span class="badge success">Active</span><span class="badge warning">Pending</span><span class="badge danger">Expired</span><span class="badge accent">Owner</span></div>
+    <div class="notice success-message" role="status"><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 10.5 3.5 3.5 7.5-8"/></svg><div><p>Stockroom › Shelf A added</p></div></div>
+    <div class="notice error-message" role="alert"><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="10" cy="10" r="7"/><path d="M10 6.5v4M10 13.5v.01"/></svg><div><p>Couldn't load the catalog. Check your connection.</p><button class="button secondary" type="button">Try again</button></div></div>
+  </section>
+
+  <section>
+    <h2>Data table</h2>
+    <p>Whole row opens the record. Under 640 px each row restacks into name, then SKU · unit. Resize the window to see it.</p>
+    <div class="panel table-panel">
+      <table class="data-table">
+        <thead><tr><th scope="col">Item</th><th scope="col">SKU</th><th scope="col">Base unit</th><th scope="col"><span class="sr-only">Open</span></th></tr></thead>
+        <tbody>
+          <tr class="linked"><td><span class="name-line"><a class="record-link" href="#">Espresso beans</a></span><span class="cell-secondary mobile-only"><span class="mono">BEAN-01</span> · Kilogram</span></td><td class="desktop-only mono">BEAN-01</td><td class="desktop-only">Kilogram</td><td class="cell-chevron"><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="m8 5 5 5-5 5"/></svg></td></tr>
+          <tr class="linked"><td><span class="name-line"><a class="record-link" href="#">Oat milk</a></span><span class="cell-secondary mobile-only"><span class="mono">OAT-01</span> · Liter</span></td><td class="desktop-only mono">OAT-01</td><td class="desktop-only">Liter</td><td class="cell-chevron"><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="m8 5 5 5-5 5"/></svg></td></tr>
+          <tr class="linked"><td><span class="name-line"><a class="record-link" href="#">Seasonal syrup</a><span class="badge">Archived</span></span><span class="cell-secondary mobile-only">No SKU · Milliliter</span></td><td class="desktop-only mono"><span aria-hidden="true">—</span><span class="sr-only">No SKU</span></td><td class="desktop-only">Milliliter</td><td class="cell-chevron"><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="m8 5 5 5-5 5"/></svg></td></tr>
+        </tbody>
+      </table>
+      <nav class="pager" aria-label="Pagination"><span class="numeric">Page 1 of 3</span><span><button class="button secondary" disabled>Previous</button> <button class="button secondary">Next</button></span></nav>
+    </div>
+  </section>
+
+  <section>
+    <h2>Navigation</h2>
+    <p>Sidebar at 1024 px and wider; bottom tab bar below that. Both come from one destinations list, filtered by role.</p>
+    <div class="nav-demo">
+      <nav class="primary-nav" aria-label="Sidebar example">
+        <a class="nav-link active" href="#" aria-current="page"><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"><path d="M3.5 6.5 10 3l6.5 3.5v7L10 17l-6.5-3.5z"/><path d="M3.5 6.5 10 10l6.5-3.5M10 10v7"/></svg><span>Catalog</span></a>
+        <a class="nav-link" href="#"><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"><path d="M3 17V7.5L10 3l7 4.5V17"/><path d="M6.5 17v-6h7v6M6.5 14h7"/></svg><span>Locations</span></a>
+        <a class="nav-link" href="#"><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.5 2"/></svg><span>Activity</span></a>
+      </nav>
+      <nav class="tabbar-demo" aria-label="Tab bar example">
+        <a class="nav-link active" href="#" aria-current="page"><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"><path d="M3.5 6.5 10 3l6.5 3.5v7L10 17l-6.5-3.5z"/><path d="M3.5 6.5 10 10l6.5-3.5M10 10v7"/></svg><span>Catalog</span></a>
+        <a class="nav-link" href="#"><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round"><path d="M3 17V7.5L10 3l7 4.5V17"/><path d="M6.5 17v-6h7v6M6.5 14h7"/></svg><span>Locations</span></a>
+        <a class="nav-link" href="#"><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.5 2"/></svg><span>Activity</span></a>
+      </nav>
+    </div>
+  </section>
+
+  <section>
+    <h2>Dialog</h2>
+    <p>Confirmations ask the question in the title and repeat the verb on the button. Focus starts on Cancel. On phones this opens as a bottom sheet.</p>
+    <section class="dialog static-dialog" role="group" aria-label="Dialog example">
+      <div class="dialog-heading"><h2>Archive Espresso beans?</h2><button type="button" class="icon-button" aria-label="Close dialog"><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="m5.5 5.5 9 9M14.5 5.5l-9 9"/></svg></button></div>
+      <div class="dialog-body"><p>Its expected locations are removed from active use. You can still find it with <strong>Include archived</strong>, and its history stays available.</p><div class="form-actions"><button class="button secondary" type="button">Cancel</button><button class="button danger" type="button">Archive</button></div></div>
+    </section>
+  </section>
+
+  <section>
+    <h2>Empty state</h2>
+    <p>Tell people what to do next, or where content will come from if they can't add it.</p>
+    <div class="empty-state"><div class="empty-icon"><svg class="icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="9" cy="9" r="5.5"/><path d="m13 13 4 4"/></svg></div><h2>No items match “espresso”</h2><p>Check the spelling, or search by SKU instead.</p><button class="button secondary" type="button">Clear search</button></div>
+  </section>
+</main>
+</body>
+</html>
