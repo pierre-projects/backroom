@@ -14,6 +14,7 @@ quantities, inventory actions, scanning, and replenishment come in later phases.
 - [PRD v1](backroom_prd_v1.md)
 - [Architecture and module boundaries](docs/architecture.md)
 - [Phase 1 behavior and API defaults](docs/phase-1.md)
+- [Phase 2 inventory quantities and stock operations](docs/phase-2.md)
 - [Design system and visual specimen](docs/design-system.md)
 - [Frontend codebook](docs/frontend-codebook.md)
 
@@ -116,7 +117,7 @@ CSRF behavior, tenant isolation, role changes, archival, invitation races,
 concurrent ownership/hierarchy changes, transactional audit rollback, and the
 existing infrastructure guarantees.
 
-Flyway applies three domain migrations for access, catalog/locations, and activity.
+Flyway applies four domain migrations for access, catalog/locations, activity, and inventory.
 Existing Phase 0 database volumes upgrade without being reset. Hibernate validates
 the schema and never creates business tables.
 
@@ -204,7 +205,7 @@ Use `pwsh ./scripts/smoke-test.ps1` for the same production-container checks.
 - **npm ci reports EPERM on a native binding:** stop the Vite development server
   in its terminal, then run setup or verification again.
 - **Flyway reports no migrations:** check that the current Phase 1 code/image is
-  running; three versioned migrations should be present.
+  running; four versioned migrations should be present.
 - **Signed out after a restart:** sessions are in memory. Sign in again; database
   records are preserved. Accounts have no self-service recovery or verified email
   yet, so establish a recovery process before using real business data.
@@ -215,6 +216,6 @@ GitHub Actions runs frontend compilation, Maven integration tests, a
 production-container smoke test, and isolated Playwright browser checks. It does
 not publish images or deploy services.
 
-Phase 1 is prepared on `feature/phase-1-foundation`. Phase 2 introduces opening
-balances and transaction-safe stock operations. Follow the PRD for later scanning
-and replenishment milestones. PRD v1 is unchanged.
+Phase 1 (foundation) is merged. Phase 2 adds stock quantities, transaction-safe
+stock operations and movement history; see [docs/phase-2.md](docs/phase-2.md).
+Follow the PRD for later scanning and replenishment milestones. PRD v1 is unchanged.

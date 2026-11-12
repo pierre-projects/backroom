@@ -5,7 +5,8 @@ import { send } from './api';
 import { Badge, Dialog, Empty, ErrorMessage, Field, Loading, PageHeader, Pager, useResource } from './components';
 import { Icon } from './icons';
 import type { IconName } from './icons';
-import type { Activity, CreatedInvitation, Invitation, Member, Page, Role } from './types';
+import type { Activity, CreatedInvitation, Invitation, Member, Page, Role, Unit } from './types';
+import { formatQuantity } from './stock';
 import { roleNames } from './types';
 import { useWorkspace } from './workspace';
 import { useAuth } from './auth';
@@ -101,6 +102,13 @@ export function PeoplePage() {
   </>;
 }
 
+/** Quantity and place for stock events, e.g. " · 2.5 kg · Stockroom › Shelf A". */
+function stockDetail(event: Activity) {
+  const { quantity, unit, location, from, to } = event.metadata;
+  if (!quantity || !unit) return '';
+  const amount = formatQuantity(quantity, unit as Unit);
+  return ' · ' + amount + (location ? ' · ' + location : '') + (from && to ? ' · ' + from + ' → ' + to : '');
+}
 function activityIcon(event: Activity): IconName {
   if (event.resourceType === 'ITEM') return 'catalog';
   if (event.resourceType === 'LOCATION') return 'location';
@@ -122,7 +130,7 @@ export function ActivityPage() {
       <ul className="activity-list">{events.data.items.map(event => <li key={event.id}>
         <span className="activity-icon" aria-hidden="true"><Icon name={activityIcon(event)} /></span>
         <div><strong>{event.action.replaceAll('_', ' ').toLowerCase()}</strong>
-          <p>{event.actorName}{event.metadata.name ? ' · ' + event.metadata.name : ''}{event.metadata.role ? ' · ' + roleNames[event.metadata.role as Role] : ''}</p>
+          <p>{event.actorName}{event.metadata.name ? ' · ' + event.metadata.name : ''}{event.metadata.role ? ' · ' + roleNames[event.metadata.role as Role] : ''}{stockDetail(event)}</p>
           {event.resourceType === 'ITEM' && <Link to={root + '/items/' + event.resourceId}>View item</Link>}
           {event.resourceType === 'LOCATION' && <Link to={root + '/locations/' + event.resourceId}>View location</Link>}</div>
         <time dateTime={event.occurredAt}>{new Date(event.occurredAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</time>

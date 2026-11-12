@@ -17,7 +17,7 @@ async function createOrganization(page: Page, name: string) {
   }
   await page.getByLabel('Business name', { exact: true }).fill(name);
   await page.getByRole('button', { name: 'Create organization', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Catalog', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Inventory', exact: true })).toBeVisible();
 }
 async function csrf(request: APIRequestContext) {
   const response = await request.get('/api/v1/auth/csrf');
@@ -45,7 +45,7 @@ test('owner onboarding, placements, invitation acceptance and employee restricti
   await page.getByRole('button', { name: 'Create location', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Shelf A', exact: true })).toBeVisible();
 
-  await page.getByRole('link', { name: /Catalog/, exact: false }).first().click();
+  await page.getByRole('link', { name: /Inventory/, exact: false }).first().click();
   await page.getByRole('button', { name: 'Add item', exact: true }).click();
   await page.getByLabel('Item name', { exact: true }).fill('Coffee beans');
   await page.getByLabel('SKU (optional)', { exact: true }).fill(' beans-01 ');
@@ -54,6 +54,7 @@ test('owner onboarding, placements, invitation acceptance and employee restricti
   await expect(page.getByRole('heading', { name: 'Coffee beans', exact: true })).toBeVisible();
   await expect(page.getByText('BEANS-01', { exact: true })).toBeVisible();
   const itemUrl = page.url();
+  await page.getByRole('button', { name: 'Add an expected location', exact: true }).click();
   await page.getByLabel('Storage location', { exact: true }).selectOption({ label: 'Stockroom › Shelf A' });
   await page.getByRole('button', { name: 'Add placement', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Shelf A', exact: true })).toBeVisible();
@@ -73,7 +74,7 @@ test('owner onboarding, placements, invitation acceptance and employee restricti
   const employeeEmail = await register(employee, 'Cafe Employee');
   await expect(employee.getByRole('heading', { name: business, exact: true })).toBeVisible();
   await employee.getByRole('button', { name: 'Accept invitation', exact: true }).click();
-  await expect(employee.getByRole('heading', { name: 'Catalog', exact: true })).toBeVisible();
+  await expect(employee.getByRole('heading', { name: 'Inventory', exact: true })).toBeVisible();
   await expect(employee.getByRole('button', { name: 'Add item', exact: true })).toHaveCount(0);
   await expect(employee.getByRole('link', { name: /People/ })).toHaveCount(0);
   await employee.getByRole('link', { name: 'Coffee beans', exact: true }).click();

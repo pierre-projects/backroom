@@ -81,11 +81,11 @@ Tabs are filtered by role, so the bar never needs a "More" item:
 
 | Role | Destinations |
 | --- | --- |
-| Employee | Catalog, Locations |
-| Manager | Catalog, Locations, Activity |
-| Owner | Catalog, Locations, Activity, People, Settings |
+| Employee | Inventory, Locations |
+| Manager | Inventory, Locations, Activity |
+| Owner | Inventory, Locations, Activity, People, Settings |
 
-Detail pages show a back link above the title (**‹ Catalog**, **‹ All locations**, **‹ Parent location**). A "Skip to content" link is the first focusable element.
+Detail pages show a back link above the title (**‹ Inventory**, **‹ All locations**, **‹ Parent location**). A "Skip to content" link is the first focusable element.
 
 ## Components
 
@@ -104,6 +104,17 @@ Detail pages show a back link above the title (**‹ Catalog**, **‹ All locati
 | **Loading** | Skeleton rows inside the panel for lists; short text elsewhere. Empty results only show after a successful load. |
 | **Pager** | "Page 2 of 5" on the left, **Previous** / **Next** on the right, inside the panel footer. |
 
+## Stock patterns
+
+| Pattern | Rules |
+| --- | --- |
+| **Quantity** | Always show the unit beside the number (`12.5 kg`, `24 L`; Each shows the number alone). `tabular-nums`, right-aligned in tables. Changes carry a sign (`+6 kg`, `−0.75 kg`); additions use the success color, removals stay in body text. |
+| **Quantity field** | Label includes the unit: "Quantity (kg)". Numeric keypad for Each, decimal keypad otherwise. Hint states what's available when removing or moving stock. |
+| **Stock by location** | Table of `Parent › Location` with the on-hand quantity and an **Update** button per row. On phones each row restacks to name, then "15 kg on hand". |
+| **Location action sheet** | **Update** opens a sheet titled with the location path. It lists only the actions the person's role allows: Record usage, Record waste, Receive stock here, plus Transfer from here, Count and Set starting quantity for managers. A one-line hint sits under less obvious actions. |
+| **Stock sheet** | One sheet per operation, titled with the action ("Record usage"). The submit button repeats the title. The success message names the amount and place: "Used 2 kg from Stockroom › Shelf A". Server errors appear inline in the sheet, and the form keeps its values for a retry. |
+| **History** | Newest first. Each row has an icon tile and a past-tense title (Received, Used, Wasted, Moved out/in, Count adjustment, Starting quantity, Reversal), then `place · person`, any note or reference, the signed change, the balance after, and the time. Reversed operations carry a **Reversed** badge. Managers see **Reverse** under reversible rows; it appears once per transfer. |
+
 ## Writing
 
 - Sentence case everywhere. Name things the way a café or shop would: items, locations, shelves, people.
@@ -115,6 +126,10 @@ Detail pages show a back link above the title (**‹ Catalog**, **‹ All locati
 | Moment | Copy |
 | --- | --- |
 | No items, editor | **No items yet** · "Use Add item to create your first one and choose the unit you count it in." |
+| Usage recorded | **Used 2 kg from Stockroom › Shelf A** |
+| Count | **Counted 15 kg at Stockroom › Shelf A. Adjusted by −0.25 kg.** (or "It matched.") |
+| Not enough stock | "There isn't enough stock at this location for that." |
+| Reverse a receipt | **Reverse this receipt of 10 kg?** · "Backroom records the opposite movement, so the history shows both." |
 | No items, employee | **No items yet** · "Items your team adds will appear here." + **View locations** |
 | No search results | **No items match "espresso"** · "Check the spelling, or search by SKU instead." + **Clear search** |
 | Placement added | **Stockroom › Shelf A added** |

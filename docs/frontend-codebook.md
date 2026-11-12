@@ -12,6 +12,7 @@ How the design system is implemented in the React, TypeScript and plain-CSS fron
 | [workspace.css](../frontend/src/workspace.css) | **Layout only**: brand, public pages (landing, auth, chooser), the workspace shell (sidebar, top bar, bottom tab bar), page header, toolbar, detail grid, activity list. Reads tokens, defines none. |
 | [icons.tsx](../frontend/src/icons.tsx) | `Icon` component and the outline icon set. Add new glyphs here in the same 20 px / 1.75 stroke style. |
 | [components.tsx](../frontend/src/components.tsx) | `Brand`, `BrandMark`, `PageHeader`, `Field`, `Dialog`, `Badge`, `Empty`, `Loading`, `ErrorMessage`, `SuccessMessage`, `Pager`, plus the `useResource` / `useAll` data hooks. |
+| [stock.tsx](../frontend/src/stock.tsx) | Stock UI: `formatQuantity`, `locationPath`, `useStockLocations` (active leaves with parent labels), `StockDialog` (one sheet for receive/usage/waste/transfer/count/opening, with a per-sheet operation key reused on retry), `SlotSheet` (role-filtered actions for one location), `MovementList`, `ReverseDialog`. |
 | [workspace.tsx](../frontend/src/workspace.tsx) | Shell, the `destinations` array (one list drives both sidebar and tab bar, filtered by role), `AccountMenu`, Settings page. |
 | [catalog.tsx](../frontend/src/catalog.tsx), [locations.tsx](../frontend/src/locations.tsx), [people.tsx](../frontend/src/people.tsx), [auth.tsx](../frontend/src/auth.tsx), [App.tsx](../frontend/src/App.tsx) | Screens. Own their copy, pending states and navigation after success. |
 

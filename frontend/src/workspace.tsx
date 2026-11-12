@@ -14,7 +14,7 @@ export function useWorkspace() { return useOutletContext<Workspace>(); }
 
 /** One source of truth for destinations: drives the desktop sidebar and the phone tab bar. */
 const destinations: { path: string; label: string; icon: IconName; roles: Role[] }[] = [
-  { path: 'items', label: 'Catalog', icon: 'catalog', roles: ['OWNER', 'MANAGER', 'EMPLOYEE'] },
+  { path: 'items', label: 'Inventory', icon: 'catalog', roles: ['OWNER', 'MANAGER', 'EMPLOYEE'] },
   { path: 'locations', label: 'Locations', icon: 'location', roles: ['OWNER', 'MANAGER', 'EMPLOYEE'] },
   { path: 'activity', label: 'Activity', icon: 'activity', roles: ['OWNER', 'MANAGER'] },
   { path: 'people', label: 'People', icon: 'people', roles: ['OWNER'] },
