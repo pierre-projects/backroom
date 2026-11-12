@@ -3,8 +3,12 @@ import type { FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { query, send } from './api';
 import { Badge, Dialog, Empty, ErrorMessage, Field, Loading, PageHeader, Pager, useAll, useResource } from './components';
-import type { Item, Page, StorageLocation } from './types';
+import { Icon } from './icons';
+import type { Item, LocationType, Page, StorageLocation } from './types';
+import { unitNames } from './types';
 import { useWorkspace } from './workspace';
+
+const typeNames: Record<LocationType, string> = { ROOM: 'Room', SHELF: 'Shelf', CABINET: 'Cabinet', BIN: 'Bin' };
 
 function LocationForm({ location, parentId, saved, cancel }: { location?: StorageLocation; parentId?: string; saved: (location: StorageLocation) => void; cancel: () => void }) {
   const { base } = useWorkspace();
@@ -33,8 +37,16 @@ function LocationForm({ location, parentId, saved, cancel }: { location?: Storag
       saved(result);
     } catch (value) { setError(value); } finally { setPending(false); }
   }
-  return <form onSubmit={submit}><ErrorMessage error={error ?? locations.error} /><Field label="Location name"><input name="name" defaultValue={location?.name} maxLength={120} required /></Field><Field label="Location type"><select name="type" defaultValue={location?.type ?? (parentId ? 'SHELF' : 'ROOM')}><option value="ROOM">Room</option><option value="SHELF">Shelf</option><option value="CABINET">Cabinet</option><option value="BIN">Bin</option></select></Field><Field label="Parent location"><select name="parentId" defaultValue={location?.parentId ?? parentId ?? ''} disabled={!locations.data}><option value="">No parent — top level</option>{locations.data?.filter(candidate => !forbidden.has(candidate.id)).map(candidate => <option value={candidate.id} key={candidate.id}>{candidate.name}</option>)}</select></Field><div className="form-actions"><button type="button" className="button secondary" onClick={cancel}>Cancel</button><button className="button primary" disabled={pending || !locations.data}>{pending ? 'Saving…' : location ? 'Save location' : 'Create location'}</button></div></form>;
+  return <form onSubmit={submit}>
+    <ErrorMessage error={error ?? locations.error} />
+    <Field label="Location name"><input name="name" defaultValue={location?.name} maxLength={120} required /></Field>
+    <Field label="Location type"><select name="type" defaultValue={location?.type ?? (parentId ? 'SHELF' : 'ROOM')}>{Object.entries(typeNames).map(([value, name]) => <option key={value} value={value}>{name}</option>)}</select></Field>
+    {/* Remount once the list loads so the default parent can be selected; otherwise a child is saved at the top level. */}
+    <Field label="Inside"><select key={locations.data ? 'ready' : 'loading'} name="parentId" defaultValue={location?.parentId ?? parentId ?? ''} disabled={!locations.data}><option value="">Nothing — top level</option>{locations.data?.filter(candidate => !forbidden.has(candidate.id)).map(candidate => <option value={candidate.id} key={candidate.id}>{candidate.name}</option>)}</select></Field>
+    <div className="form-actions"><button type="button" className="button secondary" onClick={cancel}>Cancel</button><button className="button primary" disabled={pending || !locations.data}>{pending ? 'Saving…' : location ? 'Save location' : 'Create location'}</button></div>
+  </form>;
 }
+
 export function LocationsPage() {
   const { locationId } = useParams();
   const { base, canEdit, organization } = useWorkspace();
@@ -60,17 +72,71 @@ export function LocationsPage() {
   if (current.error) return <ErrorMessage error={current.error} retry={current.reload} />;
   if (locationId && !current.data) return <Loading />;
   const value = current.data;
-  return <>{value && <Link className="back-link" to={root + '/locations' + (value.parentId ? '/' + value.parentId : '')}>← {value.parentId ? 'Parent location' : 'All locations'}</Link>}
-    <PageHeader eyebrow={value ? 'STORAGE LOCATION' : 'A HOME FOR EVERYTHING'} title={value?.name ?? 'Locations'} description={value ? 'Child locations and the items expected here.' : 'Organize your rooms, shelves, cabinets, and bins.'}>
-      {canEdit && !value?.archived && <><button className="button primary" onClick={() => setDialog('create')}>{value ? '+ Add child location' : '+ Add location'}</button>{value && <><button className="button secondary" onClick={() => setDialog('edit')}>Edit location</button><button className="button secondary" onClick={() => setDialog('archive')}>Archive location</button></>}</>}
+  const editable = canEdit && !value?.archived;
+  const addButton = <button type="button" className="button primary" onClick={() => setDialog('create')}><Icon name="plus" />{value ? 'Add child location' : 'Add location'}</button>;
+  return <>
+    <PageHeader
+      back={value ? { to: root + '/locations' + (value.parentId ? '/' + value.parentId : ''), label: value.parentId ? 'Parent location' : 'All locations' } : undefined}
+      title={value?.name ?? 'Locations'}
+      description={value ? undefined : 'Rooms, shelves, cabinets and bins where items are kept.'}>
+      {editable && <>{addButton}{value && <><button type="button" className="button secondary" onClick={() => setDialog('edit')}>Edit location</button><button type="button" className="button secondary" onClick={() => setDialog('archive')}>Archive location</button></>}</>}
     </PageHeader>
-    {value && <p className="location-status"><Badge>{value.type.toLowerCase()}</Badge> <Badge>{value.archived ? 'Archived' : 'Active'}</Badge></p>}
-    <div className="toolbar"><form className="search-form" onSubmit={event => { event.preventDefault(); setQ(String(new FormData(event.currentTarget).get('search'))); setPage(0); }}><input name="search" aria-label="Search locations" type="search" placeholder="Search locations" /><button className="button secondary">Search</button></form><label className="checkbox"><input type="checkbox" checked={archived} onChange={event => { setArchived(event.target.checked); setPage(0); }} /> Include archived</label></div>
-    <ErrorMessage error={list.error} retry={list.reload} />{!list.data && !list.error && <Loading />}
-    {list.data && (list.data.items.length ? <div className="location-grid">{list.data.items.map(location => <Link className="location-card panel" key={location.id} to={root + '/locations/' + location.id}><span className="location-symbol" aria-hidden="true">▦</span><Badge>{location.type.toLowerCase()}</Badge><h2>{location.name}</h2><span className="muted">{location.archived ? 'Archived' : 'View location →'}</span></Link>)}</div> : <Empty title={value ? 'No child locations' : q ? 'No matching locations' : 'Give your stock a home'}>{value ? 'This location can hold expected item placements when active.' : q ? 'Try another location name.' : canEdit ? 'Start with a stockroom, then add shelves or bins as needed.' : 'Your team has not created any locations yet.'}</Empty>)}
-    {list.data && <Pager data={list.data} onPage={setPage} />}
-    {value && <section className="panel"><h2>Expected items</h2><ErrorMessage error={contents.error} retry={contents.reload} />{!contents.data && !contents.error && <Loading />}{contents.data?.items.length === 0 && <p className="muted">No items are assigned directly to this location.</p>}<ul className="record-list">{contents.data?.items.map(item => <li key={item.id}><Link to={root + '/items/' + item.id}>{item.name}</Link><span className="mono muted">{item.sku}</span></li>)}</ul>{contents.data && <Pager data={contents.data} onPage={setContentsPage} />}</section>}
-    {(dialog === 'create' || dialog === 'edit') && <Dialog title={dialog === 'edit' ? 'Edit location' : 'Add location'} close={() => setDialog(null)}><LocationForm location={dialog === 'edit' ? value : undefined} parentId={dialog === 'create' ? locationId : undefined} cancel={() => setDialog(null)} saved={location => { setDialog(null); list.reload(); current.reload(); navigate(root + '/locations/' + location.id); }} />{dialog === 'edit' && <button className="text-button" onClick={current.reload}>Reload current record</button>}</Dialog>}
-    {dialog === 'archive' && <Dialog title="Archive location" close={() => setDialog(null)}><p>Archive <strong>{value?.name}</strong>? Active child locations and item placements must be removed or moved first.</p><ErrorMessage error={error} /><div className="form-actions"><button className="button secondary" onClick={() => setDialog(null)}>Cancel</button><button className="button primary" disabled={pending} onClick={() => void archive()}>Confirm archive</button></div></Dialog>}
+    {value && <p className="location-meta"><Badge>{typeNames[value.type]}</Badge>{value.archived && <Badge tone="warning">Archived</Badge>}</p>}
+
+    <section aria-labelledby="child-locations">
+      {value && <h2 className="section-heading" id="child-locations">Inside {value.name}</h2>}
+      {!value && <h2 className="sr-only" id="child-locations">All locations</h2>}
+      <div className="toolbar">
+        <form className="search-form" role="search" onSubmit={event => { event.preventDefault(); setQ(String(new FormData(event.currentTarget).get('search')).trim()); setPage(0); }}>
+          <div className="search-input"><Icon name="search" /><input name="search" aria-label="Search locations" type="search" placeholder="Search locations" defaultValue={q} key={q} /></div>
+          <button className="button secondary">Search</button>
+        </form>
+        <label className="checkbox"><input type="checkbox" checked={archived} onChange={event => { setArchived(event.target.checked); setPage(0); }} /> Include archived</label>
+      </div>
+      <ErrorMessage error={list.error} retry={list.reload} />
+      {!list.data && !list.error && <div className="panel table-panel"><Loading variant="list" label="Loading locations" /></div>}
+      {list.data && (list.data.items.length ? <div className="panel table-panel">
+        <table className="data-table">
+          <thead><tr><th scope="col">Location</th><th scope="col">Type</th><th scope="col"><span className="sr-only">Open</span></th></tr></thead>
+          <tbody>{list.data.items.map(location => <tr key={location.id} className="linked">
+            <td><span className="name-line"><Link className="record-link" to={root + '/locations/' + location.id}>{location.name}</Link>{location.archived && <Badge>Archived</Badge>}</span><span className="cell-secondary mobile-only">{typeNames[location.type]}</span></td>
+            <td className="desktop-only">{typeNames[location.type]}</td>
+            <td className="cell-chevron"><Icon name="chevronRight" /></td>
+          </tr>)}</tbody>
+        </table>
+        <Pager data={list.data} onPage={setPage} />
+      </div> : <Empty icon={q ? 'search' : 'location'}
+        title={q ? 'No locations match “' + q + '”' : value ? 'Nothing inside ' + value.name : 'No locations yet'}
+        action={q ? <button type="button" className="button secondary" onClick={() => { setQ(''); setPage(0); }}>Clear search</button> : undefined}>
+        {q ? 'Check the spelling and try again.' : value ? 'Add a shelf, cabinet or bin here, or place items directly in this location.' : canEdit ? 'Use Add location to start with a room such as Stockroom, then add shelves or bins inside it.' : 'Locations your team adds will appear here.'}
+      </Empty>)}
+    </section>
+
+    {value && <section className="panel table-panel" aria-labelledby="expected-items">
+      <div className="panel-header"><div><h2 id="expected-items">Expected items</h2><p>Items placed directly in this location.</p></div></div>
+      <ErrorMessage error={contents.error} retry={contents.reload} />
+      {!contents.data && !contents.error && <Loading variant="list" label="Loading items" />}
+      {contents.data?.items.length === 0 && <p className="panel-body muted">No items are placed here yet.</p>}
+      {!!contents.data?.items.length && <table className="data-table">
+        <thead><tr><th scope="col">Item</th><th scope="col">SKU</th><th scope="col">Base unit</th><th scope="col"><span className="sr-only">Open</span></th></tr></thead>
+        <tbody>{contents.data.items.map(item => <tr key={item.id} className="linked">
+          <td><Link className="record-link" to={root + '/items/' + item.id}>{item.name}</Link><span className="cell-secondary mobile-only">{item.sku ? <span className="mono">{item.sku}</span> : 'No SKU'} · {unitNames[item.unit]}</span></td>
+          <td className="desktop-only mono">{item.sku ?? <><span aria-hidden="true">—</span><span className="sr-only">No SKU</span></>}</td>
+          <td className="desktop-only">{unitNames[item.unit]}</td>
+          <td className="cell-chevron"><Icon name="chevronRight" /></td>
+        </tr>)}</tbody>
+      </table>}
+      {contents.data && <Pager data={contents.data} onPage={setContentsPage} />}
+    </section>}
+
+    {(dialog === 'create' || dialog === 'edit') && <Dialog title={dialog === 'edit' ? 'Edit location' : value ? 'Add location inside ' + value.name : 'Add location'} close={() => setDialog(null)}>
+      <LocationForm location={dialog === 'edit' ? value : undefined} parentId={dialog === 'create' ? locationId : undefined} cancel={() => setDialog(null)} saved={location => { setDialog(null); list.reload(); current.reload(); navigate(root + '/locations/' + location.id); }} />
+      {dialog === 'edit' && <p className="dialog-footer-link"><button type="button" className="text-button" onClick={current.reload}>Reload latest version</button></p>}
+    </Dialog>}
+    {dialog === 'archive' && <Dialog title={'Archive ' + value?.name + '?'} close={() => setDialog(null)}>
+      <p>Move or remove any active locations and items inside it first. Its history stays available.</p>
+      <ErrorMessage error={error} />
+      <div className="form-actions"><button type="button" className="button secondary" data-autofocus onClick={() => setDialog(null)}>Cancel</button><button type="button" className="button danger" disabled={pending} onClick={() => void archive()}>{pending ? 'Archiving…' : 'Archive'}</button></div>
+    </Dialog>}
   </>;
 }

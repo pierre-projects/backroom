@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { BrowserRouter, Link, Navigate, Route, Routes, useParams } from 'react-router';
 import { AuthPage, AuthProvider, InvitationPage, OrganizationChooser, Protected, useAuth } from './auth';
 import { Brand } from './components';
+import { Icon } from './icons';
 import { CatalogPage, ItemDetail } from './catalog';
 import { LocationsPage } from './locations';
 import { ActivityPage, PeoplePage } from './people';
@@ -18,7 +19,22 @@ function Landing() {
     }).catch(() => { if (!controller.signal.aborted) setConnected(false); });
     return () => controller.abort();
   }, []);
-  return <div className="app"><header className="header"><Brand /><Link className="button secondary" to={auth.user ? '/app' : '/signin'}>{auth.user ? 'Your businesses' : 'Sign in'}</Link></header><main className="main"><div className="eyebrow"><span /> A place for the work behind the work</div><h1>Everything behind<br />the business.</h1><p className="intro">Your stock. Your spaces. Your team.<br />A clearer picture of what keeps things moving.</p><div className="landing-actions"><Link className="button primary" to={auth.user ? '/app' : '/register'}>{auth.user ? 'Open your workspace' : 'Get started'}</Link><span className="muted">Made for small teams.</span></div><section className="connection-card"><span className="card-label">Connection status</span><div className="status-content" role="status"><span className={'status-indicator ' + (connected ? 'connected' : connected === false ? 'unavailable' : 'checking')} /><div><h2>{connected ? 'Connected' : connected === false ? 'Unable to connect' : 'Connecting…'}</h2><p>{connected ? 'Backroom is up and running.' : 'Check back in a moment.'}</p></div></div></section></main><footer className="footer"><span>Made for the everyday.</span><span>Backroom</span></footer></div>;
+  return <div className="public-shell">
+    <header className="public-header"><Brand /><div className="header-actions">{auth.user ? <Link className="button secondary" to="/app">Your businesses</Link> : <Link className="button ghost" to="/signin">Sign in</Link>}</div></header>
+    <main className="landing-main" id="main">
+      <h1>Know what you stock and where it’s kept.</h1>
+      <p className="landing-lead">Backroom gives small teams one catalog of items, a map of their rooms, shelves and bins, and the right access for each person.</p>
+      <div className="landing-actions">{auth.user
+        ? <Link className="button primary" to="/app">Open your workspace</Link>
+        : <><Link className="button primary" to="/register">Create an account</Link><Link className="button secondary" to="/signin">Sign in</Link></>}</div>
+      <ul className="feature-list">
+        <li><Icon name="catalog" /><div><strong>Catalog</strong><span>Items with SKUs and the unit you count them in.</span></div></li>
+        <li><Icon name="location" /><div><strong>Locations</strong><span>Rooms, shelves, cabinets and bins, and the items expected in each.</span></div></li>
+        <li><Icon name="people" /><div><strong>People</strong><span>Owners, managers and employees, each with the access they need.</span></div></li>
+      </ul>
+    </main>
+    <footer className="public-footer"><span>Backroom</span><span className="status-line" role="status"><span className={'status-dot ' + (connected ? 'connected' : connected === false ? 'unavailable' : '')} aria-hidden="true" />{connected ? 'Service available' : connected === false ? 'Service unavailable — try again shortly' : 'Checking service…'}</span></footer>
+  </div>;
 }
 function LocationRoute() {
   const { locationId } = useParams();
@@ -45,6 +61,6 @@ export function App() {
       <Route path="activity" element={<ActivityPage />} />
       <Route path="settings" element={<OrganizationSettings />} />
     </Route>
-    <Route path="*" element={<div className="public-shell"><Brand /><h1>Page not found</h1><Link to="/app">Your businesses</Link></div>} />
+    <Route path="*" element={<div className="auth-shell"><Brand /><section className="auth-card"><h1>Page not found</h1><p className="auth-lead">The link may be out of date.</p><Link className="button secondary full-width" to="/app">Go to your businesses</Link></section></div>} />
   </Routes></AuthProvider></BrowserRouter>;
 }

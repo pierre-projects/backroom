@@ -36,17 +36,17 @@ test('owner onboarding, placements, invitation acceptance and employee restricti
   const orgId = /organizations\/([^/]+)/.exec(page.url())![1];
 
   await page.getByRole('link', { name: /Locations/ }).click();
-  await page.getByRole('button', { name: '+ Add location', exact: true }).click();
+  await page.getByRole('button', { name: 'Add location', exact: true }).click();
   await page.getByLabel('Location name', { exact: true }).fill('Stockroom');
   await page.getByRole('button', { name: 'Create location', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Stockroom', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: '+ Add child location', exact: true }).click();
+  await page.getByRole('button', { name: 'Add child location', exact: true }).click();
   await page.getByLabel('Location name', { exact: true }).fill('Shelf A');
   await page.getByRole('button', { name: 'Create location', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Shelf A', exact: true })).toBeVisible();
 
   await page.getByRole('link', { name: /Catalog/, exact: false }).first().click();
-  await page.getByRole('button', { name: '+ Add item', exact: true }).click();
+  await page.getByRole('button', { name: 'Add item', exact: true }).click();
   await page.getByLabel('Item name', { exact: true }).fill('Coffee beans');
   await page.getByLabel('SKU (optional)', { exact: true }).fill(' beans-01 ');
   await page.getByLabel('Base unit', { exact: true }).selectOption('KILOGRAM');
@@ -54,12 +54,12 @@ test('owner onboarding, placements, invitation acceptance and employee restricti
   await expect(page.getByRole('heading', { name: 'Coffee beans', exact: true })).toBeVisible();
   await expect(page.getByText('BEANS-01', { exact: true })).toBeVisible();
   const itemUrl = page.url();
-  await page.getByLabel('Storage location', { exact: true }).selectOption({ label: 'Shelf A' });
+  await page.getByLabel('Storage location', { exact: true }).selectOption({ label: 'Stockroom › Shelf A' });
   await page.getByRole('button', { name: 'Add placement', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Shelf A', exact: true })).toBeVisible();
 
   await page.getByRole('link', { name: /People/ }).click();
-  await page.getByRole('button', { name: '+ Invite staff', exact: true }).click();
+  await page.getByRole('button', { name: 'Invite staff', exact: true }).click();
   await page.getByRole('button', { name: 'Create invitation', exact: true }).click();
   const invitation = await page.getByLabel('Invitation link', { exact: true }).inputValue();
   expect(invitation).toContain('/invite#token=');
@@ -74,7 +74,7 @@ test('owner onboarding, placements, invitation acceptance and employee restricti
   await expect(employee.getByRole('heading', { name: business, exact: true })).toBeVisible();
   await employee.getByRole('button', { name: 'Accept invitation', exact: true }).click();
   await expect(employee.getByRole('heading', { name: 'Catalog', exact: true })).toBeVisible();
-  await expect(employee.getByRole('button', { name: '+ Add item', exact: true })).toHaveCount(0);
+  await expect(employee.getByRole('button', { name: 'Add item', exact: true })).toHaveCount(0);
   await expect(employee.getByRole('link', { name: /People/ })).toHaveCount(0);
   await employee.getByRole('link', { name: 'Coffee beans', exact: true }).click();
   await expect(employee.getByRole('link', { name: 'Shelf A', exact: true })).toBeVisible();
@@ -96,7 +96,7 @@ test('owner onboarding, placements, invitation acceptance and employee restricti
   await expect(employeeRow).toBeVisible();
   await page.screenshot({ path: test.info().outputPath('owner-people.png'), fullPage: true });
   await employeeRow.getByRole('button', { name: 'Remove access', exact: true }).click();
-  await page.getByRole('button', { name: 'Confirm change', exact: true }).click();
+  await page.getByRole('button', { name: 'Remove', exact: true }).click();
   await expect(employeeRow.getByText('Inactive', { exact: true })).toBeVisible();
   await employee.goto(itemUrl);
   await expect(employee.getByRole('alert')).toContainText('unavailable');
@@ -114,7 +114,7 @@ test('organization switching, metadata editing, archival and expired sessions', 
   const first = 'Shop ' + unique();
   const second = 'Studio ' + unique();
   await createOrganization(page, first);
-  await page.getByRole('button', { name: '+ Add item', exact: true }).click();
+  await page.getByRole('button', { name: 'Add item', exact: true }).click();
   await page.getByLabel('Item name', { exact: true }).fill('Display bottles');
   await page.getByLabel('Base unit', { exact: true }).selectOption('EACH');
   await page.getByRole('button', { name: 'Create item', exact: true }).click();
@@ -129,13 +129,13 @@ test('organization switching, metadata editing, archival and expired sessions', 
   await page.getByRole('link', { name: /Switch business/ }).click();
   await createOrganization(page, second);
   await expect(page.getByRole('link', { name: 'Bottle display', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'A clearer picture starts here', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'No items yet', exact: true })).toBeVisible();
   await page.getByRole('link', { name: /Switch business/ }).click();
   await page.getByRole('link').filter({ has: page.getByRole('heading', { name: first, exact: true }) }).click();
   await page.getByRole('link', { name: 'Bottle display', exact: true }).click();
   await page.getByRole('button', { name: 'Archive item', exact: true }).click();
-  await page.getByRole('button', { name: 'Confirm archive', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'A clearer picture starts here', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Archive', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'No items yet', exact: true })).toBeVisible();
   await page.getByLabel('Include archived', { exact: true }).check();
   await expect(page.getByRole('link', { name: 'Bottle display', exact: true })).toBeVisible();
 
@@ -144,5 +144,5 @@ test('organization switching, metadata editing, archival and expired sessions', 
   expect(signedOut.status()).toBe(204);
   await page.getByRole('link', { name: /Locations/ }).click();
   await expect(page).toHaveURL(/\/signin$/);
-  await expect(page.getByRole('heading', { name: 'Welcome back.', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sign in to Backroom', exact: true })).toBeVisible();
 });
