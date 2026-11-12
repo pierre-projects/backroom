@@ -33,7 +33,7 @@ async function request<T>(path: string, options: RequestInit, as: 'json' | 'blob
   try {
     const method = options.method ?? 'GET';
     const headers = new Headers(options.headers);
-    headers.set('Accept', as === 'blob' ? 'application/pdf, application/problem+json' : 'application/json');
+    headers.set('Accept', as === 'blob' ? 'application/pdf, text/csv, application/problem+json' : 'application/json');
     if (method !== 'GET' && method !== 'HEAD') {
       await ensureCsrf();
       headers.set(csrf!.headerName, csrf!.token);

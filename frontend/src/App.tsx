@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Link, Navigate, Route, Routes, useParams } from 'react-router';
-import { AuthPage, AuthProvider, InvitationPage, OrganizationChooser, Protected, useAuth } from './auth';
+import { AuthPage, AuthProvider, InvitationPage, OrganizationChooser, Protected, ResetPasswordPage, useAuth } from './auth';
 import { Brand } from './components';
 import { Icon } from './icons';
 import { CatalogPage, ItemDetail } from './catalog';
@@ -11,6 +11,9 @@ import { ScanPage } from './scan';
 import { PrintLabelsPage } from './labels';
 import { CodeLinkPage } from './codes';
 import { RequestDetailPage, RequestsPage } from './requests';
+import { HomePage } from './home';
+import { SearchPage } from './search';
+import { ExportsPage } from './exports';
 
 function Landing() {
   const auth = useAuth();
@@ -54,10 +57,14 @@ export function App() {
     <Route path="/signin" element={<AuthPage mode="signin" />} />
     <Route path="/register" element={<AuthPage mode="register" />} />
     <Route path="/invite" element={<InvitationPage />} />
+    <Route path="/reset" element={<ResetPasswordPage />} />
     <Route path="/s/:token" element={<CodeLinkPage />} />
     <Route path="/app" element={<Protected><OrganizationChooser /></Protected>} />
     <Route path="/app/organizations/:orgId" element={<Protected><WorkspaceLayout /></Protected>}>
-      <Route index element={<Navigate to="items" replace />} />
+      <Route index element={<Navigate to="home" replace />} />
+      <Route path="home" element={<HomePage />} />
+      <Route path="search" element={<SearchPage />} />
+      <Route path="exports" element={<ExportsPage />} />
       <Route path="items" element={<CatalogPage />} />
       <Route path="items/:itemId" element={<ItemRoute />} />
       <Route path="locations" element={<LocationRoute />} />

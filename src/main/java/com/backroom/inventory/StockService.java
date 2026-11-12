@@ -27,6 +27,7 @@ import static com.backroom.inventory.StockOperationType.*;
 @Service
 @Transactional
 public class StockService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(StockService.class);
     private final ItemRepository items;
     private final PlacementRepository placements;
     private final StockBalanceRepository balances;
@@ -203,19 +204,46 @@ public class StockService {
                 .filter(balance -> active.contains(balance.locationId) || balance.quantity.signum() > 0).toList();
         var history = movements.locationsWithHistory(orgId, itemId);
         var labels = locations.labels(orgId, rows.stream().map(balance -> balance.locationId).toList());
+        var minimums = new HashMap<UUID, BigDecimal>();
+        placements.findByOrganizationIdAndItemIdAndActiveTrue(orgId, itemId).forEach(placement -> {
+            if (placement.minimumQuantity != null) minimums.put(placement.locationId, placement.minimumQuantity);
+        });
         return rows.stream().map(balance -> {
             var label = labels.get(balance.locationId);
+            var minimum = minimums.get(balance.locationId);
             return new StockDtos.BalanceView(itemId, balance.locationId, label == null ? null : label.name(),
                     label == null ? null : label.parentName(), Quantities.text(balance.quantity), balance.getVersion(),
-                    history.contains(balance.locationId));
+                    history.contains(balance.locationId), minimum == null ? null : Quantities.text(minimum),
+                    minimum != null && balance.quantity.compareTo(minimum) < 0);
         }).sorted(Comparator.comparing((StockDtos.BalanceView view) -> Objects.toString(view.parentName(), ""))
                 .thenComparing(view -> Objects.toString(view.locationName(), "")).thenComparing(StockDtos.BalanceView::locationId)).toList();
+    }
+
+    /** Every slot below its minimum, sorted by item name. */
+    @Transactional(readOnly=true)
+    public PageResponse<StockDtos.LowStockView> lowStock(UUID orgId, UUID locationId, int page, int size) {
+        access.require(orgId);
+        if (locationId != null) locations.requireExists(orgId, locationId);
+        var result = balances.lowStock(orgId, locationId, PageResponse.request(page, size, Sort.unsorted()));
+        var rows = result.getContent();
+        var itemIds = rows.stream().map(row -> ((StockBalance) row[0]).itemId).toList();
+        var names = new HashMap<UUID, Item>();
+        if (!itemIds.isEmpty()) items.findAllById(itemIds).forEach(item -> names.put(item.getId(), item));
+        var labels = locations.labels(orgId, rows.stream().map(row -> ((StockBalance) row[0]).locationId).toList());
+        return PageResponse.from(result.map(row -> {
+            var balance = (StockBalance) row[0];
+            var minimum = (BigDecimal) row[1];
+            var item = names.get(balance.itemId);
+            var label = labels.get(balance.locationId);
+            return new StockDtos.LowStockView(balance.itemId, item.name, item.sku, item.unit, balance.locationId,
+                    label == null ? null : label.name(), label == null ? null : label.parentName(),
+                    Quantities.text(balance.quantity), Quantities.text(minimum), Quantities.text(minimum.subtract(balance.quantity)));
+        }));
     }
 
     @Transactional(readOnly=true)
     public PageResponse<StockDtos.MovementView> movements(UUID orgId, UUID itemId, UUID locationId, int page, int size) {
         access.require(orgId);
-        if (itemId == null && locationId == null) throw ApiException.badRequest("Choose an item or a location.");
         if (itemId != null) items.findByOrganizationIdAndId(orgId, itemId).orElseThrow(ApiException::notFound);
         if (locationId != null) locations.requireExists(orgId, locationId);
         var result = movements.search(orgId, itemId, locationId, PageResponse.request(page, size, Sort.by(Sort.Direction.DESC, "createdAt", "id")));
@@ -257,6 +285,7 @@ public class StockService {
         if (!existing.actorId.equals(actor.userId()) || !existing.payloadHash.equals(hash(fingerprint))) {
             throw ApiException.conflict("IDEMPOTENCY_KEY_REUSED", "This operation key was already used for a different request.");
         }
+        log.info("Stock operation replayed: type={} operationKey={} organizationId={}", existing.type, existing.operationKey, orgId);
         return fullView(orgId, existing, true);
     }
 
@@ -270,8 +299,11 @@ public class StockService {
     private StockOperation claim(UUID orgId, StockOperationType type, Item item, UUID key, String fingerprint,
                                  String reference, String note, UUID reverses) {
         var actor = access.actor();
-        return operations.saveAndFlush(new StockOperation(orgId, type, item.getId(), actor.userId(), actor.displayName(), key,
+        var claimed = operations.saveAndFlush(new StockOperation(orgId, type, item.getId(), actor.userId(), actor.displayName(), key,
                 hash(fingerprint), blankToNull(reference), blankToNull(note), reverses));
+        // Ids only: never names, notes, references or quantities. A rollback after this line is logged as the request's failure.
+        log.info("Stock operation recorded: type={} operationKey={} organizationId={}", type, key, orgId);
+        return claimed;
     }
 
     /** A destination must be an active leaf. Creates or reactivates the placement and its balance, holding their row locks. */

@@ -2,6 +2,7 @@ package com.backroom.access;
 
 import com.backroom.audit.AuditService;
 import com.backroom.shared.PageResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -14,8 +15,10 @@ class OrganizationController {
     private final InvitationService invitations;
     private final AccessPolicy access;
     private final AuditService audit;
-    OrganizationController(OrganizationService organizations, InvitationService invitations, AccessPolicy access, AuditService audit) {
-        this.organizations = organizations; this.invitations = invitations; this.access = access; this.audit = audit;
+    private final PasswordResetService resets;
+    OrganizationController(OrganizationService organizations, InvitationService invitations, AccessPolicy access, AuditService audit,
+                           PasswordResetService resets) {
+        this.organizations = organizations; this.invitations = invitations; this.access = access; this.audit = audit; this.resets = resets;
     }
     @GetMapping
     PageResponse<AccessDtos.OrganizationView> list(@RequestParam(defaultValue="0") int page, @RequestParam(defaultValue="20") int size) {
@@ -34,6 +37,11 @@ class OrganizationController {
     @PatchMapping("/{orgId}/members/{userId}")
     AccessDtos.MemberView changeRole(@PathVariable UUID orgId, @PathVariable UUID userId, @Valid @RequestBody AccessDtos.RoleInput input) {
         return organizations.changeRole(orgId, userId, input.role());
+    }
+    @PostMapping("/{orgId}/members/{userId}/password-reset") @ResponseStatus(HttpStatus.CREATED)
+    AccessDtos.IssuedReset passwordReset(@PathVariable UUID orgId, @PathVariable UUID userId, HttpServletResponse response) {
+        response.setHeader("Cache-Control", "no-store");
+        return resets.issue(orgId, userId);
     }
     @DeleteMapping("/{orgId}/members/{userId}") @ResponseStatus(HttpStatus.NO_CONTENT)
     void deactivate(@PathVariable UUID orgId, @PathVariable UUID userId) { organizations.deactivate(orgId, userId); }

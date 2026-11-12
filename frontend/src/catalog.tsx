@@ -6,7 +6,7 @@ import { Badge, Dialog, Empty, ErrorMessage, Field, Loading, PageHeader, Pager, 
 import { Icon } from './icons';
 import type { Item, Page, StockBalance, StockMovement } from './types';
 import { unitNames } from './types';
-import { MovementList, ReverseDialog, SlotSheet, StockDialog, formatQuantity, locationPath, useStockLocations } from './stock';
+import { MinimumDialog, MinimumNote, MovementList, ReverseDialog, SlotSheet, StockDialog, formatQuantity, locationPath, shortfall, useStockLocations } from './stock';
 import type { StockAction } from './stock';
 import { CodesPanel } from './codes';
 import { ItemRequestsPanel, NewRequestDialog } from './requests';
@@ -44,7 +44,17 @@ export function CatalogPage() {
   const [archived, setArchived] = useState(false);
   const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
-  const items = useResource<Page<Item>>(query(base + '/items', { page, q, includeArchived: archived }));
+  const [params, setParams] = useSearchParams();
+  const lowOnly = params.get('low') === '1';
+  const at = params.get('location') ?? '';
+  const places = useStockLocations(base);
+  const setFilter = (name: 'low' | 'location', value: string) => {
+    const next = new URLSearchParams(params);
+    if (value) next.set(name, value); else next.delete(name);
+    setParams(next, { replace: true }); setPage(0);
+  };
+  const setLowOnly = (value: boolean) => setFilter('low', value ? '1' : '');
+  const items = useResource<Page<Item>>(query(base + '/items', { page, q, includeArchived: archived, lowStock: lowOnly || undefined, locationId: at || undefined }));
   const root = '/app/organizations/' + organization.id;
   const addButton = <button type="button" className="button primary" onClick={() => setCreating(true)}><Icon name="plus" />Add item</button>;
   const selection = useLabelSelection();
@@ -56,6 +66,11 @@ export function CatalogPage() {
         <div className="search-input"><Icon name="search" /><input name="search" type="search" aria-label="Search inventory" placeholder="Search by name or SKU" defaultValue={q} key={q} /></div>
         <button className="button secondary">Search</button>
       </form>
+      <select className="toolbar-select" aria-label="Filter by location" value={at} onChange={event => setFilter('location', event.target.value)}>
+        <option value="">All locations</option>
+        {places.leaves?.map(choice => <option key={choice.id} value={choice.id}>{choice.label}</option>)}
+      </select>
+      <label className="checkbox"><input type="checkbox" checked={lowOnly} onChange={event => setLowOnly(event.target.checked)} /> Low stock only</label>
       <label className="checkbox"><input type="checkbox" checked={archived} onChange={event => { setArchived(event.target.checked); setPage(0); }} /> Include archived</label>
     </div>
     <ErrorMessage error={items.error} retry={items.reload} />
@@ -66,7 +81,7 @@ export function CatalogPage() {
         <tbody>{items.data.items.map(item => <tr key={item.id} className={selection.selecting ? 'selectable' : 'linked'}>
           <td><span className="name-line">{selection.selecting
             ? <label className="select-line"><input type="checkbox" checked={selection.selected.includes(item.id)} disabled={item.archived} onChange={() => selection.toggle(item.id)} /><span className="record-link">{item.name}</span></label>
-            : <Link className="record-link" to={root + '/items/' + item.id}>{item.name}</Link>}{item.archived && <Badge>Archived</Badge>}</span>
+            : <Link className="record-link" to={root + '/items/' + item.id}>{item.name}</Link>}{item.archived && <Badge>Archived</Badge>}{item.low && !item.archived && <Badge tone="warning">Low</Badge>}</span>
             <span className="cell-secondary mobile-only">{item.sku ? <span className="mono">{item.sku}</span> : 'No SKU'} · <span className="numeric">{formatQuantity(item.onHand, item.unit)}</span> on hand</span></td>
           <td className="desktop-only mono">{item.sku ?? <><span aria-hidden="true">—</span><span className="sr-only">No SKU</span></>}</td>
           <td className="desktop-only cell-number numeric">{formatQuantity(item.onHand, item.unit)}</td>
@@ -74,7 +89,11 @@ export function CatalogPage() {
         </tr>)}</tbody>
       </table>
       <Pager data={items.data} onPage={setPage} />
-    </div> : q
+    </div> : at && !q && !lowOnly
+      ? <Empty icon="location" title={'Nothing is kept at ' + places.label(at)} action={<button type="button" className="button secondary" onClick={() => setFilter('location', '')}>Show all locations</button>}>Items appear here once they have stock or an expected place at this location.</Empty>
+      : lowOnly && !q
+      ? <Empty icon="catalog" title="Nothing is low" action={<button type="button" className="button secondary" onClick={() => setLowOnly(false)}>Show all items</button>}>Items show here when a location drops below its minimum. Set minimums from an item's stock rows.</Empty>
+      : q
       ? <Empty icon="search" title={'No items match “' + q + '”'} action={<button type="button" className="button secondary" onClick={() => { setQ(''); setPage(0); }}>Clear search</button>}>Check the spelling, or search by SKU instead.</Empty>
       : <Empty icon="catalog" title="No items yet" action={canEdit ? undefined : <Link className="button secondary" to={root + '/locations'}>View locations</Link>}>{canEdit ? 'Use Add item to create your first one and choose the unit you count it in.' : 'Items your team adds will appear here.'}</Empty>)}
     {creating && <Dialog title="Add item" close={() => setCreating(false)}><ItemForm cancel={() => setCreating(false)} saved={item => navigate(root + '/items/' + item.id)} /></Dialog>}
@@ -96,7 +115,8 @@ export function ItemDetail() {
   const [action, setAction] = useState<{ kind: StockAction; locationId?: string }>();
   const [reversing, setReversing] = useState<StockMovement>();
   const [addingPlace, setAddingPlace] = useState(false);
-  const [requesting, setRequesting] = useState<{ locationId?: string }>();
+  const [requesting, setRequesting] = useState<{ locationId?: string; quantity?: string }>();
+  const [minimum, setMinimum] = useState<StockBalance>();
   const [error, setError] = useState<unknown>();
   const [pending, setPending] = useState(false);
   const [status, setStatus] = useState('');
@@ -111,7 +131,7 @@ export function ItemDetail() {
     if (requested === 'request' && !item.data.archived) setRequesting({});
     setSearchParams({}, { replace: true });
   }, [requested, item.data, balances.data, setSearchParams]);
-  const finished = (message: string) => { setAction(undefined); setReversing(undefined); setStatus(message); refresh(); };
+  const finished = (message: string) => { setAction(undefined); setReversing(undefined); setMinimum(undefined); setStatus(message); refresh(); };
   async function mutate(path: string, method: string, data?: unknown, message = '') {
     setPending(true); setError(undefined); setStatus('');
     try { await send(path, method, data); refresh(); if (message) setStatus(message); return true; }
@@ -155,7 +175,8 @@ export function ItemDetail() {
         <thead><tr><th scope="col">Location</th><th scope="col" className="cell-number">On hand</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
         <tbody>{slots.map(slot => <tr key={slot.locationId}>
           <td><span className="location-path">{slot.parentName && <span className="location-parent">{slot.parentName}<span aria-hidden="true"> ›</span></span>}<Link className="record-link" to={root + '/locations/' + slot.locationId}>{slot.locationName}</Link></span>
-            <span className="cell-secondary mobile-only numeric">{formatQuantity(slot.quantity, value.unit)} on hand</span></td>
+            <span className="cell-secondary mobile-only numeric">{formatQuantity(slot.quantity, value.unit)} on hand</span>
+            <MinimumNote slot={slot} unit={value.unit} /></td>
           <td className="desktop-only cell-number numeric">{formatQuantity(slot.quantity, value.unit)}</td>
           <td className="cell-actions">{!value.archived && <button type="button" className="button secondary compact" onClick={() => setSheet(slot)}>Update<span className="sr-only"> {locationPath(slot)}</span></button>}</td>
         </tr>)}</tbody>
@@ -179,12 +200,14 @@ export function ItemDetail() {
       {history.data && <MovementList movements={history.data.items} unit={value.unit} canReverse={editable} reverse={setReversing} />}
       {history.data && <Pager data={history.data} onPage={setHistoryPage} />}
     </section>
-    {requesting && <NewRequestDialog item={{ id: value.id, name: value.name, unit: value.unit }} locationId={requesting.locationId} close={() => setRequesting(undefined)}
+    {requesting && <NewRequestDialog item={{ id: value.id, name: value.name, unit: value.unit }} locationId={requesting.locationId} quantity={requesting.quantity} close={() => setRequesting(undefined)}
       done={request => navigate(root + '/requests/' + request.id)} />}
-    {sheet && <SlotSheet slot={sheet} item={value} canManage={editable} close={() => setSheet(undefined)} request={() => { const slot = sheet; setSheet(undefined); setRequesting({ locationId: slot.locationId }); }}
+    {sheet && <SlotSheet slot={sheet} item={value} canManage={editable} close={() => setSheet(undefined)} request={() => { const slot = sheet; setSheet(undefined); setRequesting({ locationId: slot.locationId, quantity: shortfall(slot) ?? undefined }); }}
+      setMinimum={() => { const slot = sheet; setSheet(undefined); setMinimum(slot); }}
       pick={kind => { setSheet(undefined); setAction({ kind, locationId: sheet.locationId }); }}
       remove={() => { const slot = sheet; setSheet(undefined); void mutate(base + '/items/' + itemId + '/placements/' + slot.locationId, 'DELETE', undefined, locationPath(slot) + ' removed'); }} />}
     {action && <StockDialog action={action.kind} item={value} base={base} balances={slots} locationId={action.locationId} close={() => setAction(undefined)} done={finished} />}
+    {minimum && <MinimumDialog slot={minimum} item={value} base={base} close={() => setMinimum(undefined)} done={finished} />}
     {reversing && <ReverseDialog movement={reversing} unit={value.unit} base={base} close={() => setReversing(undefined)} done={finished} />}
     {editing && <Dialog title="Edit item" close={() => setEditing(false)}><ItemForm key={value.version} item={value} unitLocked={unitLocked} cancel={() => setEditing(false)} saved={() => { setEditing(false); item.reload(); }} /><p className="dialog-footer-link"><button type="button" className="text-button" onClick={item.reload}>Reload latest version</button></p></Dialog>}
     {archiving && <Dialog title={'Archive ' + value.name + '?'} close={() => setArchiving(false)}>

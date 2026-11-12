@@ -19,6 +19,11 @@ interface ItemRepository extends JpaRepository<Item, UUID> {
             select i from Item i where i.organizationId = :orgId
             and (:includeArchived = true or i.archived = false)
             and (:q = '' or lower(i.name) like concat('%', lower(:q), '%') or lower(i.sku) like concat('%', lower(:q), '%'))
+            and (:locationId is null or exists (select p from ItemPlacement p where p.organizationId = :orgId and p.itemId = i.id
+                 and p.locationId = :locationId and p.active = true))
+            and (:lowStock = false or exists (select p from ItemPlacement p, StockBalance b where p.organizationId = :orgId and p.itemId = i.id
+                 and p.active = true and p.minimumQuantity is not null and b.organizationId = :orgId and b.itemId = p.itemId
+                 and b.locationId = p.locationId and b.quantity < p.minimumQuantity))
             """)
-    Page<Item> search(UUID orgId, boolean includeArchived, String q, Pageable pageable);
+    Page<Item> search(UUID orgId, boolean includeArchived, String q, UUID locationId, boolean lowStock, Pageable pageable);
 }

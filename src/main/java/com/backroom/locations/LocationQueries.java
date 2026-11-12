@@ -34,6 +34,13 @@ public class LocationQueries {
                 location.parentId == null ? null : parents.get(location.parentId), location.type.name(), location.archived)));
         return result;
     }
+    /** Unarchived locations whose name contains the text, by name, with their parent's name. */
+    public List<Summary> search(UUID orgId, String q, int limit) {
+        var found = locations.search(orgId, null, false, false, false, q, com.backroom.shared.PageResponse.named(0, limit)).getContent();
+        var parents = names(orgId, found.stream().map(location -> location.parentId).filter(Objects::nonNull).toList());
+        return found.stream().map(location -> new Summary(location.getId(), location.name,
+                location.parentId == null ? null : parents.get(location.parentId), location.type.name(), location.archived)).toList();
+    }
     public void requireExists(UUID orgId, UUID id) {
         locations.findByOrganizationIdAndId(orgId, id).orElseThrow(ApiException::notFound);
     }

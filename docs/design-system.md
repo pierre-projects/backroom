@@ -81,11 +81,16 @@ Tabs are filtered by role, so the bar never needs a "More" item:
 
 | Role | Destinations |
 | --- | --- |
-| Employee | Inventory, Locations, Scan, Requests |
-| Manager | Inventory, Locations, Scan, Requests, Activity |
-| Owner | Inventory, Locations, Scan, Requests, Activity |
+| Employee | Home, Inventory, Scan, Requests, Locations |
+| Manager | Home, Inventory, Scan, Requests, Locations |
+| Owner | Home, Inventory, Scan, Requests, Locations |
 
-Owners reach **People** and **Business settings** from the account menu on phones and an **Administration** group under the main navigation on desktop. The Requests tab carries a count badge: requests waiting for review (managers) or approved requests waiting for delivery (employees).
+Every role gets the same five tabs, with the most frequent first. Less frequent pages live in the account menu on phones and in an **Administration** group under the main navigation on desktop, filtered by role:
+
+- **Activity** and **Export data**: Owners and Managers.
+- **People** and **Business settings**: Owners only.
+
+On desktop a compact search field sits above the main navigation; on phones the search field is at the top of Home. The Requests tab carries a count badge: requests waiting for review (managers) or approved requests waiting for delivery (employees).
 
 Detail pages show a back link above the title (**‹ Inventory**, **‹ All locations**, **‹ Parent location**). A "Skip to content" link is the first focusable element.
 
@@ -137,6 +142,19 @@ Detail pages show a back link above the title (**‹ Inventory**, **‹ All loca
 | **Request detail** | Title `R-12 · Item`. Quantities strip: Requested / Approved / Received / Still expected. A details panel with links to the item and location, then a timeline: requested, decided, each delivery (reversed ones struck through with a note), closed. Primary action is **Record delivery** while stock is expected; managers also see **Approve**/**Reject** or **Close short**. |
 | **Decision sheets** | The title asks the question ("Approve R-1?", "Close R-2 short?"). Approve pre-fills the requested quantity and says it can't be changed later. Reject and Close short need a reason and use the danger button. Delivery pre-fills what is still expected. |
 | **Duplicate warning** | The new-request sheet lists open requests for the same item and location in a warning notice, and the submit button changes to **Submit anyway**. |
+
+## Home and low-stock patterns
+
+| Pattern | Rules |
+| --- | --- |
+| **Home** | Title **Home**, a one-line description naming the business, and two actions: **Scan** (primary) and **Request stock**. Below it, the search field, the setup checklist when it applies, then cards. Desktop: **Low stock** (3/5 width) beside **Requests** (2/5), with **Recent activity** full width below. Phones: one column in that order. Cards are table panels: a header with a title, a one-line description and a text link (**See all 3**, **Open requests**, **All activity**). |
+| **Setup checklist** | Numbered steps, each with a round mark: empty, accent ring for the next step, or filled success with a check when done. Done steps turn muted. Only the next step has a primary button; the rest are secondary. Header reads "2 of 5 done" with a **Hide** text button. On phones the button drops below the step text. |
+| **Count tiles** | A row of tiles, each a large tabular number over a muted label ("Need review"), linking to the filtered list. Tiles are separated by hairlines, not boxed. |
+| **Minimum note** | Under the location name on a stock row: a **Low** warning badge (only when low), then "Min 5 L" in muted small text. The slot sheet subject adds "· min 5 L". |
+| **Low row** | Item name (link), location path, then "**3 L** of 5 L · short 2 L" with the current quantity in warning color. On the right: **Request** (secondary, prefilled with the shortfall) or "R-12 open" linking to the request that already covers it. |
+| **Search results** | A **Code match** first, as an accent-tinted card with the target's icon. Then **Items** and **Locations** panels, each saying how many matched, or "First 8 matches" when capped. |
+| **Export cards** | Two per row on desktop, one on phones. Each card has a title, one sentence saying what the file contains, From/To date fields for history files, and a secondary **Download CSV** button. A note under the cards says times are UTC and states the 50,000-row limit. |
+| **Reset link dialog** | Mirrors the invitation dialog. A confirm step explains what happens. Then a read-only link field with "it won't be shown again" help and **Copy link** (primary). |
 
 ## Writing
 

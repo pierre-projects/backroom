@@ -17,6 +17,8 @@ quantities, inventory actions, scanning, and replenishment come in later phases.
 - [Phase 2 inventory quantities and stock operations](docs/phase-2.md)
 - [Phase 3 labels and scanning](docs/phase-3.md)
 - [Phase 4 restock requests and deliveries](docs/phase-4.md)
+- [Phase 5 Home, low stock, search, exports and password resets](docs/phase-5.md)
+- [Operations: deploying, backups, restore drill, logs and incidents](docs/operations.md)
 - [Design system and visual specimen](docs/design-system.md)
 - [Frontend codebook](docs/frontend-codebook.md)
 
@@ -94,15 +96,18 @@ literal key/value pairs from `.env`; it never evaluates its contents as code.
 | SERVER_PORT | Host application port; default 8080 |
 | DATABASE_URL | Optional JDBC URL overriding the local database address |
 | DATABASE_USERNAME / DATABASE_PASSWORD | Optional credentials for an external database |
-| SESSION_COOKIE_SECURE | Set true when deployed behind HTTPS |
+| SESSION_COOKIE_SECURE | Set true when deployed behind HTTPS (the `prod` profile forces it) |
+| BACKROOM_PUBLIC_URL | Address printed into QR labels; required in production |
+| SPRING_PROFILES_ACTIVE | `prod` for deployments: see [operations](docs/operations.md) |
 | BACKROOM_API_URL | Optional Vite proxy destination |
 
 Compose automatically reads `.env`. Native Spring Boot reads environment
 variables; `scripts/env.ps1` loads the same values into your terminal.
 
 The database port is bound to 127.0.0.1. Local HTTP uses non-Secure cookies;
-production HTTPS must set `SESSION_COOKIE_SECURE=true`. No production credentials
-or provider account is included.
+deployments run with `SPRING_PROFILES_ACTIVE=prod`, which forces Secure cookies,
+requires `BACKROOM_PUBLIC_URL` and switches to JSON logs. No production credentials
+or provider account is included; [docs/operations.md](docs/operations.md) is the deploy guide.
 
 ## Verification
 
@@ -165,6 +170,18 @@ docker compose --profile app down
 Stopping containers does not remove the database volume. Keep that volume if you
 want to retain local data.
 
+## Backups and restore drill
+
+```powershell
+./scripts/backup.ps1          # backups/backroom-YYYYMMDD-HHmm.dump, newest 14 kept
+./scripts/restore-drill.ps1   # backup, restore into a scratch database, compare, drop
+```
+
+`./scripts/restore.ps1 -File <dump> -Database <name>` restores into any other database
+name; replacing the live database needs `-Force`. `./scripts/measure-memory.ps1`
+reports the app container's peak memory during the browser suite. See
+[docs/operations.md](docs/operations.md).
+
 ## Linux/macOS equivalent
 
 With Java 21, Node 24, npm 11, and Docker available:
@@ -218,10 +235,10 @@ GitHub Actions runs frontend compilation, Maven integration tests, a
 production-container smoke test, and isolated Playwright browser checks. It does
 not publish images or deploy services.
 
-Phases 1–3 (foundation; stock quantities and movement history; QR labels,
-barcodes and phone scanning) are merged. Phase 4 adds restock requests,
-approval and deliveries recorded against them; see
-[docs/phase-4.md](docs/phase-4.md).
+Phases 1–4 (foundation; stock quantities and movement history; QR labels,
+barcodes and phone scanning; restock requests and deliveries) are merged.
+Phase 5 adds Home, low-stock minimums, search, CSV exports and owner-issued
+password reset links; see [docs/phase-5.md](docs/phase-5.md).
 
 Printed QR labels encode `BACKROOM_PUBLIC_URL` (default `http://localhost:8080`).
 Set it to Backroom's permanent HTTPS address before printing labels for real

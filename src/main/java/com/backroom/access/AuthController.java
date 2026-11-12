@@ -11,7 +11,21 @@ import org.springframework.web.bind.annotation.*;
 class AuthController {
     private final AccountService accounts;
     private final AccessPolicy access;
-    AuthController(AccountService accounts, AccessPolicy access) { this.accounts = accounts; this.access = access; }
+    private final PasswordResetService resets;
+    AuthController(AccountService accounts, AccessPolicy access, PasswordResetService resets) { this.accounts = accounts; this.access = access; this.resets = resets; }
+
+    record TokenOnly(@jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Pattern(regexp="[A-Za-z0-9_-]{43}") String token) {}
+    record ResetDone(String email) {}
+    @PostMapping("/password-reset/preview")
+    AccessDtos.ResetPreview previewReset(@Valid @RequestBody TokenOnly input, HttpServletResponse response) {
+        response.setHeader("Cache-Control", "no-store");
+        return resets.preview(input.token());
+    }
+    @PostMapping("/password-reset")
+    ResetDone reset(@Valid @RequestBody AccessDtos.ResetInput input, HttpServletResponse response) {
+        response.setHeader("Cache-Control", "no-store");
+        return new ResetDone(resets.reset(input.token(), input.newPassword()));
+    }
 
     record CsrfView(String token, String headerName, String parameterName) {}
     @GetMapping("/csrf")

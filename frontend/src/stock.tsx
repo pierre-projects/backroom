@@ -131,22 +131,65 @@ export function StockDialog({ action, item, base, balances, locationId, close, d
 }
 
 /** Choices for one location row. Employees record usage, waste and receipts; managers also transfer, count and set starting stock. */
-export function SlotSheet({ slot, item, canManage, close, pick, remove, request }: {
-  slot: StockBalance; item: Item; canManage: boolean; close: () => void; pick: (action: StockAction) => void; remove?: () => void; request?: () => void;
+/** What is missing to reach the minimum, computed in thousandths so decimals stay exact. */
+export function shortfall(slot: { quantity: string; minimum: string | null }) {
+  if (!slot.minimum) return null;
+  const missing = Math.round(Number(slot.minimum) * 1000) - Math.round(Number(slot.quantity) * 1000);
+  return missing > 0 ? String(missing / 1000) : null;
+}
+
+/** "Min 4 kg" with a Low badge when the slot is under it. */
+export function MinimumNote({ slot, unit }: { slot: StockBalance; unit: Unit }) {
+  if (!slot.minimum) return null;
+  return <span className="minimum-note">{slot.low && <Badge tone="warning">Low</Badge>}<span className="numeric">Min {formatQuantity(slot.minimum, unit)}</span></span>;
+}
+
+export function MinimumDialog({ slot, item, base, close, done }: { slot: StockBalance; item: Item; base: string; close: () => void; done: (message: string) => void }) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<unknown>();
+  const unitLabel = unitShort[item.unit] ? ' (' + unitShort[item.unit] + ')' : '';
+  async function save(minimum: string | null) {
+    setPending(true); setError(undefined);
+    try {
+      await send(base + '/items/' + item.id + '/placements/' + slot.locationId + '/minimum', 'PUT', { minimum });
+      done(minimum ? 'Minimum at ' + locationPath(slot) + ' set to ' + formatQuantity(minimum, item.unit) : 'Minimum at ' + locationPath(slot) + ' removed');
+    } catch (value) { setError(value); } finally { setPending(false); }
+  }
+  return <Dialog title="Set a minimum" close={close}>
+    <p className="dialog-subject">{item.name} · {locationPath(slot)}</p>
+    <form onSubmit={event => { event.preventDefault(); void save(clean(new FormData(event.currentTarget).get('minimum'))); }}>
+      <ErrorMessage error={error} />
+      <Field label={'Keep at least' + unitLabel}>
+        <input name="minimum" inputMode={item.unit === 'EACH' ? 'numeric' : 'decimal'} autoComplete="off" required defaultValue={slot.minimum ?? ''}
+          pattern={item.unit === 'EACH' ? '[0-9]+' : '[0-9]+([.,][0-9]{1,3})?'} />
+        <small className="field-help">Below this, the item shows as low here. There is {formatQuantity(slot.quantity, item.unit)} now.</small>
+      </Field>
+      <div className="form-actions">
+        {slot.minimum && <button type="button" className="button ghost" disabled={pending} onClick={() => void save(null)}>Remove minimum</button>}
+        <button type="button" className="button secondary" onClick={close}>Cancel</button>
+        <button className="button primary" disabled={pending}>{pending ? 'Saving…' : 'Save minimum'}</button>
+      </div>
+    </form>
+  </Dialog>;
+}
+
+export function SlotSheet({ slot, item, canManage, close, pick, remove, request, setMinimum }: {
+  slot: StockBalance; item: Item; canManage: boolean; close: () => void; pick: (action: StockAction) => void; remove?: () => void; request?: () => void; setMinimum?: () => void;
 }) {
   const hasStock = Number(slot.quantity) > 0;
   const option = (icon: IconName, label: string, action: StockAction, hint?: string) =>
     <button type="button" className="menu-item sheet-option" onClick={() => pick(action)}><Icon name={icon} /><span>{label}{hint && <small>{hint}</small>}</span></button>;
   return <Dialog title={locationPath(slot)} close={close}>
-    <p className="dialog-subject">{item.name} · <span className="numeric">{formatQuantity(slot.quantity, item.unit)}</span> on hand</p>
+    <p className="dialog-subject">{item.name} · <span className="numeric">{formatQuantity(slot.quantity, item.unit)}</span> on hand{slot.minimum && <> · <span className="numeric">min {formatQuantity(slot.minimum, item.unit)}</span></>}</p>
     <div className="sheet-options">
       {hasStock && option('use', 'Record usage', 'usage')}
       {hasStock && option('waste', 'Record waste', 'waste', 'Spoiled, broken or expired')}
       {option('receive', 'Receive stock here', 'receive')}
-      {request && <button type="button" className="menu-item sheet-option" onClick={request}><Icon name="plus" /><span>Request more here<small>Ask a manager to restock this location</small></span></button>}
+      {request && <button type="button" className="menu-item sheet-option" onClick={request}><Icon name="plus" /><span>Request more here<small>{slot.low ? 'Prefilled with what is missing' : 'Ask a manager to restock this location'}</small></span></button>}
       {canManage && hasStock && option('transfer', 'Transfer from here', 'transfer')}
       {canManage && option('count', 'Count', 'count', 'Record what is physically there')}
       {canManage && !slot.hasHistory && option('start', 'Set starting quantity', 'opening')}
+      {canManage && setMinimum && <button type="button" className="menu-item sheet-option" onClick={setMinimum}><Icon name="alert" /><span>{slot.minimum ? 'Change minimum' : 'Set minimum'}<small>Show this item as low below a quantity</small></span></button>}
       {canManage && !hasStock && remove && <button type="button" className="menu-item sheet-option danger" onClick={remove}><Icon name="close" /><span>Remove this location from the item</span></button>}
     </div>
   </Dialog>;

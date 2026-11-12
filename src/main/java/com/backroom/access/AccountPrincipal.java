@@ -11,9 +11,12 @@ public final class AccountPrincipal implements UserDetails, CredentialsContainer
     private final String email;
     private final String displayName;
     private String passwordHash;
-    public AccountPrincipal(UUID userId, String email, String displayName, String passwordHash) {
-        this.userId=userId; this.email=email; this.displayName=displayName; this.passwordHash=passwordHash;
+    private final int credentialsVersion;
+    public AccountPrincipal(UUID userId, String email, String displayName, String passwordHash, int credentialsVersion) {
+        this.userId=userId; this.email=email; this.displayName=displayName; this.passwordHash=passwordHash; this.credentialsVersion=credentialsVersion;
     }
+    /** The account's credentials version when this session signed in. */
+    public int credentialsVersion() { return credentialsVersion; }
     public UUID userId() { return userId; }
     public String email() { return email; }
     public String displayName() { return displayName; }

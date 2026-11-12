@@ -17,3 +17,5 @@ frontend/*.tsbuildinfo
 .DS_Store
 Thumbs.db
 *.log
+# Local database backups (may contain business data)
+backups/

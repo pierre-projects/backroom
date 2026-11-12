@@ -18,7 +18,7 @@ services:
     restart: unless-stopped
   app:
     profiles: [app]
-    image: backroom:local
+    image: ${BACKROOM_IMAGE:-backroom:local}
     mem_limit: 512m
     build: .
     environment:

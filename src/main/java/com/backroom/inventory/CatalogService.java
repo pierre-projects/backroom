@@ -27,11 +27,14 @@ public class CatalogService {
         this.locations=locations; this.access=access; this.audit=audit;
     }
     @Transactional(readOnly=true)
-    public PageResponse<CatalogDtos.View> list(UUID orgId, boolean includeArchived, String q, int page, int size) {
+    public PageResponse<CatalogDtos.View> list(UUID orgId, boolean includeArchived, String q, UUID locationId, boolean lowStock, int page, int size) {
         access.require(orgId);
-        var result=items.search(orgId, includeArchived, q.strip(), PageResponse.named(page, size));
-        var totals=totals(orgId, result.stream().map(Item::getId).toList());
-        return PageResponse.from(result.map(item -> view(item, totals.get(item.getId()))));
+        if (locationId != null) locations.requireExists(orgId, locationId);
+        var result=items.search(orgId, includeArchived, q.strip(), locationId, lowStock, PageResponse.named(page, size));
+        var ids=result.stream().map(Item::getId).toList();
+        var totals=totals(orgId, ids);
+        var low=ids.isEmpty() ? Set.<UUID>of() : balances.lowAmong(orgId, ids);
+        return PageResponse.from(result.map(item -> view(item, totals.get(item.getId()), low.contains(item.getId()))));
     }
     @Transactional(readOnly=true)
     public CatalogDtos.View get(UUID orgId, UUID id) { access.require(orgId); return view(find(orgId, id)); }
@@ -75,7 +78,7 @@ public class CatalogService {
             throw ApiException.conflict("ITEM_HAS_STOCK", "Use, move or count this item's remaining stock to zero before archiving it.");
         }
         item.archived=true;
-        placements.findByOrganizationIdAndItemIdAndActiveTrue(orgId, id).forEach(placement -> placement.active=false);
+        placements.findByOrganizationIdAndItemIdAndActiveTrue(orgId, id).forEach(placement -> { placement.active=false; placement.minimumQuantity=null; });
         items.flush();
         record(orgId, "ITEM_ARCHIVED", "ITEM", id, metadata(item));
     }
@@ -109,7 +112,7 @@ public class CatalogService {
         if (balance.isPresent() && balance.get().quantity.signum() > 0) {
             throw ApiException.conflict("PLACEMENT_HAS_STOCK", "This location still holds stock of the item. Use, move or count it to zero first.");
         }
-        placement.active=false; placements.flush();
+        placement.active=false; placement.minimumQuantity=null; placements.flush();
         record(orgId, "PLACEMENT_REMOVED", "ITEM", itemId, Map.of("locationId", locationId.toString()));
     }
     private Item find(UUID orgId, UUID id) { return items.findByOrganizationIdAndId(orgId, id).orElseThrow(ApiException::notFound); }
@@ -126,11 +129,31 @@ public class CatalogService {
         }
     }
     private CatalogDtos.View view(Item item) {
-        return view(item, totals(item.getOrganizationId(), List.of(item.getId())).get(item.getId()));
+        var ids=List.of(item.getId());
+        return view(item, totals(item.getOrganizationId(), ids).get(item.getId()), !balances.lowAmong(item.getOrganizationId(), ids).isEmpty());
     }
-    private CatalogDtos.View view(Item item, BigDecimal onHand) {
+    private CatalogDtos.View view(Item item, BigDecimal onHand) { return view(item, onHand, false); }
+    private CatalogDtos.View view(Item item, BigDecimal onHand, boolean low) {
         return new CatalogDtos.View(item.getId(), item.name, item.sku, item.unit, item.archived, item.getVersion(),
-                Quantities.text(onHand == null ? BigDecimal.ZERO : onHand));
+                Quantities.text(onHand == null ? BigDecimal.ZERO : onHand), low);
+    }
+
+    /** Sets or clears the minimum for an item at one of its active locations. Owners and Managers. */
+    public void setMinimum(UUID orgId, UUID itemId, UUID locationId, BigDecimal value) {
+        access.lock(orgId, OWNER, MANAGER);
+        var item=find(orgId, itemId);
+        editable(item);
+        var placement=placements.findByOrganizationIdAndItemIdAndLocationId(orgId, itemId, locationId).filter(found -> found.active)
+                .orElseThrow(() -> ApiException.conflict("NOT_PLACED", "Add this location to the item before setting a minimum."));
+        placement.minimumQuantity = value == null ? null : Quantities.positive(item.unit, value);
+        placements.flush();
+        var name=locations.names(orgId, List.of(locationId)).get(locationId);
+        var metadata=new LinkedHashMap<String, String>();
+        metadata.put("name", item.name);
+        metadata.put("location", Objects.toString(name, ""));
+        metadata.put("unit", item.unit.name());
+        if (placement.minimumQuantity != null) metadata.put("minimum", Quantities.text(placement.minimumQuantity));
+        record(orgId, "MINIMUM_SET", "ITEM", itemId, metadata);
     }
     private Map<UUID, BigDecimal> totals(UUID orgId, Collection<UUID> itemIds) {
         var totals=new HashMap<UUID, BigDecimal>();
