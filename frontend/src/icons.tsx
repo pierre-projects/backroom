@@ -21,6 +21,13 @@ const paths = {
   alert: <><circle cx="10" cy="10" r="7" /><path d="M10 6.5v4M10 13.5v.01" /></>,
   box: <><rect x="3" y="4" width="14" height="12" rx="1.5" /><path d="M3 8h14M8 11h4" /></>,
   link: <><path d="M8.5 11.5a3 3 0 0 0 4.2 0l2.6-2.6a3 3 0 0 0-4.2-4.2l-.8.8" /><path d="M11.5 8.5a3 3 0 0 0-4.2 0l-2.6 2.6a3 3 0 0 0 4.2 4.2l.8-.8" /></>,
+  receive: <><path d="M10 3.5v9M6 9l4 4 4-4" /><path d="M3.5 13.5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2" /></>,
+  use: <><path d="M4.5 10h11" /><circle cx="10" cy="10" r="7" /></>,
+  waste: <><path d="M4 6h12M8 6V4.5h4V6M5.5 6l.8 10h7.4l.8-10" /><path d="M8.5 9v4.5M11.5 9v4.5" /></>,
+  transfer: <path d="M4 7h11l-3-3M16 13H5l3 3" />,
+  count: <><rect x="4.5" y="3.5" width="11" height="13.5" rx="1.5" /><path d="M7.5 3.5v2h5v-2M7.5 10l1.5 1.5 3.5-3.5M7.5 14h5" /></>,
+  undo: <><path d="M7 5 3.5 8.5 7 12" /><path d="M3.5 8.5h8a4.5 4.5 0 0 1 0 9H8" /></>,
+  start: <><path d="M5 17V3.5" /><path d="M5 4h9l-2 3 2 3H5" /></>,
   copy: <><rect x="7" y="7" width="9.5" height="9.5" rx="1.5" /><path d="M13 7V5a1.5 1.5 0 0 0-1.5-1.5h-6A1.5 1.5 0 0 0 4 5v6.5A1.5 1.5 0 0 0 5.5 13H7" /></>,
 } as const;
 

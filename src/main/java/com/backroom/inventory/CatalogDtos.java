@@ -8,6 +8,7 @@ public final class CatalogDtos {
     public record Edit(@NotBlank @Size(max=160) String name, @Size(max=80) String sku, @NotNull Unit unit,
                        @NotNull Long expectedVersion) {}
     public record Version(@NotNull Long expectedVersion) {}
-    public record View(UUID id, String name, String sku, Unit unit, boolean archived, Long version) {}
+    /** onHand is the total quantity across locations, or at one location when listing a location's items. */
+    public record View(UUID id, String name, String sku, Unit unit, boolean archived, Long version, String onHand) {}
     public record PlacementView(UUID id, UUID itemId, UUID locationId, String locationName) {}
 }

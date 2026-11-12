@@ -4,6 +4,7 @@ import com.backroom.access.*;
 import com.backroom.audit.AuditService;
 import com.backroom.locations.LocationQueries;
 import com.backroom.shared.*;
+import java.math.BigDecimal;
 import java.util.*;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -15,23 +16,33 @@ import static com.backroom.access.Role.*;
 public class CatalogService {
     private final ItemRepository items;
     private final PlacementRepository placements;
+    private final StockBalanceRepository balances;
+    private final StockMovementRepository movements;
     private final LocationQueries locations;
     private final AccessPolicy access;
     private final AuditService audit;
-    CatalogService(ItemRepository items, PlacementRepository placements, LocationQueries locations, AccessPolicy access, AuditService audit) {
-        this.items=items; this.placements=placements; this.locations=locations; this.access=access; this.audit=audit;
+    CatalogService(ItemRepository items, PlacementRepository placements, StockBalanceRepository balances, StockMovementRepository movements,
+                   LocationQueries locations, AccessPolicy access, AuditService audit) {
+        this.items=items; this.placements=placements; this.balances=balances; this.movements=movements;
+        this.locations=locations; this.access=access; this.audit=audit;
     }
     @Transactional(readOnly=true)
     public PageResponse<CatalogDtos.View> list(UUID orgId, boolean includeArchived, String q, int page, int size) {
         access.require(orgId);
-        return PageResponse.from(items.search(orgId, includeArchived, q.strip(), PageResponse.named(page, size)).map(this::view));
+        var result=items.search(orgId, includeArchived, q.strip(), PageResponse.named(page, size));
+        var totals=totals(orgId, result.stream().map(Item::getId).toList());
+        return PageResponse.from(result.map(item -> view(item, totals.get(item.getId()))));
     }
     @Transactional(readOnly=true)
     public CatalogDtos.View get(UUID orgId, UUID id) { access.require(orgId); return view(find(orgId, id)); }
     @Transactional(readOnly=true)
     public PageResponse<CatalogDtos.View> atLocation(UUID orgId, UUID locationId, int page, int size) {
         access.require(orgId); locations.requireExists(orgId, locationId);
-        return PageResponse.from(items.atLocation(orgId, locationId, PageResponse.named(page, size)).map(this::view));
+        var result=items.atLocation(orgId, locationId, PageResponse.named(page, size));
+        var here=new HashMap<UUID, BigDecimal>();
+        if (!result.isEmpty()) balances.findByOrganizationIdAndLocationIdAndItemIdIn(orgId, locationId, result.stream().map(Item::getId).toList())
+                .forEach(balance -> here.put(balance.itemId, balance.quantity));
+        return PageResponse.from(result.map(item -> view(item, here.getOrDefault(item.getId(), BigDecimal.ZERO))));
     }
     public CatalogDtos.View create(UUID orgId, CatalogDtos.Input input) {
         access.lock(orgId, OWNER, MANAGER);
@@ -46,6 +57,9 @@ public class CatalogService {
         var item=find(orgId, id);
         editable(item); item.checkVersion(input.expectedVersion());
         var sku=normalizeSku(input.sku()); checkSku(orgId, sku, id);
+        if (input.unit() != item.unit && movements.existsByOrganizationIdAndItemId(orgId, id)) {
+            throw ApiException.conflict("UNIT_LOCKED", "The unit can't change after stock has been recorded. Create a new item instead.");
+        }
         item.name=input.name().strip(); item.sku=sku; item.unit=input.unit();
         items.flush();
         record(orgId, "ITEM_UPDATED", "ITEM", id, metadata(item));
@@ -53,9 +67,13 @@ public class CatalogService {
     }
     public void archive(UUID orgId, UUID id, Long version) {
         access.lock(orgId, OWNER, MANAGER);
-        var item=find(orgId, id);
+        // Exclusive row lock: waits for in-flight stock commands, which share-lock the item.
+        var item=items.lockForUpdate(orgId, id).orElseThrow(ApiException::notFound);
         item.checkVersion(version);
         if (item.archived) return;
+        if (balances.existsByOrganizationIdAndItemIdAndQuantityGreaterThan(orgId, id, BigDecimal.ZERO)) {
+            throw ApiException.conflict("ITEM_HAS_STOCK", "Use, move or count this item's remaining stock to zero before archiving it.");
+        }
         item.archived=true;
         placements.findByOrganizationIdAndItemIdAndActiveTrue(orgId, id).forEach(placement -> placement.active=false);
         items.flush();
@@ -78,13 +96,19 @@ public class CatalogService {
         else if (placement.active) return placementView(placement, locations.names(orgId, List.of(locationId)).get(locationId));
         placement.active=true;
         placements.saveAndFlush(placement);
+        balances.insertIfMissing(orgId, itemId, locationId);
         record(orgId, "PLACEMENT_ADDED", "ITEM", itemId, Map.of("locationId", locationId.toString()));
         return placementView(placement, locations.names(orgId, List.of(locationId)).get(locationId));
     }
     public void removePlacement(UUID orgId, UUID itemId, UUID locationId) {
         access.lock(orgId, OWNER, MANAGER); find(orgId, itemId);
-        var placement=placements.findByOrganizationIdAndItemIdAndLocationId(orgId, itemId, locationId).orElseThrow(ApiException::notFound);
+        // Lock order matches stock commands: placement, then balance.
+        var placement=placements.lockSlot(orgId, itemId, locationId).orElseThrow(ApiException::notFound);
         if (!placement.active) return;
+        var balance=balances.lockSlot(orgId, itemId, locationId);
+        if (balance.isPresent() && balance.get().quantity.signum() > 0) {
+            throw ApiException.conflict("PLACEMENT_HAS_STOCK", "This location still holds stock of the item. Use, move or count it to zero first.");
+        }
         placement.active=false; placements.flush();
         record(orgId, "PLACEMENT_REMOVED", "ITEM", itemId, Map.of("locationId", locationId.toString()));
     }
@@ -102,7 +126,16 @@ public class CatalogService {
         }
     }
     private CatalogDtos.View view(Item item) {
-        return new CatalogDtos.View(item.getId(), item.name, item.sku, item.unit, item.archived, item.getVersion());
+        return view(item, totals(item.getOrganizationId(), List.of(item.getId())).get(item.getId()));
+    }
+    private CatalogDtos.View view(Item item, BigDecimal onHand) {
+        return new CatalogDtos.View(item.getId(), item.name, item.sku, item.unit, item.archived, item.getVersion(),
+                Quantities.text(onHand == null ? BigDecimal.ZERO : onHand));
+    }
+    private Map<UUID, BigDecimal> totals(UUID orgId, Collection<UUID> itemIds) {
+        var totals=new HashMap<UUID, BigDecimal>();
+        if (!itemIds.isEmpty()) balances.totals(orgId, itemIds).forEach(row -> totals.put((UUID) row[0], (BigDecimal) row[1]));
+        return totals;
     }
     private CatalogDtos.PlacementView placementView(ItemPlacement placement, String name) {
         return new CatalogDtos.PlacementView(placement.getId(), placement.itemId, placement.locationId, name);

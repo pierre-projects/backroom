@@ -1,9 +1,16 @@
 package com.backroom.locations;
 import java.util.*;
 import org.springframework.data.domain.*;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.*;
 
 interface LocationRepository extends JpaRepository<StorageLocation, UUID> {
+    @Lock(LockModeType.PESSIMISTIC_READ)
+    @Query("select l from StorageLocation l where l.organizationId = :orgId and l.id = :id")
+    Optional<StorageLocation> lockForShare(UUID orgId, UUID id);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select l from StorageLocation l where l.organizationId = :orgId and l.id = :id")
+    Optional<StorageLocation> lockForUpdate(UUID orgId, UUID id);
     Optional<StorageLocation> findByOrganizationIdAndId(UUID orgId, UUID id);
     List<StorageLocation> findByOrganizationIdAndIdIn(UUID orgId, Collection<UUID> ids);
     boolean existsByOrganizationIdAndParentIdAndArchivedFalse(UUID orgId, UUID parentId);

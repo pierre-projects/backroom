@@ -49,7 +49,8 @@ public class LocationService {
     }
     public void archive(UUID orgId, UUID id, Long version) {
         access.lock(orgId, OWNER, MANAGER);
-        var location=find(orgId, id);
+        // Exclusive row lock: waits for in-flight stock commands that share-lock this location.
+        var location=locations.lockForUpdate(orgId, id).orElseThrow(ApiException::notFound);
         location.checkVersion(version);
         if (location.archived) return;
         if (locations.existsByOrganizationIdAndParentIdAndArchivedFalse(orgId, id)) {
@@ -61,6 +62,8 @@ public class LocationService {
         record(location, "LOCATION_ARCHIVED");
     }
     private void validateParent(UUID orgId, UUID self, UUID parentId) {
+        // Lock the new parent first so a concurrent stock receipt cannot place stock on it while it gains a child.
+        if (parentId != null) locations.lockForUpdate(orgId, parentId).orElseThrow(ApiException::notFound);
         var cursor=parentId;
         var visited=new HashSet<UUID>();
         while (cursor != null) {

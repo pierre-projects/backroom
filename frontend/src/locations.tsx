@@ -5,8 +5,8 @@ import { query, send } from './api';
 import { Badge, Dialog, Empty, ErrorMessage, Field, Loading, PageHeader, Pager, useAll, useResource } from './components';
 import { Icon } from './icons';
 import type { Item, LocationType, Page, StorageLocation } from './types';
-import { unitNames } from './types';
 import { useWorkspace } from './workspace';
+import { formatQuantity } from './stock';
 
 const typeNames: Record<LocationType, string> = { ROOM: 'Room', SHELF: 'Shelf', CABINET: 'Cabinet', BIN: 'Bin' };
 
@@ -118,11 +118,11 @@ export function LocationsPage() {
       {!contents.data && !contents.error && <Loading variant="list" label="Loading items" />}
       {contents.data?.items.length === 0 && <p className="panel-body muted">No items are placed here yet.</p>}
       {!!contents.data?.items.length && <table className="data-table">
-        <thead><tr><th scope="col">Item</th><th scope="col">SKU</th><th scope="col">Base unit</th><th scope="col"><span className="sr-only">Open</span></th></tr></thead>
+        <thead><tr><th scope="col">Item</th><th scope="col">SKU</th><th scope="col" className="cell-number">On hand here</th><th scope="col"><span className="sr-only">Open</span></th></tr></thead>
         <tbody>{contents.data.items.map(item => <tr key={item.id} className="linked">
-          <td><Link className="record-link" to={root + '/items/' + item.id}>{item.name}</Link><span className="cell-secondary mobile-only">{item.sku ? <span className="mono">{item.sku}</span> : 'No SKU'} · {unitNames[item.unit]}</span></td>
+          <td><Link className="record-link" to={root + '/items/' + item.id}>{item.name}</Link><span className="cell-secondary mobile-only">{item.sku ? <span className="mono">{item.sku}</span> : 'No SKU'} · <span className="numeric">{formatQuantity(item.onHand, item.unit)}</span> here</span></td>
           <td className="desktop-only mono">{item.sku ?? <><span aria-hidden="true">—</span><span className="sr-only">No SKU</span></>}</td>
-          <td className="desktop-only">{unitNames[item.unit]}</td>
+          <td className="desktop-only cell-number numeric">{formatQuantity(item.onHand, item.unit)}</td>
           <td className="cell-chevron"><Icon name="chevronRight" /></td>
         </tr>)}</tbody>
       </table>}

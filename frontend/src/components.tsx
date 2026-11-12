@@ -85,13 +85,17 @@ export function Pager<T>({ data, onPage }: { data: Page<T>; onPage: (page: numbe
  * Initial focus: an element marked data-autofocus (use on Cancel for destructive tasks),
  * else the first editable field, else the first control.
  */
+/** The control that opened the outermost dialog, so a dialog opened from another dialog can still return focus there. */
+let dialogTrigger: HTMLElement | null = null;
 export function Dialog({ title, children, close }: { title: string; children: ReactNode; close: () => void }) {
   const container = useRef<HTMLElement>(null);
   const closeRef = useRef(close);
   closeRef.current = close;
   const headingId = useId();
   useEffect(() => {
-    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const active = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : null;
+    const previous = active?.isConnected ? active : dialogTrigger?.isConnected ? dialogTrigger : null;
+    dialogTrigger = previous;
     const root = document.getElementById('root');
     if (root) root.inert = true;
     const focusable = () => Array.from(container.current?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])') ?? []);
