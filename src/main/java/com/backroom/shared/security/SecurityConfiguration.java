@@ -54,7 +54,7 @@ class SecurityConfiguration {
                 .authorizeHttpRequests(authorize -> authorize
                         .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
                         .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/favicon.svg",
-                                "/signin", "/register", "/invite", "/app", "/app/**", "/actuator/health", "/api/v1/auth/csrf").permitAll()
+                                "/signin", "/register", "/invite", "/app", "/app/**", "/s/*", "/actuator/health", "/api/v1/auth/csrf").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll())

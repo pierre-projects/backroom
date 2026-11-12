@@ -13,8 +13,27 @@ public class LocationQueries {
     public record Label(String name, String parentName) {
         public String path() { return parentName == null ? name : parentName + " › " + name; }
     }
+    /** What a label or scan result shows for a location. */
+    public record Summary(UUID id, String name, String parentName, String type, boolean archived) {
+        public String path() { return parentName == null ? name : parentName + " › " + name; }
+    }
     private final LocationRepository locations;
     LocationQueries(LocationRepository locations) { this.locations=locations; }
+
+    public Summary require(UUID orgId, UUID id) {
+        var summary = summaries(orgId, List.of(id)).get(id);
+        if (summary == null) throw ApiException.notFound();
+        return summary;
+    }
+    public Map<UUID, Summary> summaries(UUID orgId, Collection<UUID> ids) {
+        var result = new HashMap<UUID, Summary>();
+        if (ids.isEmpty()) return result;
+        var found = locations.findByOrganizationIdAndIdIn(orgId, ids);
+        var parents = names(orgId, found.stream().map(location -> location.parentId).filter(Objects::nonNull).toList());
+        found.forEach(location -> result.put(location.getId(), new Summary(location.getId(), location.name,
+                location.parentId == null ? null : parents.get(location.parentId), location.type.name(), location.archived)));
+        return result;
+    }
     public void requireExists(UUID orgId, UUID id) {
         locations.findByOrganizationIdAndId(orgId, id).orElseThrow(ApiException::notFound);
     }
