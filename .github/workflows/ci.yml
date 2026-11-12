@@ -1,4 +1,4 @@
-name: Verify Phase 0
+name: Verify Backroom
 
 on:
   push:
@@ -39,6 +39,9 @@ jobs:
       - name: Build and smoke-test production container
         shell: pwsh
         run: ./scripts/smoke-test.ps1
+      - name: Browser onboarding and permission checks
+        shell: pwsh
+        run: ./scripts/e2e.ps1 -SkipBuild
       - name: Show container logs on failure
         if: failure()
         run: docker compose --profile app logs --tail 100

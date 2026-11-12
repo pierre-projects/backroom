@@ -43,6 +43,10 @@ foreach ($backroomAsset in $backroomAssets) {
 }
 $backroomUserId = (& docker compose exec -T app id -u | Out-String).Trim()
 if ($LASTEXITCODE -ne 0 -or $backroomUserId -eq '0') { throw 'The runtime must run as a non-root user.' }
+$backroomAppId = (& docker compose ps -q app | Out-String).Trim()
+if ($LASTEXITCODE -ne 0 -or -not $backroomAppId) { throw 'The application container could not be inspected.' }
+$backroomMemoryLimit = (& docker inspect --format '{{.HostConfig.Memory}}' $backroomAppId | Out-String).Trim()
+if ($LASTEXITCODE -ne 0 -or $backroomMemoryLimit -ne '536870912') { throw 'The application container must retain its 512 MB memory limit.' }
 
 # Create one uniquely named diagnostic table, then remove only that table.
 $backroomProbeSuffix = [guid]::NewGuid().ToString('N')
@@ -64,5 +68,5 @@ try {
         Invoke-BackroomSql ('DROP TABLE public.' + $backroomProbeTable) | Out-Null
     }
 }
-Write-Host 'PASS: health, packaged homepage, compiled assets, non-root runtime, and data persistence across container recreation.'
+Write-Host 'PASS: health, packaged homepage, compiled assets, non-root runtime, 512 MB limit, and data persistence across container recreation.'
 Write-Host ('Backroom is running at ' + $backroomBaseUrl)

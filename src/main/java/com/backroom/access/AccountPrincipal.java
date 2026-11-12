@@ -1,0 +1,25 @@
+package com.backroom.access;
+
+import java.io.Serializable;
+import java.util.*;
+import org.springframework.security.core.*;
+import org.springframework.security.core.userdetails.UserDetails;
+
+public final class AccountPrincipal implements UserDetails, CredentialsContainer, Serializable {
+    private static final long serialVersionUID = 1L;
+    private final UUID userId;
+    private final String email;
+    private final String displayName;
+    private String passwordHash;
+    public AccountPrincipal(UUID userId, String email, String displayName, String passwordHash) {
+        this.userId=userId; this.email=email; this.displayName=displayName; this.passwordHash=passwordHash;
+    }
+    public UUID userId() { return userId; }
+    public String email() { return email; }
+    public String displayName() { return displayName; }
+    @Override public Collection<? extends GrantedAuthority> getAuthorities() { return List.of(); }
+    @Override public String getPassword() { return passwordHash; }
+    @Override public String getUsername() { return email; }
+    @Override public void eraseCredentials() { passwordHash=null; }
+    @Override public String toString() { return "AccountPrincipal[userId=" + userId + "]"; }
+}

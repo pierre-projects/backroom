@@ -7,11 +7,15 @@ Spring Boot and PostgreSQL. Café operations and liquor-store inventory are
 reference workflows. The product emphasizes physical labels, practical recording
 effort, and trustworthy stock history.
 
-Phase 0 provides a runnable foundation. Accounts, organizations, inventory actions,
-and scanning arrive in later phases; the current landing page checks connectivity.
+Phase 1 provides accounts, organizations, staff invitations and roles, nested
+locations, a catalog, expected item placements, and activity history. Stock
+quantities, inventory actions, scanning, and replenishment come in later phases.
 
 - [PRD v1](backroom_prd_v1.md)
 - [Architecture and module boundaries](docs/architecture.md)
+- [Phase 1 behavior and API defaults](docs/phase-1.md)
+- [Design system and visual specimen](docs/design-system.md)
+- [Frontend codebook](docs/frontend-codebook.md)
 
 ## Requirements
 
@@ -61,7 +65,8 @@ API and health: http://localhost:8080/actuator/health
 npm --prefix frontend run dev
 ```
 
-Open http://localhost:5173. The page should show **Connected**. Vite proxies
+Open http://localhost:5173 and choose **Get started** to register. Create a business,
+add locations and catalog items, then invite an employee from People. Vite proxies
 `/api` and `/actuator` to Spring Boot; browser requests stay on one origin.
 
 ### Select Java for other Maven commands
@@ -106,13 +111,24 @@ This installs locked frontend dependencies, type-checks and compiles React,
 and runs Maven verification against real PostgreSQL Testcontainers. Docker
 unavailability is a failure, not a skipped test.
 
-The integration suite verifies PostgreSQL 17 connectivity, Flyway history
-initialization and repeat migration safety, minimal public health, anonymous API
-rejection, CSRF protection, and blocked administrative endpoints.
+The integration suite verifies PostgreSQL connectivity, migrations, session and
+CSRF behavior, tenant isolation, role changes, archival, invitation races,
+concurrent ownership/hierarchy changes, transactional audit rollback, and the
+existing infrastructure guarantees.
 
-There are no business-table migrations yet. Flyway initializes its schema
-history; the first versioned business migration belongs to Phase 1.
-Hibernate validates the schema and never creates business tables.
+Flyway applies three domain migrations for access, catalog/locations, and activity.
+Existing Phase 0 database volumes upgrade without being reset. Hibernate validates
+the schema and never creates business tables.
+
+### Browser verification
+
+```powershell
+./scripts/e2e.ps1
+```
+
+This runs Playwright against a separately named Compose project with a disposable
+database and random host ports. Your development data is not used. After building
+the current image, `./scripts/e2e.ps1 -SkipBuild` avoids rebuilding it.
 
 ## Run the production-style container
 
@@ -126,7 +142,8 @@ The multistage build compiles React and packages it inside the Spring Boot JAR.
 The final Java 21 image runs as a non-root user. Compose limits it to 512 MB
 with half available for the Java heap. Open http://localhost:8080.
 
-The smoke test checks health, the homepage, compiled assets, and the runtime user.
+The smoke test checks health, the homepage, compiled assets, the runtime user,
+and the 512 MB container memory limit.
 It also creates a uniquely named diagnostic table, recreates the PostgreSQL
 container against its existing volume, restarts the application, verifies the
 saved value, and removes that diagnostic table.
@@ -186,14 +203,18 @@ Use `pwsh ./scripts/smoke-test.ps1` for the same production-container checks.
   Subsequent builds use the local cache.
 - **npm ci reports EPERM on a native binding:** stop the Vite development server
   in its terminal, then run setup or verification again.
-- **Flyway reports no migrations:** expected in Phase 0. Schema history exists;
-  Phase 1 introduces business migrations.
+- **Flyway reports no migrations:** check that the current Phase 1 code/image is
+  running; three versioned migrations should be present.
+- **Signed out after a restart:** sessions are in memory. Sign in again; database
+  records are preserved. Accounts have no self-service recovery or verified email
+  yet, so establish a recovery process before using real business data.
 
 ## CI and next milestone
 
-GitHub Actions runs frontend compilation, Maven integration tests, and a
-production-container smoke test. It does not publish images or deploy services.
+GitHub Actions runs frontend compilation, Maven integration tests, a
+production-container smoke test, and isolated Playwright browser checks. It does
+not publish images or deploy services.
 
-Work is prepared on `chore/phase-0-setup`. Phase 1 introduces authentication,
-organizations, memberships, and the first business schema. Follow the PRD for
-subsequent inventory, scanning, and replenishment milestones.
+Phase 1 is prepared on `feature/phase-1-foundation`. Phase 2 introduces opening
+balances and transaction-safe stock operations. Follow the PRD for later scanning
+and replenishment milestones. PRD v1 is unchanged.
