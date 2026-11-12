@@ -28,6 +28,7 @@ import static com.backroom.restocking.RequestStatus.*;
 @Service
 @Transactional
 public class RestockService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(RestockService.class);
     private final RestockRequestRepository requests;
     private final RestockReceiptRepository receipts;
     private final StockService stock;
@@ -127,6 +128,7 @@ public class RestockService {
             var receipt = receipts.findByOrganizationIdAndStockOperationId(orgId, earlier.get());
             if (receipt.isPresent() && receipt.get().requestId.equals(id) && receipt.get().receiverId.equals(actor.userId())
                     && receipt.get().quantity.compareTo(quantity) == 0) {
+                log.info("Restock delivery replayed: type=RESTOCK_RECEIPT operationKey={} organizationId={}", in.operationKey(), orgId);
                 return detail(orgId, request, true);
             }
             throw ApiException.conflict("IDEMPOTENCY_KEY_REUSED", "This operation key was already used for a different request.");
@@ -143,6 +145,7 @@ public class RestockService {
         request.receivedQuantity = request.receivedQuantity.add(quantity);
         request.settle();
         touch(request);
+        log.info("Restock delivery recorded: type=RESTOCK_RECEIPT operationKey={} organizationId={}", in.operationKey(), orgId);
         record(orgId, "RESTOCK_RECEIVED", request, "quantity", Quantities.text(quantity), "received", Quantities.text(request.receivedQuantity));
         return detail(orgId, request, false);
     }

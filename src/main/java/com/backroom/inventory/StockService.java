@@ -27,6 +27,7 @@ import static com.backroom.inventory.StockOperationType.*;
 @Service
 @Transactional
 public class StockService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(StockService.class);
     private final ItemRepository items;
     private final PlacementRepository placements;
     private final StockBalanceRepository balances;
@@ -257,6 +258,7 @@ public class StockService {
         if (!existing.actorId.equals(actor.userId()) || !existing.payloadHash.equals(hash(fingerprint))) {
             throw ApiException.conflict("IDEMPOTENCY_KEY_REUSED", "This operation key was already used for a different request.");
         }
+        log.info("Stock operation replayed: type={} operationKey={} organizationId={}", existing.type, existing.operationKey, orgId);
         return fullView(orgId, existing, true);
     }
 
@@ -270,8 +272,11 @@ public class StockService {
     private StockOperation claim(UUID orgId, StockOperationType type, Item item, UUID key, String fingerprint,
                                  String reference, String note, UUID reverses) {
         var actor = access.actor();
-        return operations.saveAndFlush(new StockOperation(orgId, type, item.getId(), actor.userId(), actor.displayName(), key,
+        var claimed = operations.saveAndFlush(new StockOperation(orgId, type, item.getId(), actor.userId(), actor.displayName(), key,
                 hash(fingerprint), blankToNull(reference), blankToNull(note), reverses));
+        // Ids only: never names, notes, references or quantities. A rollback after this line is logged as the request's failure.
+        log.info("Stock operation recorded: type={} operationKey={} organizationId={}", type, key, orgId);
+        return claimed;
     }
 
     /** A destination must be an active leaf. Creates or reactivates the placement and its balance, holding their row locks. */

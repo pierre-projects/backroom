@@ -1,0 +1,34 @@
+# Production profile. Activate with SPRING_PROFILES_ACTIVE=prod behind an HTTPS proxy or platform router.
+# See docs/operations.md for every environment variable this profile reads.
+spring:
+  datasource:
+    hikari:
+      # Small hosts and free database tiers allow few connections; four covers Backroom's short transactions.
+      maximum-pool-size: 4
+      minimum-idle: 0
+  lifecycle:
+    # In-flight requests get this long to finish after SIGTERM before the JVM stops.
+    timeout-per-shutdown-phase: 20s
+server:
+  shutdown: graceful
+  # Trust X-Forwarded-Proto/Host from the platform's TLS proxy so redirects and secure cookies see HTTPS.
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        secure: true
+backroom:
+  # Required in production: the permanent HTTPS address printed into QR labels. Startup fails when it is missing.
+  public-base-url: ${BACKROOM_PUBLIC_URL:}
+management:
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+      probes:
+        enabled: true
+logging:
+  structured:
+    format:
+      # One JSON object per line (Elastic Common Schema); includes the requestId MDC field.
+      console: ecs
