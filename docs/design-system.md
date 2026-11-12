@@ -81,9 +81,11 @@ Tabs are filtered by role, so the bar never needs a "More" item:
 
 | Role | Destinations |
 | --- | --- |
-| Employee | Inventory, Locations |
-| Manager | Inventory, Locations, Activity |
-| Owner | Inventory, Locations, Activity, People, Settings |
+| Employee | Inventory, Locations, Scan |
+| Manager | Inventory, Locations, Scan, Activity |
+| Owner | Inventory, Locations, Scan, Activity, People |
+
+Owners reach **Business settings** from the account menu on phones and the gear beside their name on desktop.
 
 Detail pages show a back link above the title (**‹ Inventory**, **‹ All locations**, **‹ Parent location**). A "Skip to content" link is the first focusable element.
 
@@ -114,6 +116,17 @@ Detail pages show a back link above the title (**‹ Inventory**, **‹ All loca
 | **Location action sheet** | **Update** opens a sheet titled with the location path. It lists only the actions the person's role allows: Record usage, Record waste, Receive stock here, plus Transfer from here, Count and Set starting quantity for managers. A one-line hint sits under less obvious actions. |
 | **Stock sheet** | One sheet per operation, titled with the action ("Record usage"). The submit button repeats the title. The success message names the amount and place: "Used 2 kg from Stockroom › Shelf A". Server errors appear inline in the sheet, and the form keeps its values for a retry. |
 | **History** | Newest first. Each row has an icon tile and a past-tense title (Received, Used, Wasted, Moved out/in, Count adjustment, Starting quantity, Reversal), then `place · person`, any note or reference, the signed change, the balance after, and the time. Reversed operations carry a **Reversed** badge. Managers see **Reverse** under reversible rows; it appears once per transfer. |
+
+## Scanning and label patterns
+
+| Pattern | Rules |
+| --- | --- |
+| **Scan page** | Camera panel and result column side by side on desktop, stacked on phones. The camera never starts on its own; **Start camera** asks for permission. A white rounded aim frame over a dimmed preview. Manual entry ("Type a code or barcode") is always visible. |
+| **Result card** | Left border in the accent color for a found item or location, warning color for anything that needs attention. Kicker line names the type and the code in monospace. Primary action **Open item** / **Open location**, plus **Record usage** and **Receive** for items. **Scan again** sits under the card at full width. |
+| **Camera problems** | One error notice per cause (denied, no camera, needs HTTPS, failed to start), each saying what to do next. Never a dead end: manual entry stays usable. |
+| **Labels and barcodes panel** | On item and location pages. One row per active code (QR label, product barcodes) with the code in monospace. Managers see **Print label** / **Create label**, **Withdraw** / **Remove** (danger, confirmed) and an **Add a product barcode** field. Withdrawn codes are listed once, muted. |
+| **Print labels** | Label previews at true aspect ratio on white (a label is paper, even in dark mode). Paper choice as large radio cards, start position, and three numbered print steps including the calibration page. A warning notice while labels would point to a local address. |
+| **Selection mode** | **Print labels** on the Inventory and Locations lists switches rows to checkboxes, with a tinted bar showing the count and **Print N labels**. |
 
 ## Writing
 

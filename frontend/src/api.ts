@@ -18,10 +18,22 @@ async function ensureCsrf() {
   await csrfRequest;
 }
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
+  return request<T>(path, options, 'json');
+}
+/** Downloads a file (such as a label PDF) and saves it with the given name. */
+export async function download(path: string, filename: string, data?: unknown): Promise<void> {
+  const blob = await request<Blob>(path, { method: data === undefined ? 'GET' : 'POST', body: data === undefined ? undefined : JSON.stringify(data) }, 'blob');
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url; link.download = filename; link.rel = 'noopener';
+  document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+async function request<T>(path: string, options: RequestInit, as: 'json' | 'blob'): Promise<T> {
   try {
     const method = options.method ?? 'GET';
     const headers = new Headers(options.headers);
-    headers.set('Accept', 'application/json');
+    headers.set('Accept', as === 'blob' ? 'application/pdf, application/problem+json' : 'application/json');
     if (method !== 'GET' && method !== 'HEAD') {
       await ensureCsrf();
       headers.set(csrf!.headerName, csrf!.token);
@@ -35,6 +47,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
       throw new ApiError(response.status, problem.errorCode ?? 'REQUEST_FAILED', problem.detail ?? 'The action could not be completed.', problem.fieldErrors);
     }
     if (response.status === 204) return undefined as T;
+    if (as === 'blob') return await response.blob() as T;
     return await response.json() as T;
   } catch (error) {
     if (error instanceof ApiError || (error instanceof DOMException && error.name === 'AbortError')) throw error;

@@ -29,6 +29,10 @@ public class AccessPolicy {
         checkRole(membership, allowed);
         return membership.role;
     }
+    /** True when the signed-in user is an active member; never throws for non-members. */
+    public boolean isActiveMember(UUID orgId) {
+        return memberships.existsByOrganizationIdAndUserIdAndActiveTrue(orgId, actor().userId());
+    }
     public void lock(UUID orgId, Role... allowed) {
         if (!memberships.existsByOrganizationIdAndUserIdAndActiveTrue(orgId, actor().userId())) {
             throw ApiException.notFound();

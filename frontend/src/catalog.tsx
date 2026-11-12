@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { query, send } from './api';
 import { Badge, Dialog, Empty, ErrorMessage, Field, Loading, PageHeader, Pager, SuccessMessage, useResource } from './components';
 import { Icon } from './icons';
@@ -8,6 +8,8 @@ import type { Item, Page, StockBalance, StockMovement } from './types';
 import { unitNames } from './types';
 import { MovementList, ReverseDialog, SlotSheet, StockDialog, formatQuantity, locationPath, useStockLocations } from './stock';
 import type { StockAction } from './stock';
+import { CodesPanel } from './codes';
+import { SelectionBar, useLabelSelection } from './labels';
 import { useWorkspace } from './workspace';
 
 function ItemForm({ item, saved, cancel, unitLocked = false }: { item?: Item; saved: (item: Item) => void; cancel: () => void; unitLocked?: boolean }) {
@@ -44,8 +46,10 @@ export function CatalogPage() {
   const items = useResource<Page<Item>>(query(base + '/items', { page, q, includeArchived: archived }));
   const root = '/app/organizations/' + organization.id;
   const addButton = <button type="button" className="button primary" onClick={() => setCreating(true)}><Icon name="plus" />Add item</button>;
+  const selection = useLabelSelection();
   return <>
-    <PageHeader title="Inventory" description="What you stock, how much, and where.">{canEdit && addButton}</PageHeader>
+    <PageHeader title="Inventory" description="What you stock, how much, and where.">{canEdit && <>{addButton}<button type="button" className="button secondary" aria-pressed={selection.selecting} onClick={selection.toggleMode}><Icon name="label" />{selection.selecting ? 'Cancel' : 'Print labels'}</button></>}</PageHeader>
+    {selection.selecting && <SelectionBar count={selection.selected.length} noun="item" href={root + '/labels?items=' + selection.selected.join(',')} />}
     <div className="toolbar">
       <form className="search-form" role="search" onSubmit={event => { event.preventDefault(); setQ(String(new FormData(event.currentTarget).get('search')).trim()); setPage(0); }}>
         <div className="search-input"><Icon name="search" /><input name="search" type="search" aria-label="Search inventory" placeholder="Search by name or SKU" defaultValue={q} key={q} /></div>
@@ -58,8 +62,10 @@ export function CatalogPage() {
     {items.data && (items.data.items.length ? <div className="panel table-panel">
       <table className="data-table">
         <thead><tr><th scope="col">Item</th><th scope="col">SKU</th><th scope="col" className="cell-number">On hand</th><th scope="col"><span className="sr-only">Open</span></th></tr></thead>
-        <tbody>{items.data.items.map(item => <tr key={item.id} className="linked">
-          <td><span className="name-line"><Link className="record-link" to={root + '/items/' + item.id}>{item.name}</Link>{item.archived && <Badge>Archived</Badge>}</span>
+        <tbody>{items.data.items.map(item => <tr key={item.id} className={selection.selecting ? 'selectable' : 'linked'}>
+          <td><span className="name-line">{selection.selecting
+            ? <label className="select-line"><input type="checkbox" checked={selection.selected.includes(item.id)} disabled={item.archived} onChange={() => selection.toggle(item.id)} /><span className="record-link">{item.name}</span></label>
+            : <Link className="record-link" to={root + '/items/' + item.id}>{item.name}</Link>}{item.archived && <Badge>Archived</Badge>}</span>
             <span className="cell-secondary mobile-only">{item.sku ? <span className="mono">{item.sku}</span> : 'No SKU'} · <span className="numeric">{formatQuantity(item.onHand, item.unit)}</span> on hand</span></td>
           <td className="desktop-only mono">{item.sku ?? <><span aria-hidden="true">—</span><span className="sr-only">No SKU</span></>}</td>
           <td className="desktop-only cell-number numeric">{formatQuantity(item.onHand, item.unit)}</td>
@@ -94,6 +100,14 @@ export function ItemDetail() {
   const [status, setStatus] = useState('');
   const root = '/app/organizations/' + organization.id;
   const refresh = () => { item.reload(); balances.reload(); history.reload(); locations.reload(); };
+  // A scan result can open this page with ?action=usage or ?action=receive; the sheet still needs confirmation.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requested = searchParams.get('action');
+  useEffect(() => {
+    if (!requested || !item.data || !balances.data) return;
+    if ((requested === 'usage' || requested === 'receive' || requested === 'waste') && !item.data.archived) setAction({ kind: requested });
+    setSearchParams({}, { replace: true });
+  }, [requested, item.data, balances.data, setSearchParams]);
   const finished = (message: string) => { setAction(undefined); setReversing(undefined); setStatus(message); refresh(); };
   async function mutate(path: string, method: string, data?: unknown, message = '') {
     setPending(true); setError(undefined); setStatus('');
@@ -151,6 +165,7 @@ export function ItemDetail() {
         </form> : <button type="button" className="text-button" onClick={() => setAddingPlace(true)}><Icon name="plus" className="small" />Add an expected location</button>}
       </div>}
     </section>
+    <CodesPanel type="ITEM" targetId={value.id} archived={value.archived} />
     <section className="panel table-panel" aria-labelledby="history-heading">
       <div className="panel-header"><div><h2 id="history-heading">History</h2><p>Every change to this item's stock, newest first.</p></div></div>
       <ErrorMessage error={history.error} retry={history.reload} />

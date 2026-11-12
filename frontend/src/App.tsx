@@ -7,6 +7,9 @@ import { CatalogPage, ItemDetail } from './catalog';
 import { LocationsPage } from './locations';
 import { ActivityPage, PeoplePage } from './people';
 import { OrganizationSettings, WorkspaceLayout } from './workspace';
+import { ScanPage } from './scan';
+import { PrintLabelsPage } from './labels';
+import { CodeLinkPage } from './codes';
 
 function Landing() {
   const auth = useAuth();
@@ -50,6 +53,7 @@ export function App() {
     <Route path="/signin" element={<AuthPage mode="signin" />} />
     <Route path="/register" element={<AuthPage mode="register" />} />
     <Route path="/invite" element={<InvitationPage />} />
+    <Route path="/s/:token" element={<CodeLinkPage />} />
     <Route path="/app" element={<Protected><OrganizationChooser /></Protected>} />
     <Route path="/app/organizations/:orgId" element={<Protected><WorkspaceLayout /></Protected>}>
       <Route index element={<Navigate to="items" replace />} />
@@ -60,6 +64,8 @@ export function App() {
       <Route path="people" element={<PeoplePage />} />
       <Route path="activity" element={<ActivityPage />} />
       <Route path="settings" element={<OrganizationSettings />} />
+      <Route path="scan" element={<ScanPage />} />
+      <Route path="labels" element={<PrintLabelsPage />} />
     </Route>
     <Route path="*" element={<div className="auth-shell"><Brand /><section className="auth-card"><h1>Page not found</h1><p className="auth-lead">The link may be out of date.</p><Link className="button secondary full-width" to="/app">Go to your businesses</Link></section></div>} />
   </Routes></AuthProvider></BrowserRouter>;

@@ -29,6 +29,9 @@ server:
         http-only: true
         same-site: lax
         secure: ${SESSION_COOKIE_SECURE:false}
+backroom:
+  # Address printed into QR labels. Use a stable hostname before printing real labels.
+  public-base-url: ${BACKROOM_PUBLIC_URL:http://localhost:${SERVER_PORT:8080}}
 management:
   endpoints:
     web:

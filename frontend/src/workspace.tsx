@@ -16,16 +16,16 @@ export function useWorkspace() { return useOutletContext<Workspace>(); }
 const destinations: { path: string; label: string; icon: IconName; roles: Role[] }[] = [
   { path: 'items', label: 'Inventory', icon: 'catalog', roles: ['OWNER', 'MANAGER', 'EMPLOYEE'] },
   { path: 'locations', label: 'Locations', icon: 'location', roles: ['OWNER', 'MANAGER', 'EMPLOYEE'] },
+  { path: 'scan', label: 'Scan', icon: 'scan', roles: ['OWNER', 'MANAGER', 'EMPLOYEE'] },
   { path: 'activity', label: 'Activity', icon: 'activity', roles: ['OWNER', 'MANAGER'] },
   { path: 'people', label: 'People', icon: 'people', roles: ['OWNER'] },
-  { path: 'settings', label: 'Settings', icon: 'settings', roles: ['OWNER'] },
 ];
 
 function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]!.toUpperCase()).join('') || '?';
 }
 
-function AccountMenu({ onSignOut }: { onSignOut: () => void }) {
+function AccountMenu({ onSignOut, settingsHref }: { onSignOut: () => void; settingsHref?: string }) {
   const auth = useAuth();
   const [open, setOpen] = useState(false);
   const menuId = useId();
@@ -44,6 +44,7 @@ function AccountMenu({ onSignOut }: { onSignOut: () => void }) {
     <button ref={trigger} type="button" className="avatar-button" aria-expanded={open} aria-controls={menuId} aria-label={'Account: ' + name} onClick={() => setOpen(value => !value)}><span className="avatar" aria-hidden="true">{initials(name)}</span></button>
     <div className="menu account-menu" id={menuId} hidden={!open}>
       <div className="menu-label"><strong>{name}</strong>{auth.user?.email}</div>
+      {settingsHref && <Link className="menu-item" to={settingsHref} onClick={() => setOpen(false)}><Icon name="settings" />Business settings</Link>}
       <Link className="menu-item" to="/app" onClick={() => setOpen(false)}><Icon name="switch" />Switch business</Link>
       <button type="button" className="menu-item" onClick={() => { setOpen(false); onSignOut(); }}><Icon name="logout" />Sign out</button>
     </div>
@@ -68,7 +69,7 @@ export function WorkspaceLayout() {
     <header className="topbar">
       <Brand compact to="/app" />
       <Link className="topbar-business" to="/app"><span className="topbar-business-name">{org.name}</span><span className="sr-only">, {roleNames[org.role]}. Switch business</span><Icon name="chevronDown" className="small" /></Link>
-      <AccountMenu onSignOut={signOut} />
+      <AccountMenu onSignOut={signOut} settingsHref={org.role === 'OWNER' ? root + '/settings' : undefined} />
     </header>
     <aside className="sidebar">
       <div className="sidebar-brand"><Brand to="/app" /></div>
@@ -84,6 +85,7 @@ export function WorkspaceLayout() {
       <div className="sidebar-account">
         <span className="avatar" aria-hidden="true">{initials(auth.user?.displayName ?? '')}</span>
         <div className="sidebar-account-name"><strong>{auth.user?.displayName}</strong><span>{auth.user?.email}</span></div>
+        {org.role === 'OWNER' && <NavLink className="icon-button" to={root + '/settings'} aria-label="Business settings" title="Business settings"><Icon name="settings" /></NavLink>}
         <button type="button" className="icon-button" aria-label="Sign out" title="Sign out" onClick={signOut}><Icon name="logout" /></button>
       </div>
     </aside>
