@@ -9,6 +9,7 @@ import { useWorkspace } from './workspace';
 import { SlotSheet, StockDialog, formatQuantity } from './stock';
 import type { StockAction } from './stock';
 import { CodesPanel } from './codes';
+import { NewRequestDialog } from './requests';
 import { SelectionBar, useLabelSelection } from './labels';
 import type { StockBalance } from './types';
 
@@ -72,6 +73,7 @@ export function LocationsPage() {
   const [slot, setSlot] = useState<{ item: Item; balances: StockBalance[]; balance: StockBalance }>();
   const [stockAction, setStockAction] = useState<StockAction>();
   const [stockStatus, setStockStatus] = useState('');
+  const [requesting, setRequesting] = useState<Item>();
   async function openSlot(item: Item) {
     setError(undefined); setStockStatus('');
     try {
@@ -151,7 +153,10 @@ export function LocationsPage() {
     </section>}
 
     {value && <CodesPanel type="LOCATION" targetId={value.id} archived={value.archived} />}
-    {slot && !stockAction && <SlotSheet slot={slot.balance} item={slot.item} canManage={canEdit} close={() => setSlot(undefined)} pick={setStockAction} />}
+    {slot && !stockAction && <SlotSheet slot={slot.balance} item={slot.item} canManage={canEdit} close={() => setSlot(undefined)} pick={setStockAction}
+      request={() => { const chosen = slot.item; setSlot(undefined); setRequesting(chosen); }} />}
+    {requesting && value && <NewRequestDialog item={{ id: requesting.id, name: requesting.name, unit: requesting.unit }} locationId={value.id}
+      close={() => setRequesting(undefined)} done={request => navigate(root + '/requests/' + request.id)} />}
     {slot && stockAction && <StockDialog action={stockAction} item={slot.item} base={base} balances={slot.balances} locationId={slot.balance.locationId}
       close={() => { setStockAction(undefined); setSlot(undefined); }}
       done={message => { setStockAction(undefined); setSlot(undefined); setStockStatus(message); contents.reload(); }} />}

@@ -186,6 +186,7 @@ function ResultCard({ result, scanned, root, linkBarcode }: { result: ScanResult
           {item && <>
             <button type="button" className="button secondary" onClick={() => navigate(href + '?action=usage')}><Icon name="use" />Record usage</button>
             <button type="button" className="button secondary" onClick={() => navigate(href + '?action=receive')}><Icon name="receive" />Receive</button>
+            <button type="button" className="button secondary" onClick={() => navigate(href + '?action=request')}><Icon name="plus" />Request restock</button>
           </>}
         </div>}
     </div>;

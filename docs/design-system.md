@@ -81,11 +81,11 @@ Tabs are filtered by role, so the bar never needs a "More" item:
 
 | Role | Destinations |
 | --- | --- |
-| Employee | Inventory, Locations, Scan |
-| Manager | Inventory, Locations, Scan, Activity |
-| Owner | Inventory, Locations, Scan, Activity, People |
+| Employee | Inventory, Locations, Scan, Requests |
+| Manager | Inventory, Locations, Scan, Requests, Activity |
+| Owner | Inventory, Locations, Scan, Requests, Activity |
 
-Owners reach **Business settings** from the account menu on phones and the gear beside their name on desktop.
+Owners reach **People** and **Business settings** from the account menu on phones and an **Administration** group under the main navigation on desktop. The Requests tab carries a count badge: requests waiting for review (managers) or approved requests waiting for delivery (employees).
 
 Detail pages show a back link above the title (**‹ Inventory**, **‹ All locations**, **‹ Parent location**). A "Skip to content" link is the first focusable element.
 
@@ -127,6 +127,16 @@ Detail pages show a back link above the title (**‹ Inventory**, **‹ All loca
 | **Labels and barcodes panel** | On item and location pages. One row per active code (QR label, product barcodes) with the code in monospace. Managers see **Print label** / **Create label**, **Withdraw** / **Remove** (danger, confirmed) and an **Add a product barcode** field. Withdrawn codes are listed once, muted. |
 | **Print labels** | Label previews at true aspect ratio on white (a label is paper, even in dark mode). Paper choice as large radio cards, start position, and three numbered print steps including the calibration page. A warning notice while labels would point to a local address. |
 | **Selection mode** | **Print labels** on the Inventory and Locations lists switches rows to checkboxes, with a tinted bar showing the count and **Print N labels**. |
+
+## Request patterns
+
+| Pattern | Rules |
+| --- | --- |
+| **Filter chips** | A horizontal row of pill buttons above the list (`aria-pressed`). Managers start on **Needs review**, employees on **To receive**. The active chip is filled with the accent color. On phones the row scrolls sideways inside itself. |
+| **Request row** | `R-12` in muted monospace, then the item name. Second line: destination path and progress ("4 of 6 L received"). Third line: requester and relative time. Status badge on the right: Submitted (warning), Approved and Partly received (accent), Received (success), Rejected, Cancelled and Closed short (neutral). |
+| **Request detail** | Title `R-12 · Item`. Quantities strip: Requested / Approved / Received / Still expected. A details panel with links to the item and location, then a timeline: requested, decided, each delivery (reversed ones struck through with a note), closed. Primary action is **Record delivery** while stock is expected; managers also see **Approve**/**Reject** or **Close short**. |
+| **Decision sheets** | The title asks the question ("Approve R-1?", "Close R-2 short?"). Approve pre-fills the requested quantity and says it can't be changed later. Reject and Close short need a reason and use the danger button. Delivery pre-fills what is still expected. |
+| **Duplicate warning** | The new-request sheet lists open requests for the same item and location in a warning notice, and the submit button changes to **Submit anyway**. |
 
 ## Writing
 
