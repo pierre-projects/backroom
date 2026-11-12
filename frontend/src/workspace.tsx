@@ -8,24 +8,32 @@ import { Icon } from './icons';
 import type { IconName } from './icons';
 import type { Organization, RequestSummary, Role } from './types';
 import { roleNames } from './types';
+import { SearchForm } from './search';
 
 interface Workspace { organization: Organization; base: string; canEdit: boolean; refresh: () => void }
 export function useWorkspace() { return useOutletContext<Workspace>(); }
 
 /** One source of truth for destinations: drives the desktop sidebar and the phone tab bar. */
 const destinations: { path: string; label: string; icon: IconName; roles: Role[] }[] = [
+  { path: 'home', label: 'Home', icon: 'home', roles: ['OWNER', 'MANAGER', 'EMPLOYEE'] },
   { path: 'items', label: 'Inventory', icon: 'catalog', roles: ['OWNER', 'MANAGER', 'EMPLOYEE'] },
-  { path: 'locations', label: 'Locations', icon: 'location', roles: ['OWNER', 'MANAGER', 'EMPLOYEE'] },
   { path: 'scan', label: 'Scan', icon: 'scan', roles: ['OWNER', 'MANAGER', 'EMPLOYEE'] },
   { path: 'requests', label: 'Requests', icon: 'receive', roles: ['OWNER', 'MANAGER', 'EMPLOYEE'] },
+  { path: 'locations', label: 'Locations', icon: 'location', roles: ['OWNER', 'MANAGER', 'EMPLOYEE'] },
+];
+/** Less frequent pages: the account menu on phones, the Administration group on desktop. */
+const adminDestinations: { path: string; label: string; icon: IconName; roles: Role[] }[] = [
   { path: 'activity', label: 'Activity', icon: 'activity', roles: ['OWNER', 'MANAGER'] },
+  { path: 'exports', label: 'Export data', icon: 'download', roles: ['OWNER', 'MANAGER'] },
+  { path: 'people', label: 'People', icon: 'people', roles: ['OWNER'] },
+  { path: 'settings', label: 'Business settings', icon: 'settings', roles: ['OWNER'] },
 ];
 
 function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0]!.toUpperCase()).join('') || '?';
 }
 
-function AccountMenu({ onSignOut, settingsHref, peopleHref }: { onSignOut: () => void; settingsHref?: string; peopleHref?: string }) {
+function AccountMenu({ onSignOut, links }: { onSignOut: () => void; links: { href: string; label: string; icon: IconName }[] }) {
   const auth = useAuth();
   const [open, setOpen] = useState(false);
   const menuId = useId();
@@ -44,8 +52,7 @@ function AccountMenu({ onSignOut, settingsHref, peopleHref }: { onSignOut: () =>
     <button ref={trigger} type="button" className="avatar-button" aria-expanded={open} aria-controls={menuId} aria-label={'Account: ' + name} onClick={() => setOpen(value => !value)}><span className="avatar" aria-hidden="true">{initials(name)}</span></button>
     <div className="menu account-menu" id={menuId} hidden={!open}>
       <div className="menu-label"><strong>{name}</strong>{auth.user?.email}</div>
-      {peopleHref && <Link className="menu-item" to={peopleHref} onClick={() => setOpen(false)}><Icon name="people" />People</Link>}
-      {settingsHref && <Link className="menu-item" to={settingsHref} onClick={() => setOpen(false)}><Icon name="settings" />Business settings</Link>}
+      {links.map(link => <Link key={link.href} className="menu-item" to={link.href} onClick={() => setOpen(false)}><Icon name={link.icon} />{link.label}</Link>)}
       <Link className="menu-item" to="/app" onClick={() => setOpen(false)}><Icon name="switch" />Switch business</Link>
       <button type="button" className="menu-item" onClick={() => { setOpen(false); onSignOut(); }}><Icon name="logout" />Sign out</button>
     </div>
@@ -69,12 +76,13 @@ export function WorkspaceLayout() {
   const workspace = { organization: org, base: '/organizations/' + org.id, canEdit: org.role !== 'EMPLOYEE', refresh: organization.reload };
   const signOut = () => void auth.logout().catch(setError);
   const badge = org.role === 'EMPLOYEE' ? summary.data?.toReceive ?? 0 : summary.data?.needsReview ?? 0;
+  const admin = adminDestinations.filter(destination => destination.roles.includes(org.role));
   return <div className="workspace">
     <a className="skip-link" href="#main">Skip to content</a>
     <header className="topbar">
       <Brand compact to="/app" />
       <Link className="topbar-business" to="/app"><span className="topbar-business-name">{org.name}</span><span className="sr-only">, {roleNames[org.role]}. Switch business</span><Icon name="chevronDown" className="small" /></Link>
-      <AccountMenu onSignOut={signOut} settingsHref={org.role === 'OWNER' ? root + '/settings' : undefined} peopleHref={org.role === 'OWNER' ? root + '/people' : undefined} />
+      <AccountMenu onSignOut={signOut} links={admin.map(destination => ({ href: root + '/' + destination.path, label: destination.label, icon: destination.icon }))} />
     </header>
     <aside className="sidebar">
       <div className="sidebar-brand"><Brand to="/app" /></div>
@@ -83,15 +91,15 @@ export function WorkspaceLayout() {
         <div className="business-meta"><strong>{org.name}</strong><span>{roleNames[org.role]}</span></div>
         <Link className="switch-link" to="/app"><Icon name="switch" className="small" />Switch business</Link>
       </div>
+      <div className="sidebar-search"><SearchForm root={root} compact /></div>
       <nav className="primary-nav" aria-label="Business navigation">
         {destinations.filter(destination => destination.roles.includes(org.role)).map(destination =>
           <NavLink key={destination.path} className="nav-link" to={root + '/' + destination.path}><Icon name={destination.icon} /><span>{destination.label}</span>
             {destination.path === 'requests' && badge > 0 && <span className="nav-badge" aria-label={badge + (org.role === 'EMPLOYEE' ? ' waiting for delivery' : ' waiting for review')}>{badge > 99 ? '99+' : badge}</span>}</NavLink>)}
       </nav>
-      {org.role === 'OWNER' && <nav className="secondary-nav" aria-label="Business administration">
+      {admin.length > 0 && <nav className="secondary-nav" aria-label="Business administration">
         <span className="secondary-nav-label">Administration</span>
-        <NavLink className="nav-link" to={root + '/people'}><Icon name="people" /><span>People</span></NavLink>
-        <NavLink className="nav-link" to={root + '/settings'}><Icon name="settings" /><span>Business settings</span></NavLink>
+        {admin.map(destination => <NavLink key={destination.path} className="nav-link" to={root + '/' + destination.path}><Icon name={destination.icon} /><span>{destination.label}</span></NavLink>)}
       </nav>}
       <div className="sidebar-account">
         <span className="avatar" aria-hidden="true">{initials(auth.user?.displayName ?? '')}</span>

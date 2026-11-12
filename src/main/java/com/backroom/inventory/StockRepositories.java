@@ -32,6 +32,30 @@ interface StockBalanceRepository extends JpaRepository<StockBalance, UUID> {
 
     @Query("select b.itemId, sum(b.quantity) from StockBalance b where b.organizationId = :orgId and b.itemId in :itemIds group by b.itemId")
     List<Object[]> totals(UUID orgId, Collection<UUID> itemIds);
+
+    /** Active slots of unarchived items whose stock is below their minimum, as [balance, minimum]. */
+    @Query(value = """
+            select b, p.minimumQuantity from StockBalance b, ItemPlacement p, Item i
+            where b.organizationId = :orgId and p.organizationId = :orgId and i.organizationId = :orgId
+              and p.itemId = b.itemId and p.locationId = b.locationId and i.id = b.itemId
+              and p.active = true and i.archived = false and p.minimumQuantity is not null and b.quantity < p.minimumQuantity
+              and (:locationId is null or b.locationId = :locationId)
+            order by i.name, b.locationId
+            """, countQuery = """
+            select count(b) from StockBalance b, ItemPlacement p, Item i
+            where b.organizationId = :orgId and p.organizationId = :orgId and i.organizationId = :orgId
+              and p.itemId = b.itemId and p.locationId = b.locationId and i.id = b.itemId
+              and p.active = true and i.archived = false and p.minimumQuantity is not null and b.quantity < p.minimumQuantity
+              and (:locationId is null or b.locationId = :locationId)
+            """)
+    Page<Object[]> lowStock(UUID orgId, UUID locationId, Pageable pageable);
+
+    @Query("""
+            select distinct b.itemId from StockBalance b, ItemPlacement p where b.organizationId = :orgId and p.organizationId = :orgId
+              and p.itemId = b.itemId and p.locationId = b.locationId and p.active = true and p.minimumQuantity is not null
+              and b.quantity < p.minimumQuantity and b.itemId in :itemIds
+            """)
+    Set<UUID> lowAmong(UUID orgId, Collection<UUID> itemIds);
 }
 
 interface StockOperationRepository extends JpaRepository<StockOperation, UUID> {

@@ -3,6 +3,8 @@
  * Decorative by default (aria-hidden); always pair with visible text or an aria-label on the control.
  */
 const paths = {
+  home: <><path d="M3.5 9 10 3.5 16.5 9" /><path d="M5 8v8.5h10V8M8.5 16.5v-4.5h3v4.5" /></>,
+  download: <><path d="M10 3.5v9M6 9l4 4 4-4" /><path d="M4 16.5h12" /></>,
   catalog: <><path d="M3.5 6.5 10 3l6.5 3.5v7L10 17l-6.5-3.5z" /><path d="M3.5 6.5 10 10l6.5-3.5M10 10v7" /></>,
   location: <><path d="M3 17V7.5L10 3l7 4.5V17" /><path d="M6.5 17v-6h7v6M6.5 14h7" /></>,
   people: <><circle cx="7.5" cy="7" r="2.75" /><path d="M2.5 16.5c.6-2.7 2.5-4 5-4s4.4 1.3 5 4" /><path d="M13 4.5a2.6 2.6 0 0 1 0 5M14.5 12.7c1.6.5 2.6 1.7 3 3.8" /></>,

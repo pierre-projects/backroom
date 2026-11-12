@@ -46,7 +46,10 @@ public final class StockDtos {
     public record OperationView(UUID id, StockOperationType type, UUID itemId, String actorName, Instant occurredAt,
                                 UUID reversesOperationId, List<MovementView> movements, CountResult count, boolean replayed) {}
     public record BalanceView(UUID itemId, UUID locationId, String locationName, String parentName, String quantity,
-                              Long version, boolean hasHistory) {}
+                              Long version, boolean hasHistory, String minimum, boolean low) {}
+    public record LowStockView(UUID itemId, String itemName, String sku, Unit unit, UUID locationId, String locationName, String parentName,
+                               String quantity, String minimum, String shortfall) {}
+    public record Minimum(BigDecimal minimum) {}
 
     private static String plain(BigDecimal value) { return value == null ? "" : value.stripTrailingZeros().toPlainString(); }
     private static String join(Object... parts) {

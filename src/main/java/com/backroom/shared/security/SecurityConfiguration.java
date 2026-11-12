@@ -25,7 +25,7 @@ class SecurityConfiguration {
     PasswordEncoder passwordEncoder() { return PasswordEncoderFactories.createDelegatingPasswordEncoder(); }
 
     @Bean
-    SecurityFilterChain applicationSecurity(HttpSecurity http, ProblemResponses problems, ObjectMapper mapper) throws Exception {
+    SecurityFilterChain applicationSecurity(HttpSecurity http, ProblemResponses problems, ObjectMapper mapper, PasswordResetService resets) throws Exception {
         return http
                 .csrf(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionFixation(fixation -> fixation.changeSessionId()))
@@ -54,12 +54,37 @@ class SecurityConfiguration {
                 .authorizeHttpRequests(authorize -> authorize
                         .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
                         .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/favicon.svg",
-                                "/signin", "/register", "/invite", "/app", "/app/**", "/s/*", "/actuator/health", "/api/v1/auth/csrf").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login").permitAll()
+                                "/signin", "/register", "/invite", "/reset", "/app", "/app/**", "/s/*", "/actuator/health", "/api/v1/auth/csrf").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login",
+                                "/api/v1/auth/password-reset", "/api/v1/auth/password-reset/preview").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll())
                 .addFilterBefore(new LoginInputFilter(problems), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new StaleSessionFilter(resets, problems), org.springframework.security.web.access.intercept.AuthorizationFilter.class)
                 .build();
+    }
+
+    /** Ends sessions that signed in before the account's password was reset. */
+    private static class StaleSessionFilter extends OncePerRequestFilter {
+        private final PasswordResetService resets;
+        private final ProblemResponses problems;
+        StaleSessionFilter(PasswordResetService resets, ProblemResponses problems) { this.resets = resets; this.problems = problems; }
+        @Override
+        protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+                throws ServletException, IOException {
+            var authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.getPrincipal() instanceof AccountPrincipal principal && !resets.current(principal)) {
+                org.springframework.security.core.context.SecurityContextHolder.clearContext();
+                var session = request.getSession(false);
+                if (session != null) session.invalidate();
+                // API calls learn why; pages load signed out, and the app then sends the person to sign in.
+                if (request.getRequestURI().startsWith(request.getContextPath() + "/api/")) {
+                    problems.write(response, HttpStatus.UNAUTHORIZED, "SESSION_ENDED", "Your password was changed. Sign in again.");
+                    return;
+                }
+            }
+            chain.doFilter(request, response);
+        }
     }
 
     private static class LoginInputFilter extends OncePerRequestFilter {

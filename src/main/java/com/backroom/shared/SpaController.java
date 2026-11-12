@@ -5,6 +5,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
 class SpaController {
-    @GetMapping({"/signin", "/register", "/invite", "/app", "/app/{*path}", "/s/{token}"})
+    @GetMapping({"/signin", "/register", "/invite", "/reset", "/app", "/app/{*path}", "/s/{token}"})
     String application() { return "forward:/index.html"; }
 }

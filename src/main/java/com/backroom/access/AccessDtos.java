@@ -15,6 +15,9 @@ public final class AccessDtos {
     public record OrganizationView(UUID id, String name, Long version, Role role) {}
     public record MemberView(UUID id, UUID userId, String displayName, String email, Role role, boolean active) {}
     public record RoleInput(@NotNull Role role) {}
+    public record IssuedReset(UUID userId, String displayName, String resetPath, java.time.Instant expiresAt) {}
+    public record ResetPreview(String displayName, String email, java.time.Instant expiresAt) {}
+    public record ResetInput(@NotBlank @Pattern(regexp="[A-Za-z0-9_-]{43}") String token, @ValidPassword String newPassword) {}
     public record TokenInput(@NotBlank @Pattern(regexp="[A-Za-z0-9_-]{43}") String token) {}
     public record InvitationView(UUID id, Role role, Instant expiresAt, String status, Instant acceptedAt) {}
     public record CreatedInvitation(InvitationView invitation, String invitePath) {}

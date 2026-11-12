@@ -13,6 +13,8 @@ Vite's proxy; deployment needs one Java process and one database.
 | inventory | Items, placements, balances, movements, transfers, counts |
 | restocking | Requests, review, actual receipt |
 | labels | Code resolution, generation, printable PDFs |
+| search | One search across items, locations and codes, through other modules' query services |
+| exports | Read-only CSV reports (the one module allowed to read other modules' tables with SQL) |
 | audit | Durable business activity |
 | assets | Equipment, when that capability ships |
 | shared | Small technical configuration and primitives |
@@ -21,8 +23,10 @@ Phase 1 implements access, locations, catalog/placements within inventory, audit
 and shared technical configuration. Phase 2 adds balances, stock operations and
 movement history to inventory. Phase 3 adds the labels module (codes, scan
 resolution, label PDFs). Phase 4 adds restocking (requests, approval,
-deliveries). Assets remain a future module. See [Phase 1](phase-1.md),
-[Phase 2](phase-2.md), [Phase 3](phase-3.md) and [Phase 4](phase-4.md) for the
+deliveries). Phase 5 adds low-stock minimums to inventory, the search and
+exports modules, and owner-issued password reset links to access. Assets remain
+a future module. See [Phase 1](phase-1.md), [Phase 2](phase-2.md),
+[Phase 3](phase-3.md), [Phase 4](phase-4.md) and [Phase 5](phase-5.md) for the
 implemented contracts.
 
 Controllers will accept DTOs and call application services. Services will enforce
@@ -106,6 +110,27 @@ one another through repositories. JPA entities are not API responses.
   before locking balances. Restocking implements it to take a reversed
   delivery off its request. Inventory never depends on restocking (the same
   pattern as `LocationMutationPolicy`).
+
+## Usability (Phase 5)
+
+- **Low stock:** a slot is low when `quantity < minimum_quantity` on an active
+  placement of an unarchived item. It is computed in queries, never stored.
+- **Home:** composed in the browser from existing endpoints. The open request
+  beside a low slot comes from the restocking API, not from inventory, so the
+  dependency direction is unchanged.
+- **`search`:** depends on `ItemQueries`, `LocationQueries` and
+  `ScanService.resolve` only.
+- **`exports`:** the documented exception to "no reading across modules". It runs
+  read-only SQL over inventory, locations and restocking tables, filtering every
+  joined table by `organization_id`, and streams the result in one read-only
+  transaction. Nothing may depend on `exports`, and it writes only its own
+  audit event.
+- **Password resets:**
+  - Live in `access`.
+  - Sessions carry the account's `credentials_version` from sign-in. A filter
+    before authorization rejects a session whose version is stale
+    (`401 SESSION_ENDED`). Versions are cached for 30 seconds per user, and
+    the reset clears the cache before and after its commit.
 
 POS automation and equipment remain later product capabilities.
 

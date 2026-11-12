@@ -20,7 +20,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'The isolated browser-test application failed to start.' }
     $backroomAddress = (& docker compose -p $backroomTestProject port app 8080 | Out-String).Trim()
     $env:BACKROOM_E2E_URL = 'http://' + $backroomAddress
-    $backroomDeadline = [DateTime]::UtcNow.AddSeconds(120)
+    $backroomDeadline = [DateTime]::UtcNow.AddSeconds(240)
     Write-Host ('Waiting for the isolated test application at ' + $env:BACKROOM_E2E_URL)
     $backroomReady = $false
     while ([DateTime]::UtcNow -lt $backroomDeadline) {

@@ -22,5 +22,9 @@ public class ItemQueries {
                 .forEach(item -> result.put(item.getId(), summary(item)));
         return result;
     }
+    /** Unarchived items whose name or SKU contains the text, by name. */
+    public List<ItemSummary> search(UUID orgId, String q, int limit) {
+        return items.search(orgId, false, q, null, false, com.backroom.shared.PageResponse.named(0, limit)).stream().map(ItemQueries::summary).toList();
+    }
     private static ItemSummary summary(Item item) { return new ItemSummary(item.getId(), item.name, item.sku, item.unit, item.archived); }
 }

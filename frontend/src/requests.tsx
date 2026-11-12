@@ -77,8 +77,8 @@ export function RequestsPage() {
  * Ask for more of one item at one location. Shows any open requests for the same place first,
  * so people don't ask twice for the same thing.
  */
-export function NewRequestDialog({ item, locationId, close, done }: {
-  item?: { id: string; name: string; unit: Unit }; locationId?: string; close: () => void; done: (request: RestockRequest) => void;
+export function NewRequestDialog({ item, locationId, quantity, close, done }: {
+  item?: { id: string; name: string; unit: Unit }; locationId?: string; quantity?: string; close: () => void; done: (request: RestockRequest) => void;
 }) {
   const { base } = useWorkspace();
   const locations = useStockLocations(base);
@@ -130,7 +130,7 @@ export function NewRequestDialog({ item, locationId, close, done }: {
         <p>{open.map(request => request.label + ' asks for ' + formatQuantity(request.approved ?? request.requested, request.unit) + ' (' + statusNames[request.status].toLowerCase() + ')').join('; ')}. Submit anyway only if you need more.</p>
       </div></div>}
       <Field label={'Quantity' + (chosen.unit === 'EACH' ? '' : ' (' + formatQuantity('1', chosen.unit).replace(/^1 /, '') + ')')}>
-        <input name="quantity" inputMode={chosen.unit === 'EACH' ? 'numeric' : 'decimal'} autoComplete="off" required pattern={chosen.unit === 'EACH' ? '[0-9]+' : '[0-9]+([.,][0-9]{1,3})?'} />
+        <input name="quantity" defaultValue={quantity} inputMode={chosen.unit === 'EACH' ? 'numeric' : 'decimal'} autoComplete="off" required pattern={chosen.unit === 'EACH' ? '[0-9]+' : '[0-9]+([.,][0-9]{1,3})?'} />
       </Field>
       <Field label="Note (optional)"><input name="note" maxLength={500} autoComplete="off" placeholder="For the weekend rush" /></Field>
       <div className="form-actions"><button type="button" className="button secondary" onClick={close}>Cancel</button>

@@ -48,6 +48,11 @@ class StockController {
     List<StockDtos.BalanceView> balances(@PathVariable UUID orgId, @RequestParam UUID itemId) {
         return stock.balances(orgId, itemId);
     }
+    @GetMapping("/low-stock")
+    PageResponse<StockDtos.LowStockView> lowStock(@PathVariable UUID orgId, @RequestParam(required=false) UUID locationId,
+            @RequestParam(defaultValue="0") int page, @RequestParam(defaultValue="20") int size) {
+        return stock.lowStock(orgId, locationId, page, size);
+    }
     @GetMapping("/movements")
     PageResponse<StockDtos.MovementView> movements(@PathVariable UUID orgId, @RequestParam(required=false) UUID itemId,
             @RequestParam(required=false) UUID locationId, @RequestParam(defaultValue="0") int page, @RequestParam(defaultValue="20") int size) {

@@ -95,6 +95,11 @@ export function AuthForm({ initialMode = 'signin', invitation = false }: { initi
       <Field label="Password"><input name="password" type="password" autoComplete={register ? 'new-password' : 'current-password'} minLength={12} required />{register && <small>At least 12 characters.</small>}</Field>
       <button className="button primary full-width" disabled={pending}>{pending ? (register ? 'Creating account…' : 'Signing in…') : register ? 'Create account' : 'Sign in'}</button>
     </form>
+    {!register && <details className="forgot">
+      <summary>Forgot your password?</summary>
+      <p>Ask an Owner of your business for a password reset link. They can make one from <strong>People</strong>, next to your name. The link works once, for 24 hours.</p>
+      <p>If you are the only Owner, add a second Owner you trust while you can still sign in; Backroom does not send email yet.</p>
+    </details>}
     <p className="auth-switch">{register ? 'Already have an account?' : 'New to Backroom?'}{' '}
       {invitation ? <button className="text-button" type="button" onClick={() => { setMode(register ? 'signin' : 'register'); setError(undefined); }}>{register ? 'Sign in' : 'Create an account'}</button> :
         <Link to={(register ? '/signin' : '/register') + keep}>{register ? 'Sign in' : 'Create an account'}</Link>}
@@ -127,7 +132,7 @@ export function InvitationPage() {
     setPending(true); setError(undefined);
     try {
       const org = await send<Organization>('/invitations/accept', 'POST', { token });
-      navigate('/app/organizations/' + org.id + '/items', { replace: true });
+      navigate('/app/organizations/' + org.id + '/home', { replace: true });
     } catch (value) { setError(value); } finally { setPending(false); }
   }
   return <div className="auth-shell"><Brand />{auth.loading ? <Loading /> : !token
@@ -137,6 +142,55 @@ export function InvitationPage() {
       {preview && <><div className="invite-summary"><h2>{preview.organizationName}</h2><p>Role: <strong>{roleNames[preview.role]}</strong></p><p className="muted">Invitation expires {new Date(preview.expiresAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}</p></div>
         <button className="button primary full-width" disabled={pending} onClick={() => void accept()}>{pending ? 'Joining…' : 'Accept invitation'}</button></>}
       <p className="auth-switch"><Link to="/app">Not now — go to your businesses</Link></p></section>}</div>;
+}
+interface ResetPreview { displayName: string; email: string; expiresAt: string }
+/** Opened from an Owner's one-time link: set a new password, then sign straight in. */
+export function ResetPasswordPage() {
+  const auth = useAuth();
+  const navigate = useNavigate();
+  const [token] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get('token'));
+  const [preview, setPreview] = useState<ResetPreview>();
+  const [error, setError] = useState<unknown>();
+  const [mismatch, setMismatch] = useState(false);
+  const [pending, setPending] = useState(false);
+  useEffect(() => {
+    if (!token) return;
+    const controller = new AbortController();
+    void refreshCsrf().then(() => api<ResetPreview>('/auth/password-reset/preview', { method: 'POST', body: JSON.stringify({ token }), signal: controller.signal }))
+      .then(value => { if (!controller.signal.aborted) setPreview(value); })
+      .catch(value => { if (!controller.signal.aborted) setError(value); });
+    return () => controller.abort();
+  }, [token]);
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const password = String(data.get('password'));
+    if (password !== String(data.get('confirm'))) { setMismatch(true); return; }
+    setMismatch(false); setPending(true); setError(undefined);
+    try {
+      if (auth.user) await auth.logout();
+      const done = await send<{ email: string }>('/auth/password-reset', 'POST', { token, newPassword: password });
+      history.replaceState(null, '', '/reset');
+      await auth.login(done.email, password);
+      navigate('/app', { replace: true });
+    } catch (value) { setError(value); } finally { setPending(false); }
+  }
+  return <div className="auth-shell"><Brand />{!token
+    ? <section className="auth-card"><h1>Reset link incomplete</h1><p className="auth-lead">Open the full link an Owner gave you, or ask them for a new one.</p><Link className="button secondary full-width" to="/signin">Go to sign in</Link></section>
+    : <section className="auth-card"><h1>Choose a new password</h1>
+      {!preview && !error && <Loading />}
+      {!preview && error ? <><ErrorMessage error={error} /><Link className="button secondary full-width" to="/signin">Go to sign in</Link></> : null}
+      {preview && <>
+        <p className="auth-lead">For <strong>{preview.displayName}</strong> ({preview.email}). Saving signs you out everywhere else.</p>
+        <form onSubmit={submit}>
+          <ErrorMessage error={error} />
+          <Field label="New password"><input name="password" type="password" autoComplete="new-password" minLength={12} required /><small>At least 12 characters.</small></Field>
+          <Field label="Confirm new password" error={mismatch ? 'The passwords don’t match.' : undefined}><input name="confirm" type="password" autoComplete="new-password" minLength={12} required /></Field>
+          <button className="button primary full-width" disabled={pending}>{pending ? 'Saving…' : 'Set password and sign in'}</button>
+        </form>
+        <p className="auth-switch muted">Link expires {new Date(preview.expiresAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</p>
+      </>}
+    </section>}</div>;
 }
 export function OrganizationChooser() {
   const auth = useAuth();
@@ -151,7 +205,7 @@ export function OrganizationChooser() {
     const name = String(new FormData(event.currentTarget).get('name'));
     try {
       const org = await send<Organization>('/organizations', 'POST', { name });
-      navigate('/app/organizations/' + org.id + '/items');
+      navigate('/app/organizations/' + org.id + '/home');
     } catch (value) { setError(value); } finally { setPending(false); }
   }
   const none = organizations.data?.totalElements === 0;

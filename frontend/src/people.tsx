@@ -5,7 +5,7 @@ import { send } from './api';
 import { Badge, Dialog, Empty, ErrorMessage, Field, Loading, PageHeader, Pager, useResource } from './components';
 import { Icon } from './icons';
 import type { IconName } from './icons';
-import type { Activity, CreatedInvitation, Invitation, Member, Page, Role, Unit } from './types';
+import type { Activity, CreatedInvitation, Invitation, IssuedReset, Member, Page, Role, Unit } from './types';
 import { formatQuantity } from './stock';
 import { roleNames } from './types';
 import { useWorkspace } from './workspace';
@@ -27,6 +27,8 @@ export function PeoplePage() {
   const [pending, setPending] = useState(false);
   const [removing, setRemoving] = useState<Member>();
   const [changing, setChanging] = useState<{ member: Member; role: Role }>();
+  const [resetting, setResetting] = useState<Member>();
+  const [issued, setIssued] = useState<IssuedReset>();
   if (organization.role !== 'OWNER') return <ErrorMessage error={new Error('Only an Owner can manage people and invitations.')} />;
   async function invite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setPending(true); setError(undefined);
@@ -44,6 +46,14 @@ export function PeoplePage() {
     } catch (value) { setError(value); } finally { setPending(false); }
   }
   const closeConfirm = () => { setRemoving(undefined); setChanging(undefined); };
+  async function issueReset() {
+    if (!resetting) return;
+    setPending(true); setError(undefined);
+    try { setIssued(await send<IssuedReset>(base + '/members/' + resetting.userId + '/password-reset', 'POST')); }
+    catch (value) { setError(value); } finally { setPending(false); }
+  }
+  const closeReset = () => { setResetting(undefined); setIssued(undefined); setCopied(false); setError(undefined); };
+  const resetUrl = issued ? new URL(issued.resetPath, window.location.origin).href : '';
   const inviteUrl = created ? new URL(created.invitePath, window.location.origin).href : '';
   return <>
     <PageHeader title="People" description="Who can open this business, and what they can change."><button type="button" className="button primary" onClick={() => { setShowInvite(true); setCreated(undefined); setError(undefined); setCopied(false); }}><Icon name="plus" />Invite staff</button></PageHeader>
@@ -58,7 +68,9 @@ export function PeoplePage() {
           <td><strong>{member.displayName}{member.userId === auth.user?.id ? ' (you)' : ''}</strong><span className="cell-secondary">{member.email}</span></td>
           <td className="cell-inline">{member.active ? <select aria-label={'Role for ' + member.displayName} value={member.role} disabled={pending} onChange={event => { setChanging({ member, role: event.target.value as Role }); setError(undefined); }}>{Object.entries(roleNames).map(([role, label]) => <option key={role} value={role}>{label}</option>)}</select> : roleNames[member.role]}</td>
           <td className="cell-inline">{member.active ? <Badge tone="success">Active</Badge> : <Badge>Inactive</Badge>}</td>
-          <td className="cell-actions">{member.active && <button type="button" className="text-button danger" disabled={pending} onClick={() => { setRemoving(member); setError(undefined); }}>Remove access</button>}</td>
+          <td className="cell-actions">{member.active && <span className="row-actions">
+            {member.userId !== auth.user?.id && <button type="button" className="text-button" disabled={pending} onClick={() => { setResetting(member); setError(undefined); }}>Reset password<span className="sr-only"> for {member.displayName}</span></button>}
+            <button type="button" className="text-button danger" disabled={pending} onClick={() => { setRemoving(member); setError(undefined); }}>Remove access</button></span>}</td>
         </tr>)}</tbody>
       </table>}
       {members.data && <Pager data={members.data} onPage={setMemberPage} />}
@@ -93,6 +105,17 @@ export function PeoplePage() {
       <div className="form-actions"><button type="button" className="button secondary" onClick={() => setShowInvite(false)}>Cancel</button><button className="button primary" disabled={pending}>{pending ? 'Creating…' : 'Create invitation'}</button></div>
     </form>}</Dialog>}
 
+    {resetting && <Dialog title={'Reset password for ' + resetting.displayName + '?'} close={closeReset}>{issued ? <>
+      <p>Give this link to {issued.displayName} in person, or by a message only they can read. It works once and expires in 24 hours.</p>
+      <Field label="Reset link"><input readOnly value={resetUrl} onFocus={event => event.currentTarget.select()} /><small>Copy it now; it won't be shown again. Making another link cancels this one.</small></Field>
+      <ErrorMessage error={error} />
+      <div className="form-actions"><button type="button" className="button secondary" onClick={closeReset}>Done</button><button type="button" className="button primary" onClick={() => { void navigator.clipboard.writeText(resetUrl).then(() => setCopied(true)).catch(() => setError(new Error('Copy isn’t available here. Select the link above and copy it.'))); }}><Icon name={copied ? 'check' : 'copy'} />{copied ? 'Copied' : 'Copy link'}</button></div>
+    </> : <>
+      <p>This creates a one-time link that lets {resetting.displayName} choose a new password. Their current password keeps working until they use it; then every device they are signed in on is signed out.</p>
+      <ErrorMessage error={error} />
+      <div className="form-actions"><button type="button" className="button secondary" data-autofocus onClick={closeReset}>Cancel</button><button type="button" className="button primary" disabled={pending} onClick={() => void issueReset()}>{pending ? 'Creating…' : 'Create reset link'}</button></div>
+    </>}</Dialog>}
+
     {(removing || changing) && <Dialog title={removing ? 'Remove ' + removing.displayName + '?' : 'Change role?'} close={closeConfirm}>
       <p>{removing ? 'They will lose access to ' + organization.name + ' right away. Their past activity stays in the history.' : 'Make ' + changing?.member.displayName + ' ' + (changing ? roleNames[changing.role] : '') + '?'}</p>
       <p className="field-help">A business always needs at least one active Owner.</p>
@@ -115,6 +138,18 @@ function activityIcon(event: Activity): IconName {
   if (event.action.includes('MEMBER') || event.action.includes('INVITATION')) return 'people';
   return 'activity';
 }
+/** Audit events as a list; used by the Activity page and the Home card. */
+export function ActivityList({ events, root }: { events: Activity[]; root: string }) {
+  return <ul className="activity-list">{events.map(event => <li key={event.id}>
+    <span className="activity-icon" aria-hidden="true"><Icon name={activityIcon(event)} /></span>
+    <div><strong>{event.action.replaceAll('_', ' ').toLowerCase()}</strong>
+      <p>{event.actorName}{event.metadata.name ? ' · ' + event.metadata.name : ''}{event.metadata.role ? ' · ' + roleNames[event.metadata.role as Role] : ''}{stockDetail(event)}</p>
+      {event.resourceType === 'ITEM' && <Link to={root + '/items/' + event.resourceId}>View item</Link>}
+      {event.resourceType === 'LOCATION' && <Link to={root + '/locations/' + event.resourceId}>View location</Link>}
+      {event.resourceType === 'REQUEST' && <Link to={root + '/requests/' + event.resourceId}>View request {event.metadata.request}</Link>}</div>
+    <time dateTime={event.occurredAt}>{new Date(event.occurredAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</time>
+  </li>)}</ul>;
+}
 export function ActivityPage() {
   const { base, organization } = useWorkspace();
   const [page, setPage] = useState(0);
@@ -127,15 +162,7 @@ export function ActivityPage() {
     {!events.data && !events.error && <div className="panel table-panel"><Loading variant="list" label="Loading activity" /></div>}
     {events.data?.items.length === 0 && <Empty icon="activity" title="No activity yet">Changes to items, locations and people will be listed here.</Empty>}
     {!!events.data?.items.length && <section className="panel table-panel" aria-label="Activity">
-      <ul className="activity-list">{events.data.items.map(event => <li key={event.id}>
-        <span className="activity-icon" aria-hidden="true"><Icon name={activityIcon(event)} /></span>
-        <div><strong>{event.action.replaceAll('_', ' ').toLowerCase()}</strong>
-          <p>{event.actorName}{event.metadata.name ? ' · ' + event.metadata.name : ''}{event.metadata.role ? ' · ' + roleNames[event.metadata.role as Role] : ''}{stockDetail(event)}</p>
-          {event.resourceType === 'ITEM' && <Link to={root + '/items/' + event.resourceId}>View item</Link>}
-          {event.resourceType === 'LOCATION' && <Link to={root + '/locations/' + event.resourceId}>View location</Link>}
-          {event.resourceType === 'REQUEST' && <Link to={root + '/requests/' + event.resourceId}>View request {event.metadata.request}</Link>}</div>
-        <time dateTime={event.occurredAt}>{new Date(event.occurredAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</time>
-      </li>)}</ul>
+      <ActivityList events={events.data.items} root={root} />
       <Pager data={events.data} onPage={setPage} />
     </section>}
   </>;

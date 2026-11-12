@@ -12,8 +12,13 @@ class CatalogController {
     CatalogController(CatalogService catalog) { this.catalog=catalog; }
     @GetMapping
     PageResponse<CatalogDtos.View> list(@PathVariable UUID orgId, @RequestParam(defaultValue="false") boolean includeArchived,
-            @RequestParam(defaultValue="") String q, @RequestParam(defaultValue="0") int page, @RequestParam(defaultValue="20") int size) {
-        return catalog.list(orgId, includeArchived, q, page, size);
+            @RequestParam(defaultValue="") String q, @RequestParam(required=false) UUID locationId, @RequestParam(defaultValue="false") boolean lowStock,
+            @RequestParam(defaultValue="0") int page, @RequestParam(defaultValue="20") int size) {
+        return catalog.list(orgId, includeArchived, q, locationId, lowStock, page, size);
+    }
+    @PutMapping("/{id}/placements/{locationId}/minimum") @ResponseStatus(HttpStatus.NO_CONTENT)
+    void setMinimum(@PathVariable UUID orgId, @PathVariable UUID id, @PathVariable UUID locationId, @RequestBody StockDtos.Minimum input) {
+        catalog.setMinimum(orgId, id, locationId, input.minimum());
     }
     @GetMapping("/{id}")
     CatalogDtos.View get(@PathVariable UUID orgId, @PathVariable UUID id) { return catalog.get(orgId, id); }

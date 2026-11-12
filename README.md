@@ -17,6 +17,7 @@ quantities, inventory actions, scanning, and replenishment come in later phases.
 - [Phase 2 inventory quantities and stock operations](docs/phase-2.md)
 - [Phase 3 labels and scanning](docs/phase-3.md)
 - [Phase 4 restock requests and deliveries](docs/phase-4.md)
+- [Phase 5 Home, low stock, search, exports and password resets](docs/phase-5.md)
 - [Design system and visual specimen](docs/design-system.md)
 - [Frontend codebook](docs/frontend-codebook.md)
 
@@ -218,10 +219,10 @@ GitHub Actions runs frontend compilation, Maven integration tests, a
 production-container smoke test, and isolated Playwright browser checks. It does
 not publish images or deploy services.
 
-Phases 1–3 (foundation; stock quantities and movement history; QR labels,
-barcodes and phone scanning) are merged. Phase 4 adds restock requests,
-approval and deliveries recorded against them; see
-[docs/phase-4.md](docs/phase-4.md).
+Phases 1–4 (foundation; stock quantities and movement history; QR labels,
+barcodes and phone scanning; restock requests and deliveries) are merged.
+Phase 5 adds Home, low-stock minimums, search, CSV exports and owner-issued
+password reset links; see [docs/phase-5.md](docs/phase-5.md).
 
 Printed QR labels encode `BACKROOM_PUBLIC_URL` (default `http://localhost:8080`).
 Set it to Backroom's permanent HTTPS address before printing labels for real
