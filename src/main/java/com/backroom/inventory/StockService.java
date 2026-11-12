@@ -37,12 +37,15 @@ public class StockService {
     private final AccessPolicy access;
     private final AuditService audit;
     private final StockCommandHooks hooks;
+    private final List<StockReversalListener> reversalListeners;
 
     StockService(ItemRepository items, PlacementRepository placements, StockBalanceRepository balances,
                  StockOperationRepository operations, StockMovementRepository movements, StockCountRepository counts,
-                 LocationQueries locations, AccessPolicy access, AuditService audit, StockCommandHooks hooks) {
+                 LocationQueries locations, AccessPolicy access, AuditService audit, StockCommandHooks hooks,
+                 List<StockReversalListener> reversalListeners) {
         this.items=items; this.placements=placements; this.balances=balances; this.operations=operations;
         this.movements=movements; this.counts=counts; this.locations=locations; this.access=access; this.audit=audit; this.hooks=hooks;
+        this.reversalListeners=reversalListeners;
     }
 
     // ---------- Commands ----------
@@ -160,6 +163,8 @@ public class StockService {
             throw ApiException.conflict("ALREADY_REVERSED", "This operation has already been reversed.");
         }
         var operation = claim(orgId, REVERSAL, item, in.operationKey(), fingerprint, null, in.note(), operationId);
+        // Other modules (restocking) adjust their records here, before balances are locked.
+        reversalListeners.forEach(listener -> listener.onReversal(orgId, operationId));
         var originalMovements = movements.findByOrganizationIdAndOperationIdOrderByQuantityChangeAsc(orgId, operationId);
         // Stock that was removed comes back: those locations must still be able to hold it.
         originalMovements.stream().filter(movement -> movement.quantityChange.signum() < 0)
@@ -227,6 +232,18 @@ public class StockService {
         access.require(orgId);
         var operation = operations.findByOrganizationIdAndId(orgId, operationId).orElseThrow(ApiException::notFound);
         return fullView(orgId, operation, false);
+    }
+
+    /** The operation a client key produced in this organization, if any. Callers authorize. */
+    @Transactional(readOnly=true)
+    public Optional<UUID> operationIdForKey(UUID orgId, UUID operationKey) {
+        return operations.findByOrganizationIdAndOperationKey(orgId, operationKey).map(StockOperation::getId);
+    }
+
+    /** Which of these operations have since been reversed. Callers authorize. */
+    @Transactional(readOnly=true)
+    public Set<UUID> reversedAmong(UUID orgId, Collection<UUID> operationIds) {
+        return operationIds.isEmpty() ? Set.of() : operations.reversedAmong(orgId, operationIds);
     }
 
     // ---------- Steps ----------
