@@ -15,6 +15,7 @@ quantities, inventory actions, scanning, and replenishment come in later phases.
 - [Architecture and module boundaries](docs/architecture.md)
 - [Phase 1 behavior and API defaults](docs/phase-1.md)
 - [Phase 2 inventory quantities and stock operations](docs/phase-2.md)
+- [Phase 3 labels and scanning](docs/phase-3.md)
 - [Design system and visual specimen](docs/design-system.md)
 - [Frontend codebook](docs/frontend-codebook.md)
 
@@ -117,7 +118,7 @@ CSRF behavior, tenant isolation, role changes, archival, invitation races,
 concurrent ownership/hierarchy changes, transactional audit rollback, and the
 existing infrastructure guarantees.
 
-Flyway applies four domain migrations for access, catalog/locations, activity, and inventory.
+Flyway applies five domain migrations for access, catalog/locations, activity, inventory, and resource codes.
 Existing Phase 0 database volumes upgrade without being reset. Hibernate validates
 the schema and never creates business tables.
 
@@ -205,7 +206,7 @@ Use `pwsh ./scripts/smoke-test.ps1` for the same production-container checks.
 - **npm ci reports EPERM on a native binding:** stop the Vite development server
   in its terminal, then run setup or verification again.
 - **Flyway reports no migrations:** check that the current Phase 1 code/image is
-  running; four versioned migrations should be present.
+  running; five versioned migrations should be present.
 - **Signed out after a restart:** sessions are in memory. Sign in again; database
   records are preserved. Accounts have no self-service recovery or verified email
   yet, so establish a recovery process before using real business data.
@@ -216,6 +217,13 @@ GitHub Actions runs frontend compilation, Maven integration tests, a
 production-container smoke test, and isolated Playwright browser checks. It does
 not publish images or deploy services.
 
-Phase 1 (foundation) is merged. Phase 2 adds stock quantities, transaction-safe
-stock operations and movement history; see [docs/phase-2.md](docs/phase-2.md).
+Phase 1 (foundation) and Phase 2 (stock quantities, transaction-safe stock
+operations, movement history) are merged. Phase 3 adds QR labels, product
+barcodes and phone scanning; see [docs/phase-3.md](docs/phase-3.md).
+
+Printed QR labels encode `BACKROOM_PUBLIC_URL` (default `http://localhost:8080`).
+Set it to Backroom's permanent HTTPS address before printing labels for real
+shelves. To test the camera on a phone, run the frontend with
+`BACKROOM_DEV_HTTPS=1` and open the HTTPS LAN address shown by Vite; the steps
+are in [docs/phase-3.md](docs/phase-3.md#testing-on-iphone-safari).
 Follow the PRD for later scanning and replenishment milestones. PRD v1 is unchanged.

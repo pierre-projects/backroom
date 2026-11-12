@@ -19,9 +19,10 @@ Vite's proxy; deployment needs one Java process and one database.
 
 Phase 1 implements access, locations, catalog/placements within inventory, audit,
 and shared technical configuration. Phase 2 adds balances, stock operations and
-movement history to inventory. Restocking, labels, and assets remain future
-modules. See [Phase 1 defaults](phase-1.md) and [Phase 2 inventory](phase-2.md)
-for the implemented contracts.
+movement history to inventory. Phase 3 adds the labels module (codes, scan
+resolution, label PDFs). Restocking and assets remain future modules. See
+[Phase 1](phase-1.md), [Phase 2](phase-2.md) and [Phase 3](phase-3.md) for the
+implemented contracts.
 
 Controllers will accept DTOs and call application services. Services will enforce
 organization access and own transaction boundaries. Inventory will own every
@@ -33,7 +34,7 @@ one another through repositories. JPA entities are not API responses.
 - Spring Boot 4.1.2, Spring MVC, Security, JPA, Validation, Actuator, Flyway.
 - Java 21 is enforced by Maven; Windows setup uses an ignored portable JDK.
 - PostgreSQL 17 is used in Compose and Testcontainers.
-- Flyway applies the access, catalog/locations, audit, and inventory migrations;
+- Flyway applies the access, catalog/locations, audit, inventory, and resource-code migrations;
   Hibernate uses validate, never update or create.
 - No default or demo account exists. Users register through the application;
   Spring's generated user remains disabled.
@@ -71,6 +72,22 @@ one another through repositories. JPA entities are not API responses.
   exactly one balance.
 - Tests coordinate competing transactions with the StockCommandHooks extension
   point and pg_stat_activity, never with sleeps.
+
+## Labels and scanning (Phase 3)
+
+- `labels` reads items and locations only through `ItemQueries` and
+  `LocationQueries`. Inventory and locations never depend on labels.
+- `resource_codes` targets exactly one item or location.
+  - Generated tokens are globally unique and never recycled.
+  - Manufacturer barcodes are unique per organization while active.
+  - A trigger makes codes permanent apart from one-way revocation.
+- A printed QR holds `{BACKROOM_PUBLIC_URL}/s/{token}`. `/s/{token}` is served
+  by the SPA. It calls `GET /api/v1/codes/{token}`, which needs a session and an
+  active membership. Signed-out visitors go through `/signin?next=` and come back.
+- Label PDFs are generated in memory with ZXing (QR) and PDFBox. Nothing is stored.
+- The browser scanner uses the native `BarcodeDetector` when present.
+  Otherwise it uses a lazy-loaded zxing-cpp WebAssembly polyfill served from
+  `/assets` (no CDN).
 
 POS automation and equipment remain later product capabilities.
 

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router';
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { ApiError, api, refreshCsrf, send } from './api';
 import { Brand, ErrorMessage, Field, Loading, PageHeader, useResource, Pager } from './components';
 import { Icon } from './icons';
@@ -52,11 +52,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
   return <AuthContext.Provider value={{ user, loading, error, login, logout, reload: () => setRevision(v => v + 1) }}>{children}</AuthContext.Provider>;
 }
+/** Only same-site paths may be used as a post-sign-in destination. */
+export function safeNext(value: string | null): string | null {
+  return value && value.startsWith('/') && !value.startsWith('//') && !value.startsWith('/\\') ? value : null;
+}
 export function Protected({ children }: { children: ReactNode }) {
   const auth = useAuth();
+  const location = useLocation();
   if (auth.loading) return <div className="auth-shell"><Loading /></div>;
   if (auth.error) return <div className="auth-shell"><Brand /><div className="auth-card"><ErrorMessage error={auth.error} retry={auth.reload} /></div></div>;
-  if (!auth.user) return <Navigate to="/signin" replace />;
+  if (!auth.user) return <Navigate to={'/signin?next=' + encodeURIComponent(location.pathname + location.search)} replace />;
   return children;
 }
 export function AuthForm({ initialMode = 'signin', invitation = false }: { initialMode?: 'signin' | 'register'; invitation?: boolean }) {
@@ -77,6 +82,9 @@ export function AuthForm({ initialMode = 'signin', invitation = false }: { initi
     } catch (value) { setError(value); } finally { setPending(false); }
   }
   const register = mode === 'register';
+  const [params] = useSearchParams();
+  const next = safeNext(params.get('next'));
+  const keep = next ? '?next=' + encodeURIComponent(next) : '';
   return <section className="auth-card">
     <h1>{register ? 'Create your account' : 'Sign in to Backroom'}</h1>
     <p className="auth-lead">{invitation ? 'Sign in or create an account to see your invitation.' : register ? 'You can create a business or join one after this step.' : 'Use the email and password for your account.'}</p>
@@ -89,14 +97,15 @@ export function AuthForm({ initialMode = 'signin', invitation = false }: { initi
     </form>
     <p className="auth-switch">{register ? 'Already have an account?' : 'New to Backroom?'}{' '}
       {invitation ? <button className="text-button" type="button" onClick={() => { setMode(register ? 'signin' : 'register'); setError(undefined); }}>{register ? 'Sign in' : 'Create an account'}</button> :
-        <Link to={register ? '/signin' : '/register'}>{register ? 'Sign in' : 'Create an account'}</Link>}
+        <Link to={(register ? '/signin' : '/register') + keep}>{register ? 'Sign in' : 'Create an account'}</Link>}
     </p>
   </section>;
 }
 export function AuthPage({ mode }: { mode: 'signin' | 'register' }) {
   const auth = useAuth();
+  const [params] = useSearchParams();
   if (auth.loading) return <div className="auth-shell"><Loading /></div>;
-  if (auth.user) return <Navigate to="/app" replace />;
+  if (auth.user) return <Navigate to={safeNext(params.get('next')) ?? '/app'} replace />;
   return <div className="auth-shell"><Brand /><AuthForm key={mode} initialMode={mode} /></div>;
 }
 export function InvitationPage() {
@@ -149,7 +158,7 @@ export function OrganizationChooser() {
   return <div className="public-shell">
     <header className="public-header"><Brand to="/app" /><div className="header-actions"><span className="muted chooser-user">{auth.user!.displayName}</span><button type="button" className="button ghost" onClick={() => void auth.logout().catch(setError)}><Icon name="logout" />Sign out</button></div></header>
     <main className="chooser-main" id="main">
-      <PageHeader title="Your businesses" description={none ? 'Create a business to start your catalog, or open an invitation link from your team.' : 'Choose a business to open its workspace.'}>{!none && <button type="button" className="button secondary" aria-expanded={showCreate} onClick={() => setShowCreate(v => !v)}><Icon name="plus" />New organization</button>}</PageHeader>
+      <PageHeader title="Your businesses" description={none ? 'Create a business to start your catalog, or open an invitation link from your team.' : 'Choose a business to open its workspace.'}>{organizations.data && !none && <button type="button" className="button secondary" aria-expanded={showCreate} onClick={() => setShowCreate(v => !v)}><Icon name="plus" />New organization</button>}</PageHeader>
       <ErrorMessage error={organizations.error ?? error} retry={organizations.error ? organizations.reload : undefined} />
       {(showCreate || none) && <form className="panel organization-form" onSubmit={create}><h2 className="section-heading">Create an organization</h2><p className="section-intro">You will be its Owner. You can rename it later in Settings.</p><Field label="Business name"><input name="name" maxLength={120} required /></Field><button className="button primary" disabled={pending}>{pending ? 'Creating…' : 'Create organization'}</button></form>}
       {!organizations.data && !organizations.error && <div className="panel table-panel"><Loading variant="list" label="Loading businesses" /></div>}

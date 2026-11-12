@@ -12,7 +12,10 @@ async function register(page: Page, name: string) {
   return email;
 }
 async function createOrganization(page: Page, name: string) {
-  if (!await page.getByLabel('Business name', { exact: true }).isVisible()) {
+  const form = page.getByLabel('Business name', { exact: true });
+  const newButton = page.getByRole('button', { name: 'New organization', exact: true });
+  await expect(form.or(newButton)).toBeVisible();
+  if (!await form.isVisible()) {
     await page.getByRole('button', { name: 'New organization', exact: true }).click();
   }
   await page.getByLabel('Business name', { exact: true }).fill(name);
@@ -144,6 +147,6 @@ test('organization switching, metadata editing, archival and expired sessions', 
   const signedOut = await context.request.post('/api/v1/auth/logout', { headers: { [token.headerName]: token.token } });
   expect(signedOut.status()).toBe(204);
   await page.getByRole('link', { name: /Locations/ }).click();
-  await expect(page).toHaveURL(/\/signin$/);
+  await expect(page).toHaveURL(/\/signin(\?|$)/);
   await expect(page.getByRole('heading', { name: 'Sign in to Backroom', exact: true })).toBeVisible();
 });

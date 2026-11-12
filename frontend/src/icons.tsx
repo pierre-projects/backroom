@@ -28,6 +28,8 @@ const paths = {
   count: <><rect x="4.5" y="3.5" width="11" height="13.5" rx="1.5" /><path d="M7.5 3.5v2h5v-2M7.5 10l1.5 1.5 3.5-3.5M7.5 14h5" /></>,
   undo: <><path d="M7 5 3.5 8.5 7 12" /><path d="M3.5 8.5h8a4.5 4.5 0 0 1 0 9H8" /></>,
   start: <><path d="M5 17V3.5" /><path d="M5 4h9l-2 3 2 3H5" /></>,
+  scan: <><path d="M3.5 7V4.5a1 1 0 0 1 1-1H7M13 3.5h2.5a1 1 0 0 1 1 1V7M16.5 13v2.5a1 1 0 0 1-1 1H13M7 16.5H4.5a1 1 0 0 1-1-1V13" /><path d="M6.5 10h7" /></>,
+  label: <><path d="M3.5 4.5h7.8l5.2 5.5-5.2 5.5H3.5z" /><circle cx="7" cy="10" r="1.2" /></>,
   copy: <><rect x="7" y="7" width="9.5" height="9.5" rx="1.5" /><path d="M13 7V5a1.5 1.5 0 0 0-1.5-1.5h-6A1.5 1.5 0 0 0 4 5v6.5A1.5 1.5 0 0 0 5.5 13H7" /></>,
 } as const;
 

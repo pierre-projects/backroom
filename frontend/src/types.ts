@@ -26,3 +26,15 @@ export interface StockOperation {
   id: string; type: StockOperationType; itemId: string; actorName: string; occurredAt: string; reversesOperationId: string | null;
   movements: StockMovement[]; count: { countedQuantity: string; recordedQuantity: string; difference: string } | null; replayed: boolean;
 }
+export type TargetType = 'ITEM' | 'LOCATION';
+export type ScanStatus = 'ITEM' | 'LOCATION' | 'REVOKED' | 'OTHER_ORGANIZATION' | 'NOT_FOUND' | 'NOT_REGISTERED' | 'UNSUPPORTED';
+export interface ResourceCode {
+  id: string; kind: 'GENERATED' | 'MANUFACTURER'; display: string; url: string | null; targetType: TargetType; targetId: string;
+  status: 'ACTIVE' | 'REVOKED'; createdAt: string; version: number;
+}
+export interface ScanResult {
+  status: ScanStatus; targetType: TargetType | null; id: string | null; name: string | null; parentName: string | null; sku: string | null;
+  unit: Unit | null; archived: boolean; code: string | null; organizationId: string | null; organizationName: string | null; canRegister: boolean;
+}
+export interface CodeLink { status: ScanStatus; organizationId: string; targetType: TargetType | null; id: string | null }
+export interface LabelSettings { publicBaseUrl: string; localAddress: boolean; maxLabels: number }
