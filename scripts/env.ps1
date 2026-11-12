@@ -1,15 +1,19 @@
 # Dot-source this file: . ./scripts/env.ps1
+# Operations scripts that only need .env (backup, restore) use: . ./scripts/env.ps1 -NoJava
+param([switch]$NoJava)
 $backroomProjectRoot = Split-Path -Parent $PSScriptRoot
-$backroomPortableJava = Join-Path $backroomProjectRoot '.tools/jdk-21'
-if (Test-Path -LiteralPath (Join-Path $backroomPortableJava 'bin/java.exe')) {
-    $env:JAVA_HOME = $backroomPortableJava
-}
-if (-not $env:JAVA_HOME -or -not (Test-Path -LiteralPath (Join-Path $env:JAVA_HOME 'bin'))) {
-    throw 'Java 21 is required. Run ./scripts/setup.ps1 or set JAVA_HOME to a Java 21 JDK.'
-}
-$backroomJavaBin = Join-Path $env:JAVA_HOME 'bin'
-if (($env:PATH -split [IO.Path]::PathSeparator) -notcontains $backroomJavaBin) {
-    $env:PATH = $backroomJavaBin + [IO.Path]::PathSeparator + $env:PATH
+if (-not $NoJava) {
+    $backroomPortableJava = Join-Path $backroomProjectRoot '.tools/jdk-21'
+    if (Test-Path -LiteralPath (Join-Path $backroomPortableJava 'bin/java.exe')) {
+        $env:JAVA_HOME = $backroomPortableJava
+    }
+    if (-not $env:JAVA_HOME -or -not (Test-Path -LiteralPath (Join-Path $env:JAVA_HOME 'bin'))) {
+        throw 'Java 21 is required. Run ./scripts/setup.ps1 or set JAVA_HOME to a Java 21 JDK.'
+    }
+    $backroomJavaBin = Join-Path $env:JAVA_HOME 'bin'
+    if (($env:PATH -split [IO.Path]::PathSeparator) -notcontains $backroomJavaBin) {
+        $env:PATH = $backroomJavaBin + [IO.Path]::PathSeparator + $env:PATH
+    }
 }
 $backroomEnvFile = Join-Path $backroomProjectRoot '.env'
 if (Test-Path -LiteralPath $backroomEnvFile) {

@@ -153,14 +153,15 @@ export function ResetPasswordPage() {
   const [error, setError] = useState<unknown>();
   const [mismatch, setMismatch] = useState(false);
   const [pending, setPending] = useState(false);
+  // Wait for the session check: it fetches the CSRF token, and a parallel fetch in a fresh browser would start a second session.
   useEffect(() => {
-    if (!token) return;
+    if (!token || auth.loading) return;
     const controller = new AbortController();
-    void refreshCsrf().then(() => api<ResetPreview>('/auth/password-reset/preview', { method: 'POST', body: JSON.stringify({ token }), signal: controller.signal }))
+    void api<ResetPreview>('/auth/password-reset/preview', { method: 'POST', body: JSON.stringify({ token }), signal: controller.signal })
       .then(value => { if (!controller.signal.aborted) setPreview(value); })
       .catch(value => { if (!controller.signal.aborted) setError(value); });
     return () => controller.abort();
-  }, [token]);
+  }, [token, auth.loading]);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);

@@ -24,7 +24,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(Exception.class)
     ProblemDetail unexpected(Exception error) {
         log.error("An unexpected application failure occurred", error);
-        return ProblemResponses.problem(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "The action could not be completed. Try again shortly.");
+        var problem = ProblemResponses.problem(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "The action could not be completed. Try again shortly.");
+        // Lets a person quote the failure; the same id is on every log line of the request.
+        var requestId = RequestIdFilter.current();
+        if (requestId != null) problem.setProperty("requestId", requestId);
+        return problem;
     }
     @ExceptionHandler(ApiException.class)
     ProblemDetail application(ApiException error) {

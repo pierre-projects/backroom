@@ -44,3 +44,13 @@ management:
     health:
       show-details: never
       show-components: never
+      # /actuator/health/liveness (process is alive) and /actuator/health/readiness (can serve: includes the database).
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db
+logging:
+  pattern:
+    # Plain-text development logs carry the request id too; production uses structured JSON (application-prod.yaml).
+    level: "%5p [%X{requestId:-}]"
