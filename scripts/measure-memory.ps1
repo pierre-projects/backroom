@@ -104,3 +104,5 @@ if ($backroomCgroupPeak -gt 0) {
 if ($backroomExit -ne 0) { throw ('The e2e suite failed (exit ' + $backroomExit + '); memory numbers are from a failed run.') }
 if ($backroomPeak -ge $backroomLimit) { throw 'FAIL: the app reached its memory limit.' }
 Write-Host 'PASS: e2e suite passed and the app stayed under its memory limit.'
+# The last docker probe usually hits the container after teardown; don't leak its exit code.
+exit 0
