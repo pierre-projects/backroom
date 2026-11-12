@@ -20,8 +20,9 @@ Vite's proxy; deployment needs one Java process and one database.
 Phase 1 implements access, locations, catalog/placements within inventory, audit,
 and shared technical configuration. Phase 2 adds balances, stock operations and
 movement history to inventory. Phase 3 adds the labels module (codes, scan
-resolution, label PDFs). Restocking and assets remain future modules. See
-[Phase 1](phase-1.md), [Phase 2](phase-2.md) and [Phase 3](phase-3.md) for the
+resolution, label PDFs). Phase 4 adds restocking (requests, approval,
+deliveries). Assets remain a future module. See [Phase 1](phase-1.md),
+[Phase 2](phase-2.md), [Phase 3](phase-3.md) and [Phase 4](phase-4.md) for the
 implemented contracts.
 
 Controllers will accept DTOs and call application services. Services will enforce
@@ -34,7 +35,7 @@ one another through repositories. JPA entities are not API responses.
 - Spring Boot 4.1.2, Spring MVC, Security, JPA, Validation, Actuator, Flyway.
 - Java 21 is enforced by Maven; Windows setup uses an ignored portable JDK.
 - PostgreSQL 17 is used in Compose and Testcontainers.
-- Flyway applies the access, catalog/locations, audit, inventory, and resource-code migrations;
+- Flyway applies the access, catalog/locations, audit, inventory, resource-code, and restocking migrations;
   Hibernate uses validate, never update or create.
 - No default or demo account exists. Users register through the application;
   Spring's generated user remains disabled.
@@ -88,6 +89,23 @@ one another through repositories. JPA entities are not API responses.
 - The browser scanner uses the native `BarcodeDetector` when present.
   Otherwise it uses a lazy-loaded zxing-cpp WebAssembly polyfill served from
   `/assets` (no CDN).
+
+## Restocking (Phase 4)
+
+- `restocking` changes stock only by calling `StockService.receive` inside its
+  own transaction. The delivery, stock movement, balance, request state and
+  audit commit together.
+- Lock order for a delivery:
+  1. request row (`FOR UPDATE`);
+  2. then, inside inventory, the item (shared), the location (shared), the
+     placement and the balance.
+- The operation key is re-checked under the request lock, so a duplicate
+  delivery that waited behind the original replays instead of
+  double-counting or failing as an over-receipt.
+- Inventory defines `StockReversalListener` and calls it during a reversal,
+  before locking balances. Restocking implements it to take a reversed
+  delivery off its request. Inventory never depends on restocking (the same
+  pattern as `LocationMutationPolicy`).
 
 POS automation and equipment remain later product capabilities.
 

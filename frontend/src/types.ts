@@ -38,3 +38,16 @@ export interface ScanResult {
 }
 export interface CodeLink { status: ScanStatus; organizationId: string; targetType: TargetType | null; id: string | null }
 export interface LabelSettings { publicBaseUrl: string; localAddress: boolean; maxLabels: number }
+export type RequestStatus = 'SUBMITTED' | 'APPROVED' | 'PARTIALLY_RECEIVED' | 'FULFILLED' | 'REJECTED' | 'CANCELLED' | 'CLOSED_SHORT';
+export interface RestockReceipt { id: string; quantity: string; receiverName: string; receivedAt: string; stockOperationId: string; reversed: boolean }
+export interface RestockRequest {
+  id: string; number: number; label: string; status: RequestStatus;
+  itemId: string; itemName: string; sku: string | null; unit: Unit; itemArchived: boolean;
+  locationId: string; locationName: string; parentName: string | null;
+  requested: string; approved: string | null; received: string; remaining: string;
+  requesterId: string; requesterName: string; note: string | null; createdAt: string;
+  decidedByName: string | null; decidedAt: string | null; decisionNote: string | null;
+  closedByName: string | null; closedAt: string | null; closeReason: string | null;
+  updatedAt: string; version: number; receipts: RestockReceipt[]; replayed: boolean;
+}
+export interface RequestSummary { needsReview: number; toReceive: number }

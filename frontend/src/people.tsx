@@ -132,7 +132,8 @@ export function ActivityPage() {
         <div><strong>{event.action.replaceAll('_', ' ').toLowerCase()}</strong>
           <p>{event.actorName}{event.metadata.name ? ' · ' + event.metadata.name : ''}{event.metadata.role ? ' · ' + roleNames[event.metadata.role as Role] : ''}{stockDetail(event)}</p>
           {event.resourceType === 'ITEM' && <Link to={root + '/items/' + event.resourceId}>View item</Link>}
-          {event.resourceType === 'LOCATION' && <Link to={root + '/locations/' + event.resourceId}>View location</Link>}</div>
+          {event.resourceType === 'LOCATION' && <Link to={root + '/locations/' + event.resourceId}>View location</Link>}
+          {event.resourceType === 'REQUEST' && <Link to={root + '/requests/' + event.resourceId}>View request {event.metadata.request}</Link>}</div>
         <time dateTime={event.occurredAt}>{new Date(event.occurredAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</time>
       </li>)}</ul>
       <Pager data={events.data} onPage={setPage} />

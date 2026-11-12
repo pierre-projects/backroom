@@ -9,6 +9,7 @@ import { unitNames } from './types';
 import { MovementList, ReverseDialog, SlotSheet, StockDialog, formatQuantity, locationPath, useStockLocations } from './stock';
 import type { StockAction } from './stock';
 import { CodesPanel } from './codes';
+import { ItemRequestsPanel, NewRequestDialog } from './requests';
 import { SelectionBar, useLabelSelection } from './labels';
 import { useWorkspace } from './workspace';
 
@@ -95,6 +96,7 @@ export function ItemDetail() {
   const [action, setAction] = useState<{ kind: StockAction; locationId?: string }>();
   const [reversing, setReversing] = useState<StockMovement>();
   const [addingPlace, setAddingPlace] = useState(false);
+  const [requesting, setRequesting] = useState<{ locationId?: string }>();
   const [error, setError] = useState<unknown>();
   const [pending, setPending] = useState(false);
   const [status, setStatus] = useState('');
@@ -106,6 +108,7 @@ export function ItemDetail() {
   useEffect(() => {
     if (!requested || !item.data || !balances.data) return;
     if ((requested === 'usage' || requested === 'receive' || requested === 'waste') && !item.data.archived) setAction({ kind: requested });
+    if (requested === 'request' && !item.data.archived) setRequesting({});
     setSearchParams({}, { replace: true });
   }, [requested, item.data, balances.data, setSearchParams]);
   const finished = (message: string) => { setAction(undefined); setReversing(undefined); setStatus(message); refresh(); };
@@ -131,6 +134,7 @@ export function ItemDetail() {
   return <>
     <PageHeader back={{ to: root + '/items', label: 'Inventory' }} title={value.name}>
       {!value.archived && <button type="button" className="button primary" onClick={() => setAction({ kind: 'receive' })}><Icon name="receive" />Receive stock</button>}
+      {!value.archived && <button type="button" className="button secondary" onClick={() => setRequesting({})}><Icon name="plus" />Request more</button>}
       {editable && hasStock && <button type="button" className="button secondary" onClick={() => setAction({ kind: 'transfer' })}><Icon name="transfer" />Transfer</button>}
       {editable && <><button type="button" className="button secondary" onClick={() => setEditing(true)}>Edit item</button><button type="button" className="button secondary" onClick={() => setArchiving(true)}>Archive item</button></>}
     </PageHeader>
@@ -165,6 +169,7 @@ export function ItemDetail() {
         </form> : <button type="button" className="text-button" onClick={() => setAddingPlace(true)}><Icon name="plus" className="small" />Add an expected location</button>}
       </div>}
     </section>
+    {!value.archived && <ItemRequestsPanel itemId={value.id} />}
     <CodesPanel type="ITEM" targetId={value.id} archived={value.archived} />
     <section className="panel table-panel" aria-labelledby="history-heading">
       <div className="panel-header"><div><h2 id="history-heading">History</h2><p>Every change to this item's stock, newest first.</p></div></div>
@@ -174,7 +179,9 @@ export function ItemDetail() {
       {history.data && <MovementList movements={history.data.items} unit={value.unit} canReverse={editable} reverse={setReversing} />}
       {history.data && <Pager data={history.data} onPage={setHistoryPage} />}
     </section>
-    {sheet && <SlotSheet slot={sheet} item={value} canManage={editable} close={() => setSheet(undefined)}
+    {requesting && <NewRequestDialog item={{ id: value.id, name: value.name, unit: value.unit }} locationId={requesting.locationId} close={() => setRequesting(undefined)}
+      done={request => navigate(root + '/requests/' + request.id)} />}
+    {sheet && <SlotSheet slot={sheet} item={value} canManage={editable} close={() => setSheet(undefined)} request={() => { const slot = sheet; setSheet(undefined); setRequesting({ locationId: slot.locationId }); }}
       pick={kind => { setSheet(undefined); setAction({ kind, locationId: sheet.locationId }); }}
       remove={() => { const slot = sheet; setSheet(undefined); void mutate(base + '/items/' + itemId + '/placements/' + slot.locationId, 'DELETE', undefined, locationPath(slot) + ' removed'); }} />}
     {action && <StockDialog action={action.kind} item={value} base={base} balances={slots} locationId={action.locationId} close={() => setAction(undefined)} done={finished} />}

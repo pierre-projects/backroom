@@ -10,6 +10,7 @@ import { OrganizationSettings, WorkspaceLayout } from './workspace';
 import { ScanPage } from './scan';
 import { PrintLabelsPage } from './labels';
 import { CodeLinkPage } from './codes';
+import { RequestDetailPage, RequestsPage } from './requests';
 
 function Landing() {
   const auth = useAuth();
@@ -66,6 +67,8 @@ export function App() {
       <Route path="settings" element={<OrganizationSettings />} />
       <Route path="scan" element={<ScanPage />} />
       <Route path="labels" element={<PrintLabelsPage />} />
+      <Route path="requests" element={<RequestsPage />} />
+      <Route path="requests/:requestId" element={<RequestDetailPage />} />
     </Route>
     <Route path="*" element={<div className="auth-shell"><Brand /><section className="auth-card"><h1>Page not found</h1><p className="auth-lead">The link may be out of date.</p><Link className="button secondary full-width" to="/app">Go to your businesses</Link></section></div>} />
   </Routes></AuthProvider></BrowserRouter>;

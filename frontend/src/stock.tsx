@@ -131,8 +131,8 @@ export function StockDialog({ action, item, base, balances, locationId, close, d
 }
 
 /** Choices for one location row. Employees record usage, waste and receipts; managers also transfer, count and set starting stock. */
-export function SlotSheet({ slot, item, canManage, close, pick, remove }: {
-  slot: StockBalance; item: Item; canManage: boolean; close: () => void; pick: (action: StockAction) => void; remove?: () => void;
+export function SlotSheet({ slot, item, canManage, close, pick, remove, request }: {
+  slot: StockBalance; item: Item; canManage: boolean; close: () => void; pick: (action: StockAction) => void; remove?: () => void; request?: () => void;
 }) {
   const hasStock = Number(slot.quantity) > 0;
   const option = (icon: IconName, label: string, action: StockAction, hint?: string) =>
@@ -143,6 +143,7 @@ export function SlotSheet({ slot, item, canManage, close, pick, remove }: {
       {hasStock && option('use', 'Record usage', 'usage')}
       {hasStock && option('waste', 'Record waste', 'waste', 'Spoiled, broken or expired')}
       {option('receive', 'Receive stock here', 'receive')}
+      {request && <button type="button" className="menu-item sheet-option" onClick={request}><Icon name="plus" /><span>Request more here<small>Ask a manager to restock this location</small></span></button>}
       {canManage && hasStock && option('transfer', 'Transfer from here', 'transfer')}
       {canManage && option('count', 'Count', 'count', 'Record what is physically there')}
       {canManage && !slot.hasHistory && option('start', 'Set starting quantity', 'opening')}
