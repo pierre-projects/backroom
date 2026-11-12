@@ -1,0 +1,37 @@
+name: backroom
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-backroom}
+      POSTGRES_USER: ${POSTGRES_USER:-backroom}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Copy .env.example to .env and set a development password}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+  app:
+    profiles: [app]
+    image: backroom:local
+    mem_limit: 512m
+    build: .
+    environment:
+      DATABASE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-backroom}
+      DATABASE_USERNAME: ${POSTGRES_USER:-backroom}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=50"
+    ports:
+      - "127.0.0.1:${SERVER_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  postgres-data:

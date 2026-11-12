@@ -1,0 +1,17 @@
+# Local secrets and tools
+.env
+.env.*
+!.env.example
+.tools/
+# Build and dependency output
+target/
+frontend/node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo
+# Local IDE and OS files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+*.log
