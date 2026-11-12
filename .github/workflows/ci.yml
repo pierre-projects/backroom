@@ -39,6 +39,9 @@ jobs:
       - name: Build and smoke-test production container
         shell: pwsh
         run: ./scripts/smoke-test.ps1
+      - name: Backup and restore drill
+        shell: pwsh
+        run: ./scripts/restore-drill.ps1
       - name: Browser onboarding and permission checks
         shell: pwsh
         run: ./scripts/e2e.ps1 -SkipBuild
