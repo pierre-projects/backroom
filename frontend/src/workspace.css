@@ -678,3 +678,28 @@ input.sr-only:focus-visible + .file-button { outline: 2px solid var(--focus); ou
   .item-rows .inventory-quantity { font-size: var(--text-md); }
   .desktop-kicker { display: none; }
 }
+
+/* ---------- Sortly dashboard ---------- */
+.work-counts { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); margin-bottom: var(--space-6); }
+.work-counts .stat.metric-card {
+  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; align-items: center; column-gap: var(--space-3);
+  padding: var(--space-4) var(--space-5); border-radius: var(--radius-panel); box-shadow: var(--shadow-card); transition: border-color var(--duration-control) ease;
+}
+.work-counts .stat.metric-card + .stat { border-left: 1px solid var(--border); }
+.work-counts .stat.metric-card:hover { background: var(--surface); border-color: var(--border-strong); }
+.metric-icon { grid-row: 1 / span 2; display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: 50%; background: var(--surface-sunken); color: var(--text-muted); }
+.metric-card.alert .metric-icon { background: var(--accent-soft); color: var(--accent); }
+.metric-card strong { font-size: 1.75rem; line-height: 2rem; font-weight: 700; }
+.metric-label { grid-column: 2; color: var(--text-muted); font-size: var(--text-sm); font-weight: 600; }
+.home-card { border-radius: var(--radius-panel); }
+.home-list li { justify-content: flex-start; }
+.home-list li > .home-list-main { flex: 1; }
+.space-chip { min-height: 4.5rem; padding: var(--space-3); box-shadow: var(--shadow-card); }
+.space-chip strong { font-size: var(--text-md); font-weight: 700; }
+@media (max-width: 63.99rem) { .work-counts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 39.99rem) {
+  .work-counts { gap: var(--space-3); }
+  .work-counts .stat.metric-card { padding: var(--space-3); column-gap: var(--space-2); }
+  .metric-icon { width: 2.25rem; height: 2.25rem; }
+  .metric-card strong { font-size: var(--text-2xl); line-height: 1.75rem; }
+}
