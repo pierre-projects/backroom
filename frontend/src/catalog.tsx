@@ -182,7 +182,8 @@ export function ItemDetail() {
   const unitLocked = slots.some(slot => slot.hasHistory) || (history.data?.totalElements ?? 0) > 0;
   const unplaced = locations.leaves?.filter(choice => !slots.some(slot => slot.locationId === choice.id)) ?? [];
   return <>
-    <PageHeader back={nav.back({ to: root + '/items', label: 'Inventory' })} title={value.name}>
+    <PageHeader back={nav.back({ to: root + '/items', label: 'Inventory' })} title={value.name}
+      media={<VisualTile size="lg" name={value.name} icon={unitIcons[value.unit]} photo={itemPhoto(base, value)} />}>
       {!value.archived && hasStock && <button type="button" className="button primary" onClick={() => setAction({ kind: 'usage' })}><Icon name="use" />Record usage</button>}
       {!value.archived && <button type="button" className={'button ' + (hasStock ? 'secondary' : 'primary')} onClick={() => setAction({ kind: 'receive' })}><Icon name="receive" />Receive stock</button>}
       {!value.archived && <button type="button" className="button secondary" onClick={() => setRequesting({})}><Icon name="plus" />Request more</button>}
@@ -193,6 +194,7 @@ export function ItemDetail() {
       <div><dt>SKU</dt><dd className="mono">{value.sku ?? 'Not set'}</dd></div>
       <div><dt>Base unit</dt><dd>{unitNames[value.unit]}</dd></div>
       {value.archived && <div><dt>Status</dt><dd><Badge tone="warning">Archived</Badge></dd></div>}
+      {!value.archived && value.low && <div><dt>Status</dt><dd><Badge tone="warning">Low</Badge> <span className="muted">below a minimum</span></dd></div>}
     </dl>
     {status && <SuccessMessage>{status}</SuccessMessage>}
     <ErrorMessage error={error} />
