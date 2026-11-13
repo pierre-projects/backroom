@@ -179,6 +179,8 @@ Detail pages show a back link above the title (**‹ Inventory**, **‹ All loca
 
 ## Research behind the decisions
 
+**Primary UI/UX inspiration:** Sortly — see [Sortly → Backroom design system & UX rules](sortly-inspiration.md) (photo-first browse, space navigation, grid/list, short add flows; adapted for physical spaces, stock actions, and attention).
+
 | Product | Observed workflow | Decision for Backroom |
 | --- | --- | --- |
 | Sortly | Search can show a folder path, and one item can appear in several folders. | Show the parent name with each expected location so two "Shelf A" entries are distinguishable, in the list and in the picker. [Sortly item locations](https://help.sortly.com/view-item-locations-in-sortly) |
