@@ -5,6 +5,13 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.*;
 
 interface PlacementRepository extends JpaRepository<ItemPlacement, UUID> {
+    @Query("""
+            select p.locationId, count(p) from ItemPlacement p, Item i
+            where p.organizationId = :orgId and i.organizationId = :orgId and i.id = p.itemId
+              and p.active = true and i.archived = false and p.locationId in :locationIds
+            group by p.locationId
+            """)
+    List<Object[]> itemCounts(UUID orgId, Collection<UUID> locationIds);
     /** Creates an active placement if the slot has none. Existing (possibly inactive) rows are left for the caller to lock. */
     @Modifying(flushAutomatically=true)
     @Query(nativeQuery=true, value="""

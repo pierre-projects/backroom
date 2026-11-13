@@ -20,7 +20,7 @@ export function itemPhoto(base: string, item: { id: string; photoVersion?: numbe
   return item.photoVersion ? '/api/v1' + base + '/items/' + item.id + '/photo?v=' + item.photoVersion : null;
 }
 
-function ItemForm({ item, saved, cancel, unitLocked = false }: { item?: Item; saved: (item: Item) => void; cancel: () => void; unitLocked?: boolean }) {
+export function ItemForm({ item, saved, cancel, unitLocked = false }: { item?: Item; saved: (item: Item) => void; cancel: () => void; unitLocked?: boolean }) {
   const { base } = useWorkspace();
   const [error, setError] = useState<unknown>();
   const [pending, setPending] = useState(false);
@@ -156,7 +156,8 @@ export function ItemDetail() {
   const requested = searchParams.get('action');
   useEffect(() => {
     if (!requested || !item.data || !balances.data) return;
-    if ((requested === 'usage' || requested === 'receive' || requested === 'waste') && !item.data.archived) setAction({ kind: requested });
+    // ?location= comes from "Add item here": receive straight into the shelf the item was created on.
+    if ((requested === 'usage' || requested === 'receive' || requested === 'waste') && !item.data.archived) setAction({ kind: requested, locationId: searchParams.get('location') ?? undefined });
     if (requested === 'request' && !item.data.archived) setRequesting({});
     setSearchParams({}, { replace: true, state: nav.current.state });
   }, [requested, item.data, balances.data, setSearchParams]);

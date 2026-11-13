@@ -502,3 +502,14 @@
   .inventory-filters .view-toggle { margin-left: auto; }
 }
 @media (max-width: 22rem) { .browse-grid { grid-template-columns: minmax(0, 1fr); } }
+.breadcrumbs ol { list-style: none; margin: 0 0 var(--space-2); padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); font-size: var(--text-sm); color: var(--text-muted); }
+.breadcrumbs li { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; }
+.breadcrumbs li + li::before { content: "›"; color: var(--text-subtle); }
+.breadcrumbs a { display: inline-flex; align-items: center; min-height: 2rem; color: var(--text-muted); font-weight: 500; overflow-wrap: anywhere; }
+.breadcrumbs a:hover { color: var(--accent); }
+.breadcrumbs [aria-current="page"] { color: var(--text); font-weight: 600; overflow-wrap: anywhere; }
+.location-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.location-badges { display: inline-flex; gap: var(--space-2); align-items: center; }
+.page-heading-media { flex: none; }
+.cell-secondary-text { color: var(--text-muted); font-size: var(--text-sm); }
+.page-heading-media + .page-heading-text { flex: 1; min-width: 0; }

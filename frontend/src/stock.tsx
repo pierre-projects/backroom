@@ -98,7 +98,7 @@ export function StockDialog({ action, item, base, balances, locationId, close, d
     {hint && <small>{hint}</small>}
   </Field>;
   const destinationChoices = (name: string, label: string, exclude?: string) => <Field label={label}>
-    <select name={name} required defaultValue={locationId && locationId !== exclude ? locationId : ''}>
+    <select key={locations.leaves ? 'ready' : 'loading'} name={name} required defaultValue={locationId && locationId !== exclude ? locationId : ''}>
       <option value="">Choose a location</option>
       {locations.leaves?.filter(choice => choice.id !== exclude).map(choice => <option key={choice.id} value={choice.id}>{choice.label}</option>)}
     </select>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
+import { Link } from 'react-router';
 import { Icon } from './icons';
 import type { IconName } from './icons';
 import type { LocationType, Unit } from './types';
@@ -71,4 +72,19 @@ export function BrowseCard({ visual, title, meta, badges, actions, selected, mut
     </div>
     {actions && <div className="browse-card-actions">{actions}</div>}
   </li>;
+}
+
+/** Where you are in the physical hierarchy. The last step is the current page; earlier steps are links. */
+export function Breadcrumbs({ trail }: { trail: { label: string; to?: string }[] }) {
+  return <nav className="breadcrumbs" aria-label="Breadcrumb"><ol>{trail.map((step, index) => <li key={index}>
+    {step.to && index < trail.length - 1 ? <Link to={step.to}>{step.label}</Link> : <span aria-current="page">{step.label}</span>}
+  </li>)}</ol></nav>;
+}
+
+/** "3 locations · 12 items" for a space card; quiet when empty. */
+export function spaceFacts(location: { childCount?: number | null; itemCount?: number | null }) {
+  const parts = [];
+  if (location.childCount) parts.push(location.childCount + (location.childCount === 1 ? ' location' : ' locations'));
+  if (location.itemCount) parts.push(location.itemCount + (location.itemCount === 1 ? ' item' : ' items'));
+  return parts.length ? parts.join(' · ') : 'Empty';
 }
