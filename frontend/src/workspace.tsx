@@ -83,6 +83,7 @@ export function WorkspaceLayout() {
     <header className="topbar">
       <Brand compact to="/app" />
       <Link className="topbar-business" to="/app"><span className="topbar-business-name">{org.name}</span><span className="sr-only">, {roleNames[org.role]}. Switch business</span><Icon name="chevronDown" className="small" /></Link>
+      <div className="topbar-search"><SearchForm root={root} compact /></div>
       <AccountMenu onSignOut={signOut} links={admin.map(destination => ({ href: root + '/' + destination.path, label: destination.label, icon: destination.icon }))} />
     </header>
     <aside className="sidebar">
@@ -92,7 +93,6 @@ export function WorkspaceLayout() {
         <div className="business-meta"><strong>{org.name}</strong><span>{roleNames[org.role]}</span></div>
         <Link className="switch-link" to="/app"><Icon name="switch" className="small" />Switch business</Link>
       </div>
-      <div className="sidebar-search"><SearchForm root={root} compact /></div>
       <nav className="primary-nav" aria-label="Business navigation">
         {destinations.filter(destination => destination.roles.includes(org.role)).map(destination =>
           <NavLink key={destination.path} className="nav-link" to={root + '/' + destination.path}><Icon name={destination.icon} /><span>{destination.label}</span>

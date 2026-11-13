@@ -5,15 +5,16 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { api, query, send } from './api';
 import { Badge, Dialog, Empty, ErrorMessage, Field, Loading, PageHeader, Pager, SuccessMessage, useResource } from './components';
 import { Icon } from './icons';
-import type { Item, Page, StockBalance, StockMovement } from './types';
+import type { IconName } from './icons';
+import type { Item, Page, StockBalance, StockMovement, StorageLocation } from './types';
 import { unitNames } from './types';
 import { MinimumDialog, MinimumNote, MovementList, ReverseDialog, SlotSheet, StockDialog, StockRowActions, formatQuantity, locationPath, shortfall, useStockLocations } from './stock';
 import type { StockAction } from './stock';
 import { CodesPanel } from './codes';
-import { ItemRequestsPanel, NewRequestDialog } from './requests';
+import { ItemRequestsPanel, NewRequestDialog, ago } from './requests';
 import { SelectionBar, useLabelSelection } from './labels';
 import { useWorkspace } from './workspace';
-import { BrowseCard, ViewToggle, VisualTile, resizePhoto, unitIcons, useBrowseView } from './browse';
+import { Breadcrumbs, BrowseCard, FolderSwitch, FolderTile, SearchScanLink, StatsStrip, ViewToggle, VisualTile, newBadge, resizePhoto, spaceFacts, unitIcons, useBrowseView, useShowFolders } from './browse';
 
 /** URL of an item's photo, versioned so a changed photo is fetched again; null until one is uploaded. */
 export function itemPhoto(base: string, item: { id: string; photoVersion?: number | null }) {
@@ -73,6 +74,12 @@ function PhotoControl({ base, item, changed }: { base: string; item: Item; chang
   </div>;
 }
 
+const sortOptions = [
+  { value: 'name', label: 'Name A–Z' },
+  { value: 'name_desc', label: 'Name Z–A' },
+  { value: 'newest', label: 'Newest first' },
+];
+
 export function CatalogPage() {
   const { base, canEdit, organization } = useWorkspace();
   const [creating, setCreating] = useState(false);
@@ -85,14 +92,20 @@ export function CatalogPage() {
   const lowOnly = params.get('low') === '1';
   const at = params.get('location') ?? '';
   const places = useStockLocations(base);
-  const setFilter = (name: 'low' | 'location' | 'q' | 'archived' | 'page', value: string) => {
+  const sort = sortOptions.some(option => option.value === params.get('sort')) ? params.get('sort')! : 'name';
+  const setFilter = (name: 'low' | 'location' | 'q' | 'archived' | 'page' | 'sort', value: string) => {
     const next = new URLSearchParams(params);
     if (value) next.set(name, value); else next.delete(name);
     if (name !== 'page') next.delete('page');
     setParams(next, { replace: true });
   };
   const setLowOnly = (value: boolean) => setFilter('low', value ? '1' : '');
-  const items = useResource<Page<Item>>(query(base + '/items', { page, q, includeArchived: archived, lowStock: lowOnly || undefined, locationId: at || undefined }));
+  const items = useResource<Page<Item>>(query(base + '/items', { page, q, includeArchived: archived, lowStock: lowOnly || undefined, locationId: at || undefined, sort: sort === 'name' ? undefined : sort }));
+  const allPlaces = useResource<Page<StorageLocation>>(query(base + '/locations', { size: 1 }));
+  const lowCount = useResource<Page<Item>>(query(base + '/items', { lowStock: true, size: 1 }));
+  const [showFolders, setShowFolders] = useShowFolders('items');
+  const browsingAll = !q && !at && !lowOnly && !archived && page === 0;
+  const folders = useResource<Page<StorageLocation>>(showFolders && browsingAll ? query(base + '/locations', { rootsOnly: true, size: 12 }) : null);
   const root = '/app/organizations/' + organization.id;
   const addButton = <button type="button" className="button primary" onClick={() => setCreating(true)}><Icon name="plus" />Add item</button>;
   const selection = useLabelSelection();
@@ -100,45 +113,65 @@ export function CatalogPage() {
   const itemChooser = (item: Item) => <label className="select-line"><input type="checkbox" checked={selection.selected.includes(item.id)} disabled={item.archived}
     onChange={() => selection.toggle(item.id)} /><span className="record-link">{item.name}</span></label>;
   const itemBadges = (item: Item) => <>{item.archived && <Badge>Archived</Badge>}{item.low && !item.archived && <Badge tone="warning">Low</Badge>}</>;
+  const itemLink = (item: Item) => selection.selecting ? itemChooser(item) : <RecordLink from="Inventory" className="record-link" to={root + '/items/' + item.id}>{item.name}</RecordLink>;
+  const kicker = (item: Item) => item.sku ? <span className="mono">{item.sku}</span> : <span>No SKU</span>;
+  const trail = at ? [{ label: 'All items', to: root + '/items' }, { label: places.label(at) }] : [{ label: 'All items' }];
   return <>
-    <PageHeader title="Inventory" description="What you stock, how much, and where.">{canEdit && <>{addButton}<Link className="button secondary" to={root + '/items/import'}><Icon name="upload" />Import items</Link><button type="button" className="button secondary" aria-pressed={selection.selecting} onClick={selection.toggleMode}><Icon name="label" />{selection.selecting ? 'Cancel' : 'Print labels'}</button></>}</PageHeader>
+    <PageHeader trail={<Breadcrumbs trail={trail} />} title="Inventory" description="What you stock, how much, and where.">{canEdit && <>{addButton}<Link className="button outline" to={root + '/items/import'}><Icon name="upload" />Import items</Link><button type="button" className="button secondary" aria-pressed={selection.selecting} onClick={selection.toggleMode}><Icon name="label" />{selection.selecting ? 'Cancel' : 'Print labels'}</button></>}</PageHeader>
     {selection.selecting && <SelectionBar count={selection.selected.length} noun="item" href={root + '/labels?items=' + selection.selected.join(',')} />}
     <section className="inventory-browser" aria-label="Inventory results">
       <div className="inventory-tools">
-        <form className="search-form" role="search" onSubmit={event => { event.preventDefault(); setFilter('q', String(new FormData(event.currentTarget).get('search')).trim()); }}>
-          <div className="search-input"><Icon name="search" /><input name="search" type="search" aria-label="Search inventory" placeholder="Search by name or SKU" defaultValue={q} key={q} /></div>
+        <form className="search-form explorer-search" role="search" onSubmit={event => { event.preventDefault(); setFilter('q', String(new FormData(event.currentTarget).get('search')).trim()); }}>
+          <div className="search-input"><Icon name="search" /><input name="search" type="search" aria-label="Search inventory" placeholder="Search by name or SKU" defaultValue={q} key={q} /><SearchScanLink root={root} /></div>
           <button className="button secondary">Search</button>
         </form>
+        <StatsStrip label="Inventory summary" stats={[
+          { label: 'Folders', value: allPlaces.data?.totalElements ?? '–' },
+          { label: 'Items', value: items.data?.totalElements ?? '–' },
+          { label: 'Low stock', value: lowCount.data?.totalElements ?? '–' },
+        ]} />
         <div className="inventory-filters">
+          <FolderSwitch checked={showFolders} onChange={setShowFolders} />
           <select className="toolbar-select" aria-label="Filter by location" value={at} onChange={event => setFilter('location', event.target.value)}>
             <option value="">All locations</option>
             {places.leaves?.map(choice => <option key={choice.id} value={choice.id}>{choice.label}</option>)}
           </select>
           <label className="checkbox"><input type="checkbox" checked={lowOnly} onChange={event => setLowOnly(event.target.checked)} /> Low stock only</label>
           <label className="checkbox"><input type="checkbox" checked={archived} onChange={event => { setFilter('archived', event.target.checked ? '1' : ''); }} /> Include archived</label>
-          <ViewToggle view={view} onChange={setView} label="Inventory layout" />
+          <span className="toolbar-end">
+            <select className="toolbar-select sort-select" aria-label="Sort items" value={sort} onChange={event => setFilter('sort', event.target.value === 'name' ? '' : event.target.value)}>
+              {sortOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+            <ViewToggle view={view} onChange={setView} label="Inventory layout" />
+          </span>
         </div>
       </div>
+      {showFolders && browsingAll && !!folders.data?.items.length && <section className="folder-band" aria-labelledby="folders-heading">
+        <div className="folder-band-header"><h2 id="folders-heading">Folders</h2><Link className="text-button" to={root + '/locations'}>All locations</Link></div>
+        <ul className="folder-grid" aria-label="Folders">{folders.data.items.map(room => <BrowseCard key={room.id} folder
+          visual={<FolderTile type={room.type} />}
+          title={<RecordLink from="Inventory" className="record-link" to={root + '/locations/' + room.id}>{room.name}</RecordLink>}
+          meta={<span>{spaceFacts(room)}</span>} />)}</ul>
+      </section>}
       <ErrorMessage error={items.error} retry={items.reload} />
       {!items.data && !items.error && <div className="panel table-panel"><Loading variant="list" label="Loading items" /></div>}
       {items.data && (items.data.items.length ? <div className="panel table-panel">
-        <div className="inventory-count">{items.data.totalElements} {items.data.totalElements === 1 ? 'item' : 'items'}</div>
         {view === 'grid'
           ? <ul className="browse-grid" aria-label="Items">{items.data.items.map(item => <BrowseCard key={item.id}
             selected={selection.selecting && selection.selected.includes(item.id)} muted={item.archived}
-            visual={<VisualTile name={item.name} icon={unitIcons[item.unit]} photo={itemPhoto(base, item)} />}
-            title={selection.selecting ? itemChooser(item) : <RecordLink from="Inventory" className="record-link" to={root + '/items/' + item.id}>{item.name}</RecordLink>}
-            meta={<><span><span className="numeric quantity-strong">{formatQuantity(item.onHand, item.unit)}</span> on hand</span>{item.sku && <span className="mono">{item.sku}</span>}</>}
+            visual={<VisualTile name={item.name} icon={unitIcons[item.unit]} photo={itemPhoto(base, item)} corner={newBadge(item.createdAt)} />}
+            kicker={kicker(item)}
+            title={itemLink(item)}
+            meta={<span><span className="numeric quantity-strong">{formatQuantity(item.onHand, item.unit)}</span> on hand</span>}
             badges={itemBadges(item)} />)}</ul>
-          : <table className="data-table inventory-table">
-          <thead><tr><th scope="col">Item</th><th scope="col">SKU</th><th scope="col" className="cell-number">On hand</th><th scope="col"><span className="sr-only">Open</span></th></tr></thead>
+          : <table className="data-table inventory-table item-rows">
+          <thead><tr><th scope="col">Item</th><th scope="col" className="cell-number">On hand</th><th scope="col"><span className="sr-only">Open</span></th></tr></thead>
           <tbody>{items.data.items.map(item => <tr key={item.id} className={selection.selecting ? 'selectable' : 'linked'}>
-            <td><span className="tile-cell"><VisualTile size="sm" name={item.name} icon={unitIcons[item.unit]} photo={itemPhoto(base, item)} /><span>
-              <span className="name-line">{selection.selecting ? itemChooser(item)
-              : <RecordLink from="Inventory" className="record-link" to={root + '/items/' + item.id}>{item.name}</RecordLink>}{itemBadges(item)}</span>
-              <span className="cell-secondary mobile-only">{item.sku ? <span className="mono">{item.sku}</span> : 'No SKU'}</span></span></span></td>
-            <td className="desktop-only mono">{item.sku ?? <><span aria-hidden="true">—</span><span className="sr-only">No SKU</span></>}</td>
-            <td className="cell-number numeric inventory-quantity">{formatQuantity(item.onHand, item.unit)}<span className="cell-secondary mobile-only"> on hand</span></td>
+            <td><span className="tile-cell"><VisualTile size="row" name={item.name} icon={unitIcons[item.unit]} photo={itemPhoto(base, item)} corner={newBadge(item.createdAt)} /><span className="item-stack">
+              <span className="item-kicker">{kicker(item)}</span>
+              <span className="name-line">{itemLink(item)}{itemBadges(item)}</span>
+              <span className="cell-secondary">{unitNames[item.unit]}</span></span></span></td>
+            <td className="cell-number numeric inventory-quantity">{formatQuantity(item.onHand, item.unit)}<span className="cell-secondary"> on hand</span></td>
             <td className="cell-chevron"><Icon name="chevronRight" /></td>
           </tr>)}</tbody>
         </table>}
@@ -208,22 +241,55 @@ export function ItemDetail() {
   const hasStock = slots.some(slot => Number(slot.quantity) > 0);
   const unitLocked = slots.some(slot => slot.hasHistory) || (history.data?.totalElements ?? 0) > 0;
   const unplaced = locations.leaves?.filter(choice => !slots.some(slot => slot.locationId === choice.id)) ?? [];
+  const back = nav.back({ to: root + '/items', label: 'Inventory' });
+  const placed = slots.length === 1 ? slots[0] : undefined;
+  const minimums = slots.filter(slot => slot.minimum);
+  const updated = history.data?.items[0]?.occurredAt ?? value.createdAt;
+  const reveal = (id: string, focus = false) => { const target = document.getElementById(id); target?.scrollIntoView({ behavior: 'smooth', block: 'start' }); if (focus) target?.focus({ preventScroll: true }); };
+  const quick = (label: string, icon: IconName, onClick: () => void, primary = false) =>
+    <button type="button" className={'quick-action' + (primary ? ' primary' : '')} onClick={onClick}><span className="quick-action-circle" aria-hidden="true"><Icon name={icon} /></span><span className="quick-action-label">{label}</span></button>;
   return <>
-    <PageHeader back={nav.back({ to: root + '/items', label: 'Inventory' })} title={value.name}
-      media={<><VisualTile size="lg" name={value.name} icon={unitIcons[value.unit]} photo={itemPhoto(base, value)} />
-        {editable && <PhotoControl base={base} item={value} changed={message => { setStatus(message); item.reload(); }} />}</>}>
-      {!value.archived && hasStock && <button type="button" className="button primary" onClick={() => setAction({ kind: 'usage' })}><Icon name="use" />Record usage</button>}
-      {!value.archived && <button type="button" className={'button ' + (hasStock ? 'secondary' : 'primary')} onClick={() => setAction({ kind: 'receive' })}><Icon name="receive" />Receive stock</button>}
-      {!value.archived && <button type="button" className="button secondary" onClick={() => setRequesting({})}><Icon name="plus" />Request more</button>}
-      {editable && hasStock && <button type="button" className="button secondary" onClick={() => setAction({ kind: 'transfer' })}><Icon name="transfer" />Transfer</button>}
-    </PageHeader>
-    <dl className="detail-grid stock-summary">
-      <div><dt>On hand</dt><dd className="numeric detail-total">{formatQuantity(value.onHand, value.unit)}</dd></div>
-      <div><dt>SKU</dt><dd className="mono">{value.sku ?? 'Not set'}</dd></div>
-      <div><dt>Base unit</dt><dd>{unitNames[value.unit]}</dd></div>
-      {value.archived && <div><dt>Status</dt><dd><Badge tone="warning">Archived</Badge></dd></div>}
-      {!value.archived && value.low && <div><dt>Status</dt><dd><Badge tone="warning">Low</Badge> <span className="muted">below a minimum</span></dd></div>}
-    </dl>
+    <div className="page-heading item-hero">
+      <Link className="back-link" to={back.to} onClick={'onClick' in back ? back.onClick : undefined}><Icon name="chevronLeft" className="small" />{back.label}</Link>
+      <div className="item-hero-grid">
+        <div className="page-heading-media item-hero-media">
+          <div className="item-hero-stage">
+            <VisualTile size="hero" name={value.name} icon={unitIcons[value.unit]} photo={itemPhoto(base, value)} />
+            <button type="button" className="hero-pill" aria-label="Labels and barcodes" title="Labels and barcodes" onClick={() => reveal('codes-' + value.id)}><Icon name="label" /></button>
+          </div>
+          {editable && <PhotoControl base={base} item={value} changed={message => { setStatus(message); item.reload(); }} />}
+        </div>
+        <div className="page-heading-text item-hero-body">
+          <p className="item-folder"><Icon name="folder" className="small" />{placed
+            ? <RecordLink from={value.name} to={root + '/locations/' + placed.locationId}>{locationPath(placed)}</RecordLink>
+            : <span>{slots.length ? slots.length + ' locations' : 'Not placed yet'}</span>}</p>
+          <h1>{value.name}</h1>
+          <dl className="item-facts">
+            <div><dt>SKU</dt><dd className="mono">{value.sku ?? 'Not set'}</dd></div>
+            {updated && <div><dt>Updated</dt><dd><time dateTime={updated} title={new Date(updated).toLocaleString()}>{ago(updated)}</time></dd></div>}
+          </dl>
+          {!value.archived && <div className="quick-actions" role="group" aria-label="Item actions">
+            {hasStock && quick('Record usage', 'use', () => setAction({ kind: 'usage' }), true)}
+            {quick('Receive stock', 'receive', () => setAction({ kind: 'receive' }), !hasStock)}
+            {editable && hasStock && quick('Transfer', 'transfer', () => setAction({ kind: 'transfer' }))}
+            {quick('Request more', 'plus', () => setRequesting({}))}
+            {quick('History', 'history', () => reveal('history-heading', true))}
+          </div>}
+          <dl className="metric-grid stock-summary">
+            <div><dt>On hand</dt><dd className="numeric detail-total">{formatQuantity(value.onHand, value.unit)}</dd>
+              {!value.archived && <span className="metric-steppers">
+                <button type="button" className="stepper" aria-label="Use some" title="Record usage" disabled={!hasStock} onClick={() => setAction({ kind: 'usage' })}><Icon name="minus" /></button>
+                <button type="button" className="stepper" aria-label="Add some" title="Receive stock" onClick={() => setAction({ kind: 'receive' })}><Icon name="plus" /></button>
+              </span>}</div>
+            <div><dt><Icon name="bell" className="small" />Min level</dt><dd className="numeric">{minimums.length === 0 ? <span className="muted">Not set</span>
+              : minimums.length === 1 ? formatQuantity(minimums[0]!.minimum!, value.unit) : minimums.length + ' shelves'}</dd></div>
+            <div><dt>Base unit</dt><dd>{unitNames[value.unit]}</dd></div>
+            <div><dt>Status</dt><dd>{value.archived ? <Badge tone="warning">Archived</Badge> : value.low ? <><Badge tone="warning">Low</Badge> <span className="muted">below a minimum</span></>
+              : hasStock ? <Badge tone="success">In stock</Badge> : <Badge>No stock</Badge>}</dd></div>
+          </dl>
+        </div>
+      </div>
+    </div>
     {status && <SuccessMessage>{status}</SuccessMessage>}
     <ErrorMessage error={error} />
     <section className="panel table-panel" aria-labelledby="stock-heading">

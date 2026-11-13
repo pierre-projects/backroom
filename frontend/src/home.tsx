@@ -4,8 +4,9 @@ import { Link, useNavigate } from 'react-router';
 import { query } from './api';
 import { ErrorMessage, Loading, PageHeader, useResource } from './components';
 import { Icon } from './icons';
+import type { IconName } from './icons';
 import { labelDownloadKey } from './labels';
-import { VisualTile, spaceFacts, spaceIcons } from './browse';
+import { FolderTile, VisualTile, spaceFacts, unitIcons } from './browse';
 import { ActivityList } from './people';
 import { SearchForm } from './search';
 import { NewRequestDialog, RequestBadge, ago, progress } from './requests';
@@ -68,6 +69,7 @@ function LowStockCard({ root, base, low }: { root: string; base: string; low: Re
     {!!low.data?.items.length && <ul className="record-list home-list">{low.data.items.map(row => {
       const request = covering(row);
       return <li key={row.itemId + row.locationId}>
+        <VisualTile size="sm" name={row.itemName} icon={unitIcons[row.unit]} />
         <div className="home-list-main">
           <RecordLink from="Home" className="record-link" to={root + '/items/' + row.itemId}>{row.itemName}</RecordLink>
           <span className="cell-secondary">{locationPath(row)}</span>
@@ -111,7 +113,7 @@ function SpacesStrip({ root, base }: { root: string; base: string }) {
     <div className="spaces-strip-header"><h2 id="spaces-heading">Spaces</h2><Link className="text-button" to={root + '/locations'}>All locations</Link></div>
     <ul>{rooms.data.items.map(room => <li key={room.id}>
       <RecordLink from="Home" className="space-chip" to={root + '/locations/' + room.id}>
-        <VisualTile size="sm" name={room.name} icon={spaceIcons[room.type]} />
+        <FolderTile type={room.type} />
         <span><strong>{room.name}</strong><span className="cell-secondary">{spaceFacts(room)}</span></span>
       </RecordLink></li>)}</ul>
   </section>;
@@ -129,6 +131,13 @@ function ActivityCard({ root, base }: { root: string; base: string }) {
   </section>;
 }
 
+/** A Sortly dashboard tile. Its accessible name is the count then the label, e.g. "1 Low stock". */
+function MetricCard({ to, icon, value, label, alert = false }: { to: string; icon: IconName; value?: number; label: string; alert?: boolean }) {
+  return <Link className={'stat metric-card' + (alert ? ' alert' : '')} to={to}>
+    <span className="metric-icon" aria-hidden="true"><Icon name={icon} /></span>
+    <strong>{value ?? '–'}</strong> <span className="metric-label">{label}</span></Link>;
+}
+
 export function HomePage() {
   const { base, canEdit, organization } = useWorkspace();
   const root = '/app/organizations/' + organization.id;
@@ -138,6 +147,8 @@ export function HomePage() {
   // The tile links to the Inventory low-stock filter, which lists items, so it counts items rather than low shelves.
   const lowItems = useResource<Page<Item>>(canEdit ? query(base + '/items', { lowStock: true, size: 1 }) : null);
   const summary = useResource<RequestSummary>(base + '/requests/summary');
+  const allItems = useResource<Page<Item>>(query(base + '/items', { size: 1 }));
+  const places = useResource<Page<StorageLocation>>(query(base + '/locations', { size: 1 }));
   const stock = useResource<Page<StockMovement>>(canEdit ? query(base + '/inventory/movements', { size: 1 }) : null);
   const hasMovements = Boolean(stock.data?.totalElements);
   const hasWork = hasMovements || Boolean(summary.data?.needsReview);
@@ -149,18 +160,20 @@ export function HomePage() {
     {!canEdit && <div className="shift-search"><SearchForm root={root} /><Link className="button primary" to={root + '/scan'}><Icon name="scan" />Scan</Link></div>}
     <div className="work-counts">
       {canEdit ? <>
-        <Link className="stat" to={root + '/requests?filter=NEEDS_REVIEW'}><strong>{summary.data?.needsReview ?? '–'}</strong> Needs review</Link>
-        <Link className="stat" to={root + '/items?low=1'}><strong>{lowItems.data?.totalElements ?? '–'}</strong> Low stock</Link>
-      </> : <Link className="stat" to={root + '/requests?filter=TO_RECEIVE'}><strong>{summary.data?.toReceive ?? '–'}</strong> To receive</Link>}
+        <MetricCard to={root + '/requests?filter=NEEDS_REVIEW'} icon="receive" value={summary.data?.needsReview} label="Needs review" alert={Boolean(summary.data?.needsReview)} />
+        <MetricCard to={root + '/items?low=1'} icon="bell" value={lowItems.data?.totalElements} label="Low stock" alert={Boolean(lowItems.data?.totalElements)} />
+      </> : <MetricCard to={root + '/requests?filter=TO_RECEIVE'} icon="receive" value={summary.data?.toReceive} label="To receive" alert={Boolean(summary.data?.toReceive)} />}
+      <MetricCard to={root + '/items'} icon="catalog" value={allItems.data?.totalElements} label="Total items" />
+      <MetricCard to={root + '/locations'} icon="folder" value={places.data?.totalElements} label="Spaces" />
     </div>
     {!canEdit && <SpacesStrip root={root} base={base} />}
     <ErrorMessage error={summary.error ?? stock.error ?? lowItems.error} retry={() => { summary.reload(); stock.reload(); lowItems.reload(); }} />
     {canEdit && <div className="shift-search"><SearchForm root={root} /><Link className="button secondary" to={root + '/scan'}><Icon name="scan" />Scan</Link></div>}
+    {canEdit && <SpacesStrip root={root} base={base} />}
     <div className="home-grid">
       <RequestsCard root={root} base={base} manager={canEdit} />
       <LowStockCard root={root} base={base} low={low} />
     </div>
-    {canEdit && <SpacesStrip root={root} base={base} />}
     <button type="button" className="button secondary home-request" onClick={() => setRequesting(true)}><Icon name="plus" />Request stock</button>
     {hasWork && setup}
     {canEdit && <ActivityCard root={root} base={base} />}

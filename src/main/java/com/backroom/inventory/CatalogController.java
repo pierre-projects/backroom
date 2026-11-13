@@ -13,8 +13,9 @@ class CatalogController {
     @GetMapping
     PageResponse<CatalogDtos.View> list(@PathVariable UUID orgId, @RequestParam(defaultValue="false") boolean includeArchived,
             @RequestParam(defaultValue="") String q, @RequestParam(required=false) UUID locationId, @RequestParam(defaultValue="false") boolean lowStock,
+            @RequestParam(defaultValue="name") String sort,
             @RequestParam(defaultValue="0") int page, @RequestParam(defaultValue="20") int size) {
-        return catalog.list(orgId, includeArchived, q, locationId, lowStock, page, size);
+        return catalog.list(orgId, includeArchived, q, locationId, lowStock, sort, page, size);
     }
     @PutMapping("/{id}/placements/{locationId}/minimum") @ResponseStatus(HttpStatus.NO_CONTENT)
     void setMinimum(@PathVariable UUID orgId, @PathVariable UUID id, @PathVariable UUID locationId, @RequestBody StockDtos.Minimum input) {

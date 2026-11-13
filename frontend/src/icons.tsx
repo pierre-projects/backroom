@@ -41,6 +41,12 @@ const paths = {
   start: <><path d="M5 17V3.5" /><path d="M5 4h9l-2 3 2 3H5" /></>,
   scan: <><path d="M3.5 7V4.5a1 1 0 0 1 1-1H7M13 3.5h2.5a1 1 0 0 1 1 1V7M16.5 13v2.5a1 1 0 0 1-1 1H13M7 16.5H4.5a1 1 0 0 1-1-1V13" /><path d="M6.5 10h7" /></>,
   label: <><path d="M3.5 4.5h7.8l5.2 5.5-5.2 5.5H3.5z" /><circle cx="7" cy="10" r="1.2" /></>,
+  folder: <path d="M3 6a1.5 1.5 0 0 1 1.5-1.5h3.3l1.7 2h6A1.5 1.5 0 0 1 17 8v6.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5z" />,
+  bell: <><path d="M5.5 13.5V9a4.5 4.5 0 0 1 9 0v4.5l1.5 1.5H4z" /><path d="M8.5 17h3" /></>,
+  history: <><path d="M3.5 10a6.5 6.5 0 1 0 1.9-4.6" /><path d="M3.5 3.5v3h3M10 6.5V10l2.5 1.5" /></>,
+  image: <><rect x="3.5" y="4" width="13" height="12" rx="1.5" /><circle cx="7.5" cy="8" r="1.25" /><path d="m3.5 14 4-4 3 3 2-2 4 4" /></>,
+  minus: <path d="M4.5 10h11" />,
+  sort: <><path d="M6.5 4v12M3.5 7l3-3 3 3" /><path d="M13.5 16V4M10.5 13l3 3 3-3" /></>,
   copy: <><rect x="7" y="7" width="9.5" height="9.5" rx="1.5" /><path d="M13 7V5a1.5 1.5 0 0 0-1.5-1.5h-6A1.5 1.5 0 0 0 4 5v6.5A1.5 1.5 0 0 0 5.5 13H7" /></>,
 } as const;
 

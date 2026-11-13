@@ -28,10 +28,10 @@ public class CatalogService {
         this.locations=locations; this.access=access; this.audit=audit; this.photos=photos;
     }
     @Transactional(readOnly=true)
-    public PageResponse<CatalogDtos.View> list(UUID orgId, boolean includeArchived, String q, UUID locationId, boolean lowStock, int page, int size) {
+    public PageResponse<CatalogDtos.View> list(UUID orgId, boolean includeArchived, String q, UUID locationId, boolean lowStock, String sort, int page, int size) {
         access.require(orgId);
         if (locationId != null) locations.requireExists(orgId, locationId);
-        var result=items.search(orgId, includeArchived, q.strip(), locationId, lowStock, PageResponse.named(page, size));
+        var result=items.search(orgId, includeArchived, q.strip(), locationId, lowStock, PageResponse.request(page, size, order(sort)));
         var ids=result.stream().map(Item::getId).toList();
         var totals=totals(orgId, ids);
         var low=ids.isEmpty() ? Set.<UUID>of() : balances.lowAmong(orgId, ids);
@@ -118,6 +118,15 @@ public class CatalogService {
         placement.active=false; placement.minimumQuantity=null; placements.flush();
         record(orgId, "PLACEMENT_REMOVED", "ITEM", itemId, Map.of("locationId", locationId.toString()));
     }
+    /** Inventory list orders: name (default), name_desc, newest. */
+    private static Sort order(String sort) {
+        return switch (sort) {
+            case "name" -> Sort.by("name", "id");
+            case "name_desc" -> Sort.by(Sort.Order.desc("name"), Sort.Order.desc("id"));
+            case "newest" -> Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
+            default -> throw ApiException.badRequest("Sort must be name, name_desc or newest.");
+        };
+    }
     private Item find(UUID orgId, UUID id) { return items.findByOrganizationIdAndId(orgId, id).orElseThrow(ApiException::notFound); }
     private void editable(Item item) { if (item.archived) throw ApiException.conflict("ARCHIVED", "Archived items cannot be changed."); }
     private String normalizeSku(String value) {
@@ -138,7 +147,7 @@ public class CatalogService {
     }
     private CatalogDtos.View view(Item item, BigDecimal onHand, boolean low, Long photoVersion) {
         return new CatalogDtos.View(item.getId(), item.name, item.sku, item.unit, item.archived, item.getVersion(),
-                Quantities.text(onHand == null ? BigDecimal.ZERO : onHand), low, photoVersion);
+                Quantities.text(onHand == null ? BigDecimal.ZERO : onHand), low, photoVersion, item.getCreatedAt());
     }
 
     /** Sets or clears the minimum for an item at one of its active locations. Owners and Managers. */

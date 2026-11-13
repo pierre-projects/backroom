@@ -7,7 +7,7 @@ import type { LocationType, Unit } from './types';
 
 /*
  * Browse patterns shared by Inventory, Locations and Home: a remembered grid/list choice, photo-ready visual tiles,
- * and cards. Tiles stay neutral (no accent): teal is reserved for actions and "you are here".
+ * and cards. Tiles stay neutral (no accent): the accent is reserved for actions and "you are here".
  */
 
 export type BrowseView = 'grid' | 'list';
@@ -63,23 +63,57 @@ export async function resizePhoto(file: File, side = 1024): Promise<Blob> {
 }
 
 /** The photo when there is one; otherwise initials and a small kind icon, so layouts stay photo-first. Decorative. */
-export function VisualTile({ name, icon, photo, size = 'md' }: { name: string; icon?: IconName; photo?: string | null; size?: 'sm' | 'md' | 'lg' }) {
+export function VisualTile({ name, icon, photo, size = 'md', corner }: { name: string; icon?: IconName; photo?: string | null; size?: 'sm' | 'row' | 'md' | 'lg' | 'hero'; corner?: string }) {
   return <span className={'visual-tile ' + size + (photo ? ' has-photo' : '')} aria-hidden="true">
-    {photo ? <img src={photo} alt="" loading="lazy" decoding="async" />
+    {photo ? <img src={photo} alt="" loading={size === 'hero' ? 'eager' : 'lazy'} decoding="async" />
       : <><span className="visual-initials">{initials(name)}</span>{icon && <Icon name={icon} className="small visual-icon" />}</>}
+    {corner && <span className="visual-corner">{corner}</span>}
   </span>;
+}
+
+/** Sortly-style folder glyph for a storage location, with its kind (room, shelf, cabinet, bin) tucked in the corner. */
+export function FolderTile({ type, size = 'row' }: { type: LocationType; size?: 'sm' | 'row' }) {
+  return <span className={'folder-tile ' + size} aria-hidden="true"><Icon name="folder" /><Icon name={spaceIcons[type]} className="small folder-kind" /></span>;
+}
+
+/** "New" for items created in the last day, shown as a corner pill on the thumbnail. */
+export function newBadge(createdAt?: string) {
+  if (!createdAt) return undefined;
+  return Date.now() - new Date(createdAt).getTime() < 24 * 60 * 60 * 1000 ? 'New' : undefined;
+}
+
+/** The thin summary line under a browse search: "Folders 3 · Items 12 · Low stock 1". */
+export function StatsStrip({ label, stats }: { label: string; stats: { label: string; value: ReactNode }[] }) {
+  return <dl className="stats-strip" aria-label={label}>{stats.map(stat => <div key={stat.label}><dt>{stat.label}</dt><dd className="numeric">{stat.value}</dd></div>)}</dl>;
+}
+
+/** Scan button inside a browse search field, like Sortly's inline barcode trigger. */
+export function SearchScanLink({ root }: { root: string }) {
+  return <Link className="search-scan" to={root + '/scan'} aria-label="Scan a label" title="Scan a label"><Icon name="scan" /></Link>;
+}
+
+/** Pill switch for showing folders above items; remembered per browser. */
+export function useShowFolders(surface: 'items'): [boolean, (value: boolean) => void] {
+  const key = 'backroom.folders.' + surface;
+  const [show, setShow] = useState(() => { try { return localStorage.getItem(key) !== '0'; } catch { return true; } });
+  return [show, value => { try { localStorage.setItem(key, value ? '1' : '0'); } catch { /* This visit only. */ } setShow(value); }];
+}
+export function FolderSwitch({ checked, onChange }: { checked: boolean; onChange: (value: boolean) => void }) {
+  return <button type="button" role="switch" aria-checked={checked} className="pill-switch" onClick={() => onChange(!checked)}>
+    <span className="pill-switch-track" aria-hidden="true"><span className="pill-switch-thumb" /></span>Show folders</button>;
 }
 
 /**
  * A browse card: visual, then the record's link (its accessible name is the record name), facts and badges, then any
  * actions. The card itself is not a link, so action buttons inside it stay separate targets.
  */
-export function BrowseCard({ visual, title, meta, badges, actions, selected, muted }: {
-  visual: ReactNode; title: ReactNode; meta?: ReactNode; badges?: ReactNode; actions?: ReactNode; selected?: boolean; muted?: boolean;
+export function BrowseCard({ visual, kicker, title, meta, badges, actions, selected, muted, folder }: {
+  visual: ReactNode; kicker?: ReactNode; title: ReactNode; meta?: ReactNode; badges?: ReactNode; actions?: ReactNode; selected?: boolean; muted?: boolean; folder?: boolean;
 }) {
-  return <li className={'browse-card' + (selected ? ' selected' : '') + (muted ? ' muted' : '')}>
+  return <li className={'browse-card' + (folder ? ' folder-card' : '') + (selected ? ' selected' : '') + (muted ? ' muted' : '')}>
     <div className="browse-card-visual">{visual}</div>
     <div className="browse-card-body">
+      {kicker && <div className="browse-card-kicker">{kicker}</div>}
       <div className="browse-card-title">{title}</div>
       {meta && <div className="browse-card-meta">{meta}</div>}
       {badges && <div className="browse-card-badges">{badges}</div>}

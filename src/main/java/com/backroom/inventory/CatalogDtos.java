@@ -1,5 +1,6 @@
 package com.backroom.inventory;
 import jakarta.validation.constraints.*;
+import java.time.Instant;
 import java.util.UUID;
 
 public final class CatalogDtos {
@@ -10,6 +11,7 @@ public final class CatalogDtos {
     public record Version(@NotNull Long expectedVersion) {}
     /** onHand is the total quantity across locations, or at one location when listing a location's items. */
     /** photoVersion is null when the item has no photo; otherwise it versions the photo URL. */
-    public record View(UUID id, String name, String sku, Unit unit, boolean archived, Long version, String onHand, boolean low, Long photoVersion) {}
+    public record View(UUID id, String name, String sku, Unit unit, boolean archived, Long version, String onHand, boolean low, Long photoVersion,
+                       Instant createdAt) {}
     public record PlacementView(UUID id, UUID itemId, UUID locationId, String locationName) {}
 }
