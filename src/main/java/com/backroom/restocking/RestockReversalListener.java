@@ -13,7 +13,11 @@ import org.springframework.stereotype.Component;
 class RestockReversalListener implements StockReversalListener {
     private final RestockRequestRepository requests;
     private final RestockReceiptRepository receipts;
-    RestockReversalListener(RestockRequestRepository requests, RestockReceiptRepository receipts) { this.requests=requests; this.receipts=receipts; }
+
+    RestockReversalListener(RestockRequestRepository requests, RestockReceiptRepository receipts) {
+        this.requests = requests;
+        this.receipts = receipts;
+    }
 
     @Override
     public void onReversal(UUID orgId, UUID reversedOperationId) {

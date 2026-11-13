@@ -1,5 +1,7 @@
 package com.backroom.labels;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.RGBLuminanceSource;
 import com.google.zxing.common.HybridBinarizer;
@@ -8,8 +10,6 @@ import java.util.List;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.*;
 
 class LabelUnitTests {
     @Test
@@ -55,7 +55,8 @@ class LabelUnitTests {
     void recognizesOnlyOurOwnLinks() {
         var url = new PublicUrl("https://labels.example.test/");
         assertThat(url.link("7K4Q2M9XQA")).isEqualTo("https://labels.example.test/s/7K4Q2M9XQA");
-        assertThat(url.tokenFrom("HTTPS://LABELS.EXAMPLE.TEST/s/7K4Q2M9XQA?x=1")).isEqualTo("7K4Q2M9XQA");
+        assertThat(url.tokenFrom("HTTPS://LABELS.EXAMPLE.TEST/s/7K4Q2M9XQA?x=1"))
+                .isEqualTo("7K4Q2M9XQA");
         assertThat(url.tokenFrom("https://evil.example/s/7K4Q2M9XQA")).isNull();
         assertThat(url.local()).isFalse();
         assertThat(new PublicUrl("http://localhost:8080").local()).isTrue();
@@ -64,13 +65,17 @@ class LabelUnitTests {
     @Test
     void printedQrDecodesBackToItsLink() throws Exception {
         var link = "https://labels.example.test/s/7K4Q2M9XQA";
-        var pdf = LabelPdfService.render(LabelPdfService.sheet(LabelDtos.Layout.SINGLE), 1,
-                List.of(new LabelPdfService.Label(link, "Espresso beans, 1 kg bag with a long name", "BEAN-01 · Kilogram", "7K4Q-2M9X-QA")));
+        var pdf = LabelPdfService.render(
+                LabelPdfService.sheet(LabelDtos.Layout.SINGLE),
+                1,
+                List.of(new LabelPdfService.Label(
+                        link, "Espresso beans, 1 kg bag with a long name", "BEAN-01 · Kilogram", "7K4Q-2M9X-QA")));
         try (var document = Loader.loadPDF(pdf)) {
             assertThat(document.getNumberOfPages()).isEqualTo(1);
             var image = new PDFRenderer(document).renderImageWithDPI(0, 300);
             var pixels = image.getRGB(0, 0, image.getWidth(), image.getHeight(), null, 0, image.getWidth());
-            var bitmap = new BinaryBitmap(new HybridBinarizer(new RGBLuminanceSource(image.getWidth(), image.getHeight(), pixels)));
+            var bitmap = new BinaryBitmap(
+                    new HybridBinarizer(new RGBLuminanceSource(image.getWidth(), image.getHeight(), pixels)));
             assertThat(new QRCodeReader().decode(bitmap).getText()).isEqualTo(link);
         }
     }
@@ -82,7 +87,8 @@ class LabelUnitTests {
         try (var document = Loader.loadPDF(LabelPdfService.render(sheet, 21, List.of(label, label)))) {
             assertThat(document.getNumberOfPages()).isEqualTo(2);
         }
-        try (var document = Loader.loadPDF(LabelPdfService.render(LabelPdfService.sheet(LabelDtos.Layout.LETTER_10), 1, java.util.Collections.nCopies(10, label)))) {
+        try (var document = Loader.loadPDF(LabelPdfService.render(
+                LabelPdfService.sheet(LabelDtos.Layout.LETTER_10), 1, java.util.Collections.nCopies(10, label)))) {
             assertThat(document.getNumberOfPages()).isEqualTo(1);
         }
         try (var document = Loader.loadPDF(LabelPdfService.calibration(sheet))) {

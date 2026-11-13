@@ -22,7 +22,9 @@ final class Gtin {
         if (!digits.matches("[0-9]+")) return results;
         var hint = formatHint == null ? "" : formatHint.toLowerCase(Locale.ROOT);
         switch (digits.length()) {
-            case 12, 13, 14 -> { if (validCheckDigit(digits)) results.add(pad(digits)); }
+            case 12, 13, 14 -> {
+                if (validCheckDigit(digits)) results.add(pad(digits));
+            }
             case 8 -> {
                 if (!hint.equals("upc_e") && validCheckDigit(digits)) results.add(pad(digits));
                 if (!hint.equals("ean_8")) {
@@ -30,7 +32,7 @@ final class Gtin {
                     if (upcA != null && validCheckDigit(upcA) && !results.contains(pad(upcA))) results.add(pad(upcA));
                 }
             }
-            default -> { }
+            default -> {}
         }
         return results;
     }
@@ -52,7 +54,9 @@ final class Gtin {
         return check == digits.charAt(digits.length() - 1) - '0';
     }
 
-    private static String pad(String digits) { return "0".repeat(14 - digits.length()) + digits; }
+    private static String pad(String digits) {
+        return "0".repeat(14 - digits.length()) + digits;
+    }
 
     /** UPC-E (number system 0 or 1, six digits, check digit) to the equivalent 12-digit UPC-A, or null. */
     static String expandUpcE(String upcE) {

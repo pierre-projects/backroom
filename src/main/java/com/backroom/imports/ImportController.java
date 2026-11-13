@@ -4,8 +4,17 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
-import org.springframework.http.*;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/organizations/{orgId}/imports/items")
@@ -16,7 +25,10 @@ class ImportController {
             + "Oat milk,OAT-01,L,Coffee bar > Fridge,6,\r\n";
 
     private final ImportService imports;
-    ImportController(ImportService imports) { this.imports = imports; }
+
+    ImportController(ImportService imports) {
+        this.imports = imports;
+    }
 
     /** The raw CSV body is read with a hard cap, so an oversized file is refused without buffering it all. */
     @PostMapping("/preview")
@@ -30,13 +42,20 @@ class ImportController {
     @PostMapping
     ResponseEntity<ImportService.Result> apply(@PathVariable UUID orgId, @RequestBody ImportService.ApplyInput input) {
         var result = imports.apply(orgId, input);
-        return ResponseEntity.status(result.replayed() ? HttpStatus.OK : HttpStatus.CREATED).body(result);
+        return ResponseEntity.status(result.replayed() ? HttpStatus.OK : HttpStatus.CREATED)
+                .body(result);
     }
 
     @GetMapping("/template.csv")
     ResponseEntity<byte[]> template() {
-        return ResponseEntity.ok().contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
-                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename("backroom-import-template.csv").build().toString())
+        return ResponseEntity.ok()
+                .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment()
+                                .filename("backroom-import-template.csv")
+                                .build()
+                                .toString())
                 .body(TEMPLATE.getBytes(StandardCharsets.UTF_8));
     }
 }

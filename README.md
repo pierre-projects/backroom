@@ -218,6 +218,10 @@ npm --prefix frontend run build
 
 Use `pwsh ./scripts/smoke-test.ps1` for the same production-container checks.
 
+Java code is formatted by Spotless (palantir-java-format, no wildcard imports).
+`./mvnw verify` fails on unformatted code; run `./mvnw spotless:apply` to fix it.
+Conventions are recorded in [ADR-0001](docs/adr/0001-backend-package-structure.md).
+
 ## Troubleshooting
 
 - **Java 17 is selected:** run `. ./scripts/env.ps1`, then check

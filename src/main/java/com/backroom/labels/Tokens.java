@@ -12,12 +12,14 @@ final class Tokens {
     static final String ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
     static final int LENGTH = 10;
     private static final SecureRandom RANDOM = new SecureRandom();
+
     private Tokens() {}
 
     static String generate() {
         while (true) {
             var token = new StringBuilder(LENGTH);
-            for (int index = 0; index < LENGTH; index++) token.append(ALPHABET.charAt(RANDOM.nextInt(ALPHABET.length())));
+            for (int index = 0; index < LENGTH; index++)
+                token.append(ALPHABET.charAt(RANDOM.nextInt(ALPHABET.length())));
             // At least one letter, so a typed token can never be mistaken for a barcode number.
             if (!token.chars().allMatch(Character::isDigit)) return token.toString();
         }
@@ -30,8 +32,13 @@ final class Tokens {
     /** Accepts lowercase, spaces and dashes, and the usual Crockford misreads (I and L as 1, O as 0). */
     static Optional<String> parse(String raw) {
         if (raw == null) return Optional.empty();
-        var cleaned = raw.strip().toUpperCase(Locale.ROOT).replace("-", "").replace(" ", "")
-                .replace('I', '1').replace('L', '1').replace('O', '0');
+        var cleaned = raw.strip()
+                .toUpperCase(Locale.ROOT)
+                .replace("-", "")
+                .replace(" ", "")
+                .replace('I', '1')
+                .replace('L', '1')
+                .replace('O', '0');
         if (cleaned.length() != LENGTH) return Optional.empty();
         for (int index = 0; index < cleaned.length(); index++) {
             if (ALPHABET.indexOf(cleaned.charAt(index)) < 0) return Optional.empty();

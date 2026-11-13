@@ -27,15 +27,23 @@ public class RequestIdFilter extends OncePerRequestFilter {
     private static final Pattern VALID = Pattern.compile("[A-Za-z0-9._-]{1,64}");
 
     /** The current request's id, or null outside a request. */
-    public static String current() { return MDC.get(MDC_KEY); }
+    public static String current() {
+        return MDC.get(MDC_KEY);
+    }
 
-    static boolean valid(String candidate) { return candidate != null && VALID.matcher(candidate).matches(); }
+    static boolean valid(String candidate) {
+        return candidate != null && VALID.matcher(candidate).matches();
+    }
 
     @Override
-    protected boolean shouldNotFilterAsyncDispatch() { return false; }
+    protected boolean shouldNotFilterAsyncDispatch() {
+        return false;
+    }
 
     @Override
-    protected boolean shouldNotFilterErrorDispatch() { return false; }
+    protected boolean shouldNotFilterErrorDispatch() {
+        return false;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
@@ -53,7 +61,8 @@ public class RequestIdFilter extends OncePerRequestFilter {
         try {
             chain.doFilter(request, response);
         } finally {
-            if (previous == null) MDC.remove(MDC_KEY); else MDC.put(MDC_KEY, previous);
+            if (previous == null) MDC.remove(MDC_KEY);
+            else MDC.put(MDC_KEY, previous);
         }
     }
 }

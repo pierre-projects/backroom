@@ -1,13 +1,13 @@
 package com.backroom.exports;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class CsvWriterTests {
     @Test
@@ -18,7 +18,9 @@ class CsvWriterTests {
         csv.row(List.of("Item", "Note"));
         csv.row(List.of("Paper cups, 12 oz", "He said \"enough\"\nfor now"));
         csv.row(Arrays.asList(" padded", null));
-        assertThat(out.toString()).isEqualTo("﻿Item,Note\r\n\"Paper cups, 12 oz\",\"He said \"\"enough\"\"\nfor now\"\r\n\" padded\",\r\n");
+        assertThat(out.toString())
+                .isEqualTo(
+                        "﻿Item,Note\r\n\"Paper cups, 12 oz\",\"He said \"\"enough\"\"\nfor now\"\r\n\" padded\",\r\n");
         assertThat(csv.rows()).isEqualTo(3);
     }
 

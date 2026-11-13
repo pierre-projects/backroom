@@ -14,28 +14,37 @@ import org.springframework.stereotype.Service;
 @Service
 public class StockCommands {
     private final StockService stock;
-    StockCommands(StockService stock) { this.stock=stock; }
+
+    StockCommands(StockService stock) {
+        this.stock = stock;
+    }
 
     public StockDtos.OperationView receive(UUID orgId, StockDtos.Receipt in) {
         return run(orgId, in.operationKey(), in.fingerprint(), () -> stock.receive(orgId, in));
     }
+
     public StockDtos.OperationView openingBalance(UUID orgId, StockDtos.Opening in) {
         return run(orgId, in.operationKey(), in.fingerprint(), () -> stock.openingBalance(orgId, in));
     }
+
     public StockDtos.OperationView remove(UUID orgId, StockDtos.Removal in) {
         return run(orgId, in.operationKey(), in.fingerprint(), () -> stock.remove(orgId, in));
     }
+
     public StockDtos.OperationView transfer(UUID orgId, StockDtos.Transfer in) {
         return run(orgId, in.operationKey(), in.fingerprint(), () -> stock.transfer(orgId, in));
     }
+
     public StockDtos.OperationView count(UUID orgId, StockDtos.Count in) {
         return run(orgId, in.operationKey(), in.fingerprint(), () -> stock.count(orgId, in));
     }
+
     public StockDtos.OperationView reverse(UUID orgId, UUID operationId, StockDtos.Reverse in) {
         return run(orgId, in.operationKey(), in.fingerprint(operationId), () -> stock.reverse(orgId, operationId, in));
     }
 
-    private StockDtos.OperationView run(UUID orgId, UUID key, String fingerprint, Supplier<StockDtos.OperationView> command) {
+    private StockDtos.OperationView run(
+            UUID orgId, UUID key, String fingerprint, Supplier<StockDtos.OperationView> command) {
         try {
             return command.get();
         } catch (DataIntegrityViolationException conflict) {

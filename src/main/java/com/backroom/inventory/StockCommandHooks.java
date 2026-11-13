@@ -1,7 +1,6 @@
 package com.backroom.inventory;
 
 import java.util.UUID;
-import org.springframework.stereotype.Component;
 
 /**
  * Extension point invoked inside a stock transaction right after its balances are locked.
@@ -10,9 +9,4 @@ import org.springframework.stereotype.Component;
  */
 public interface StockCommandHooks {
     void afterBalancesLocked(StockOperationType type, UUID itemId);
-}
-
-@Component
-class NoStockCommandHooks implements StockCommandHooks {
-    @Override public void afterBalancesLocked(StockOperationType type, UUID itemId) {}
 }

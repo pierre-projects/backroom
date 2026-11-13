@@ -16,9 +16,14 @@ import java.util.List;
 final class CsvWriter {
     private final Writer out;
     private long rows;
-    CsvWriter(Writer out) { this.out = out; }
 
-    void bom() { write("﻿"); }
+    CsvWriter(Writer out) {
+        this.out = out;
+    }
+
+    void bom() {
+        write("﻿");
+    }
 
     /** Writes one record. Strings are guarded text; BigDecimal, numbers, booleans and instants are plain values. */
     void row(List<?> cells) {
@@ -31,26 +36,43 @@ final class CsvWriter {
         write(line.toString());
         rows++;
     }
-    long rows() { return rows; }
+
+    long rows() {
+        return rows;
+    }
 
     static String cell(Object value) {
         if (value == null) return "";
-        if (value instanceof BigDecimal number) return number.stripTrailingZeros().toPlainString();
+        if (value instanceof BigDecimal number)
+            return number.stripTrailingZeros().toPlainString();
         if (value instanceof Number || value instanceof Boolean) return value.toString();
-        if (value instanceof Instant instant) return instant.truncatedTo(ChronoUnit.SECONDS).toString();
+        if (value instanceof Instant instant)
+            return instant.truncatedTo(ChronoUnit.SECONDS).toString();
         return quote(guard(value.toString()));
     }
+
     static String guard(String text) {
         if (text.isEmpty()) return text;
         var first = text.charAt(0);
-        return first == '=' || first == '+' || first == '-' || first == '@' || first == '\t' || first == '\r' ? "'" + text : text;
+        return first == '=' || first == '+' || first == '-' || first == '@' || first == '\t' || first == '\r'
+                ? "'" + text
+                : text;
     }
+
     static String quote(String text) {
-        var needs = text.indexOf(',') >= 0 || text.indexOf('"') >= 0 || text.indexOf('\n') >= 0 || text.indexOf('\r') >= 0
+        var needs = text.indexOf(',') >= 0
+                || text.indexOf('"') >= 0
+                || text.indexOf('\n') >= 0
+                || text.indexOf('\r') >= 0
                 || (!text.isEmpty() && (text.charAt(0) == ' ' || text.charAt(text.length() - 1) == ' '));
         return needs ? '"' + text.replace("\"", "\"\"") + '"' : text;
     }
+
     private void write(String text) {
-        try { out.write(text); } catch (IOException failure) { throw new UncheckedIOException(failure); }
+        try {
+            out.write(text);
+        } catch (IOException failure) {
+            throw new UncheckedIOException(failure);
+        }
     }
 }

@@ -1,20 +1,33 @@
 package com.backroom.locations;
-import java.util.*;
-import org.springframework.data.domain.*;
+
 import jakarta.persistence.LockModeType;
-import org.springframework.data.jpa.repository.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
 
 interface LocationRepository extends JpaRepository<StorageLocation, UUID> {
     @Lock(LockModeType.PESSIMISTIC_READ)
     @Query("select l from StorageLocation l where l.organizationId = :orgId and l.id = :id")
     Optional<StorageLocation> lockForShare(UUID orgId, UUID id);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select l from StorageLocation l where l.organizationId = :orgId and l.id = :id")
     Optional<StorageLocation> lockForUpdate(UUID orgId, UUID id);
+
     Optional<StorageLocation> findByOrganizationIdAndId(UUID orgId, UUID id);
+
     List<StorageLocation> findByOrganizationIdAndIdIn(UUID orgId, Collection<UUID> ids);
+
     List<StorageLocation> findByOrganizationId(UUID orgId);
+
     boolean existsByOrganizationIdAndParentIdAndArchivedFalse(UUID orgId, UUID parentId);
+
     @Query("""
             select l from StorageLocation l
             where l.organizationId = :orgId
@@ -25,11 +38,17 @@ interface LocationRepository extends JpaRepository<StorageLocation, UUID> {
                    (select child from StorageLocation child where child.organizationId = :orgId and child.parentId = l.id and child.archived = false))
               and (:q = '' or lower(l.name) like concat('%', lower(:q), '%'))
             """)
-    Page<StorageLocation> search(UUID orgId, UUID parentId, boolean rootsOnly, boolean leafOnly,
-                                boolean includeArchived, String q, Pageable pageable);
+    Page<StorageLocation> search(
+            UUID orgId,
+            UUID parentId,
+            boolean rootsOnly,
+            boolean leafOnly,
+            boolean includeArchived,
+            String q,
+            Pageable pageable);
 
     /** The chain of parents, outermost first. Every step stays inside the organization; depth is capped as a safeguard. */
-    @Query(nativeQuery=true, value="""
+    @Query(nativeQuery = true, value = """
             with recursive up(id, name, type, parent_id, depth) as (
                 select l.id, l.name, l.type, l.parent_id, 0 from locations l where l.organization_id = :orgId and l.id = :id
                 union all
@@ -40,6 +59,7 @@ interface LocationRepository extends JpaRepository<StorageLocation, UUID> {
             """)
     List<Object[]> ancestors(UUID orgId, UUID id);
 
-    @Query("select l.parentId, count(l) from StorageLocation l where l.organizationId = :orgId and l.parentId in :ids and l.archived = false group by l.parentId")
+    @Query(
+            "select l.parentId, count(l) from StorageLocation l where l.organizationId = :orgId and l.parentId in :ids and l.archived = false group by l.parentId")
     List<Object[]> childCounts(UUID orgId, Collection<UUID> ids);
 }

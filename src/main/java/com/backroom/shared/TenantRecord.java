@@ -8,5 +8,8 @@ import java.util.UUID;
 public abstract class TenantRecord extends RecordEntity {
     @Column(nullable = false, updatable = false)
     protected UUID organizationId;
-    public UUID getOrganizationId() { return organizationId; }
+
+    public UUID getOrganizationId() {
+        return organizationId;
+    }
 }

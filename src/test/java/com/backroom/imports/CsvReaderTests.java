@@ -1,14 +1,15 @@
 package com.backroom.imports;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.List;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class CsvReaderTests {
     @Test
     void readsQuotedFieldsEscapedQuotesAndEmbeddedNewlines() {
-        var records = CsvReader.read("﻿Item,SKU,Note\r\n\"Paper cups, 12 oz\",CUP-12,\"Say \"\"hi\"\"\"\r\n\"Two\nlines\",,end\r\n");
+        var records = CsvReader.read(
+                "﻿Item,SKU,Note\r\n\"Paper cups, 12 oz\",CUP-12,\"Say \"\"hi\"\"\"\r\n\"Two\nlines\",,end\r\n");
         assertThat(records).hasSize(3);
         assertThat(records.get(0).cells()).containsExactly("Item", "SKU", "Note");
         assertThat(records.get(1).cells()).containsExactly("Paper cups, 12 oz", "CUP-12", "Say \"hi\"");

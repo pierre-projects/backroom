@@ -10,8 +10,13 @@ import java.util.List;
  */
 final class CsvReader {
     record Record(int line, List<String> cells) {
-        boolean blank() { return cells.stream().allMatch(String::isBlank); }
-        String cell(int index) { return index >= 0 && index < cells.size() ? cells.get(index) : ""; }
+        boolean blank() {
+            return cells.stream().allMatch(String::isBlank);
+        }
+
+        String cell(int index) {
+            return index >= 0 && index < cells.size() ? cells.get(index) : "";
+        }
     }
 
     private CsvReader() {}
@@ -29,8 +34,10 @@ final class CsvReader {
             var ch = source.charAt(index);
             if (quoted) {
                 if (ch == '"') {
-                    if (index + 1 < source.length() && source.charAt(index + 1) == '"') { cell.append('"'); index++; }
-                    else quoted = false;
+                    if (index + 1 < source.length() && source.charAt(index + 1) == '"') {
+                        cell.append('"');
+                        index++;
+                    } else quoted = false;
                 } else {
                     if (ch == '\n') line++;
                     cell.append(ch);
@@ -38,10 +45,12 @@ final class CsvReader {
             } else if (ch == '"' && cell.isEmpty()) {
                 quoted = true;
             } else if (ch == delimiter) {
-                cells.add(cell.toString()); cell.setLength(0);
+                cells.add(cell.toString());
+                cell.setLength(0);
             } else if (ch == '\r' || ch == '\n') {
                 if (ch == '\r' && index + 1 < source.length() && source.charAt(index + 1) == '\n') index++;
-                cells.add(cell.toString()); cell.setLength(0);
+                cells.add(cell.toString());
+                cell.setLength(0);
                 records.add(new Record(recordLine, List.copyOf(cells)));
                 cells.clear();
                 line++;
@@ -54,7 +63,8 @@ final class CsvReader {
             cells.add(cell.toString());
             records.add(new Record(recordLine, List.copyOf(cells)));
         }
-        // Trailing blank lines are common in spreadsheet exports; blank lines in the middle are kept so line numbers stay true.
+        // Trailing blank lines are common in spreadsheet exports; blank lines in the middle are kept so line numbers
+        // stay true.
         while (!records.isEmpty() && records.getLast().blank()) records.removeLast();
         return records;
     }

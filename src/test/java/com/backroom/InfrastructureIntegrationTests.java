@@ -1,5 +1,13 @@
 package com.backroom;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
@@ -13,14 +21,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.postgresql.PostgreSQLContainer;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -44,8 +44,7 @@ class InfrastructureIntegrationTests {
         }
         var jdbc = new JdbcTemplate(dataSource);
         assertThat(jdbc.queryForObject("SELECT 1", Integer.class)).isEqualTo(1);
-        assertThat(jdbc.queryForObject(
-                "SELECT to_regclass('public.flyway_schema_history')::text", String.class))
+        assertThat(jdbc.queryForObject("SELECT to_regclass('public.flyway_schema_history')::text", String.class))
                 .isEqualTo("flyway_schema_history");
         assertThat(flyway.validateWithResult().validationSuccessful).isTrue();
         assertThat(flyway.info().pending()).isEmpty();
@@ -69,15 +68,13 @@ class InfrastructureIntegrationTests {
 
     @Test
     void keepsCsrfProtectionEnabled() throws Exception {
-        mvc.perform(post("/api/v1/items").with(user("test-only")))
-                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/items").with(user("test-only"))).andExpect(status().isForbidden());
     }
 
     @Test
     void doesNotExposeSensitiveActuatorEndpointsEvenToAuthenticatedUsers() throws Exception {
-        for (var endpoint : new String[]{"env", "configprops", "beans", "mappings", "heapdump"}) {
-            mvc.perform(get("/actuator/" + endpoint).with(user("test-only")))
-                    .andExpect(status().isForbidden());
+        for (var endpoint : new String[] {"env", "configprops", "beans", "mappings", "heapdump"}) {
+            mvc.perform(get("/actuator/" + endpoint).with(user("test-only"))).andExpect(status().isForbidden());
         }
     }
 

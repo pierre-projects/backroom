@@ -12,11 +12,18 @@ import org.springframework.stereotype.Component;
 @Component
 class PublicUrl {
     private final String base;
+
     PublicUrl(@Value("${backroom.public-base-url:http://localhost:8080}") String base) {
         this.base = base.strip().replaceAll("/+$", "");
     }
-    String base() { return base; }
-    String link(String token) { return base + "/s/" + token; }
+
+    String base() {
+        return base;
+    }
+
+    String link(String token) {
+        return base + "/s/" + token;
+    }
 
     /** The token part of one of our own QR links, or null for any other URL. Unfamiliar URLs are never followed. */
     String tokenFrom(String scanned) {
@@ -24,14 +31,19 @@ class PublicUrl {
         var lower = scanned.strip().toLowerCase(Locale.ROOT);
         if (!lower.startsWith(prefix)) return null;
         var rest = scanned.strip().substring(prefix.length());
-        var end = rest.indexOf('?') >= 0 ? rest.indexOf('?') : rest.indexOf('#') >= 0 ? rest.indexOf('#') : rest.length();
+        var end =
+                rest.indexOf('?') >= 0 ? rest.indexOf('?') : rest.indexOf('#') >= 0 ? rest.indexOf('#') : rest.length();
         return rest.substring(0, end).replaceAll("/+$", "");
     }
 
     boolean local() {
         try {
             var host = URI.create(base).getHost();
-            return host == null || host.equals("localhost") || host.startsWith("127.") || host.equals("[::1]") || host.endsWith(".localhost");
+            return host == null
+                    || host.equals("localhost")
+                    || host.startsWith("127.")
+                    || host.equals("[::1]")
+                    || host.endsWith(".localhost");
         } catch (IllegalArgumentException invalid) {
             return true;
         }

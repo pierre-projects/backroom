@@ -20,7 +20,9 @@ class ProductionSettings implements BeanFactoryPostProcessor, EnvironmentAware {
     private Environment environment;
 
     @Override
-    public void setEnvironment(Environment environment) { this.environment = environment; }
+    public void setEnvironment(Environment environment) {
+        this.environment = environment;
+    }
 
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
@@ -29,12 +31,17 @@ class ProductionSettings implements BeanFactoryPostProcessor, EnvironmentAware {
 
     static void requireHttpsPublicUrl(String publicUrl) {
         if (publicUrl == null || publicUrl.isBlank()) {
-            throw new IllegalStateException("BACKROOM_PUBLIC_URL must be set in production: it is the permanent HTTPS address printed on QR labels.");
+            throw new IllegalStateException(
+                    "BACKROOM_PUBLIC_URL must be set in production: it is the permanent HTTPS address printed on QR labels.");
         }
         try {
             var uri = new URI(publicUrl.strip());
-            if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null || uri.getQuery() != null || uri.getFragment() != null) {
-                throw new IllegalStateException("BACKROOM_PUBLIC_URL must be an https:// address without a query or fragment, for example https://stock.example.com");
+            if (!"https".equalsIgnoreCase(uri.getScheme())
+                    || uri.getHost() == null
+                    || uri.getQuery() != null
+                    || uri.getFragment() != null) {
+                throw new IllegalStateException(
+                        "BACKROOM_PUBLIC_URL must be an https:// address without a query or fragment, for example https://stock.example.com");
             }
         } catch (URISyntaxException invalid) {
             throw new IllegalStateException("BACKROOM_PUBLIC_URL is not a valid address.", invalid);

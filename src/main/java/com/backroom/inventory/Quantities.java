@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 public final class Quantities {
     static final int SCALE = 3;
     static final BigDecimal MAX = new BigDecimal("999999999999.999");
+
     private Quantities() {}
 
     /** A quantity that changes stock: greater than zero. */
