@@ -79,8 +79,9 @@ com.backroom
 ├── catalog/                     # optional later split (F8): items, photos, placements
 ├── locations/ labels/ restocking/ search/ imports/ exports/ audit/
 └── shared/
+    ├── error/         DomainException and its subclasses (NotFound, Conflict, InvalidRequest, ...)
     ├── persistence/   RecordEntity, TenantRecord
-    ├── web/           ApiException, ApiExceptionHandler, ProblemResponses, PageResponse, RequestIdFilter, SpaController
+    ├── web/           ApiExceptionHandler, ProblemResponses, PageResponse, RequestIdFilter, SpaController
     └── config/        ApplicationConfiguration, ProductionSettings
 
 src/test/java/com/backroom
@@ -114,8 +115,12 @@ Conventions:
    the test needs them.
 6. Entities keep fields `private`, expose getters, and change state through
    intention-revealing methods (`item.archive()`, `balance.apply(change)`).
-7. Services throw domain exceptions (`NotFound`, `Conflict(code)`,
-   `Forbidden`, `Invalid(code)`); `ApiExceptionHandler` alone maps them to HTTP.
+7. Services throw `shared.error` exceptions (`NotFoundException`,
+   `ConflictException(code, message)`, `InvalidRequestException`,
+   `ForbiddenException`, ...); `ApiExceptionHandler` alone maps them to HTTP.
+   `ArchitectureTests` fails the build if code outside controllers, `shared.web`
+   and `access.security` uses `org.springframework.http`, `.web` or
+   `jakarta.servlet` types.
 
 ## Options considered
 
@@ -206,7 +211,12 @@ available for a module that outgrows a flat package.
        `@SpringBootTest`/`@AutoConfigureMockMvc`/`@Import` trio, and the
        duplicate HTTP helpers that `FoundationIntegrationTests` kept were merged
        into `ApiTestSupport` (its stricter `register()` now runs for every test).
-6. [ ] Introduce domain exceptions and drop `HttpStatus` from services (F7).
+6. [x] Introduce domain exceptions and drop `HttpStatus` from services (F7).
+       `ApiException` is replaced by `shared.error.DomainException` and seven
+       subclasses, one per HTTP outcome (400, 401, 403, 404, 409, 413, 415);
+       status, error code and message of every response are unchanged.
+       `ArchitectureTests` (ArchUnit) keeps HTTP types in the web layer, and
+       `ApiExceptionHandlerTests` pins each exception's status and code.
 7. [ ] Make entity fields private with getters and behaviour methods, module by
        module (F6).
 8. [ ] Update `docs/architecture.md` to link this ADR and state the conventions.

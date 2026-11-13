@@ -1,5 +1,13 @@
 package com.backroom.shared.web;
 
+import com.backroom.shared.error.ConflictException;
+import com.backroom.shared.error.DomainException;
+import com.backroom.shared.error.ForbiddenException;
+import com.backroom.shared.error.InvalidRequestException;
+import com.backroom.shared.error.NotFoundException;
+import com.backroom.shared.error.PayloadTooLargeException;
+import com.backroom.shared.error.UnauthenticatedException;
+import com.backroom.shared.error.UnsupportedMediaTypeException;
 import java.util.LinkedHashMap;
 import java.util.Objects;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -43,9 +51,25 @@ public class ApiExceptionHandler {
         return problem;
     }
 
-    @ExceptionHandler(ApiException.class)
-    ProblemDetail application(ApiException error) {
-        return ProblemResponses.problem(error.status(), error.errorCode(), error.getMessage());
+    /** The one place a business failure becomes an HTTP status. */
+    @ExceptionHandler(DomainException.class)
+    ProblemDetail domain(DomainException error) {
+        return ProblemResponses.problem(statusOf(error), error.errorCode(), error.getMessage());
+    }
+
+    static HttpStatus statusOf(DomainException error) {
+        return switch (error) {
+            case InvalidRequestException ignored -> HttpStatus.BAD_REQUEST;
+            case UnauthenticatedException ignored -> HttpStatus.UNAUTHORIZED;
+            case ForbiddenException ignored -> HttpStatus.FORBIDDEN;
+            case NotFoundException ignored -> HttpStatus.NOT_FOUND;
+            case ConflictException ignored -> HttpStatus.CONFLICT;
+            case PayloadTooLargeException ignored -> HttpStatus.valueOf(413);
+            case UnsupportedMediaTypeException ignored -> HttpStatus.UNSUPPORTED_MEDIA_TYPE;
+            default ->
+                throw new IllegalStateException(
+                        "No HTTP status mapped for " + error.getClass().getName());
+        };
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

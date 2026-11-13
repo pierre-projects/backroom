@@ -5,7 +5,8 @@ import static com.backroom.access.Role.OWNER;
 
 import com.backroom.access.AccessPolicy;
 import com.backroom.audit.AuditService;
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.ConflictException;
+import com.backroom.shared.error.NotFoundException;
 import com.backroom.shared.web.PageResponse;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -115,11 +116,11 @@ public class LocationService {
     public void archive(UUID orgId, UUID id, Long version) {
         access.lock(orgId, OWNER, MANAGER);
         // Exclusive row lock: waits for in-flight stock commands that share-lock this location.
-        var location = locations.lockForUpdate(orgId, id).orElseThrow(ApiException::notFound);
+        var location = locations.lockForUpdate(orgId, id).orElseThrow(NotFoundException::new);
         location.checkVersion(version);
         if (location.archived) return;
         if (locations.existsByOrganizationIdAndParentIdAndArchivedFalse(orgId, id)) {
-            throw ApiException.conflict("LOCATION_HAS_CHILDREN", "Archive or move active child locations first.");
+            throw new ConflictException("LOCATION_HAS_CHILDREN", "Archive or move active child locations first.");
         }
         storagePolicy.assertNoActivePlacements(orgId, id);
         location.archived = true;
@@ -129,12 +130,12 @@ public class LocationService {
 
     private void validateParent(UUID orgId, UUID self, UUID parentId) {
         // Lock the new parent first so a concurrent stock receipt cannot place stock on it while it gains a child.
-        if (parentId != null) locations.lockForUpdate(orgId, parentId).orElseThrow(ApiException::notFound);
+        if (parentId != null) locations.lockForUpdate(orgId, parentId).orElseThrow(NotFoundException::new);
         var cursor = parentId;
         var visited = new HashSet<UUID>();
         while (cursor != null) {
             if (cursor.equals(self) || !visited.add(cursor)) {
-                throw ApiException.conflict("LOCATION_CYCLE", "A location cannot contain itself or its ancestors.");
+                throw new ConflictException("LOCATION_CYCLE", "A location cannot contain itself or its ancestors.");
             }
             var parent = find(orgId, cursor);
             editable(parent);
@@ -145,11 +146,11 @@ public class LocationService {
 
     private void editable(StorageLocation location) {
         if (location.archived)
-            throw ApiException.conflict("ARCHIVED", "Archived locations cannot be changed or used as parents.");
+            throw new ConflictException("ARCHIVED", "Archived locations cannot be changed or used as parents.");
     }
 
     private StorageLocation find(UUID orgId, UUID id) {
-        return locations.findByOrganizationIdAndId(orgId, id).orElseThrow(ApiException::notFound);
+        return locations.findByOrganizationIdAndId(orgId, id).orElseThrow(NotFoundException::new);
     }
 
     private LocationDtos.View view(StorageLocation location) {

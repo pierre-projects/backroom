@@ -1,6 +1,6 @@
 package com.backroom.inventory;
 
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.ConflictException;
 import java.util.UUID;
 import java.util.function.Supplier;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -51,7 +51,7 @@ public class StockCommands {
             var detail = String.valueOf(conflict.getMostSpecificCause().getMessage());
             if (detail.contains("stock_operations_key_uq")) return stock.replayAfterConflict(orgId, key, fingerprint);
             if (detail.contains("stock_operations_reversal_uq")) {
-                throw ApiException.conflict("ALREADY_REVERSED", "This operation has already been reversed.");
+                throw new ConflictException("ALREADY_REVERSED", "This operation has already been reversed.");
             }
             throw conflict;
         }

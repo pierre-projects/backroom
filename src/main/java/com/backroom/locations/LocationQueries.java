@@ -1,6 +1,7 @@
 package com.backroom.locations;
 
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.ConflictException;
+import com.backroom.shared.error.NotFoundException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -36,7 +37,7 @@ public class LocationQueries {
 
     public Summary require(UUID orgId, UUID id) {
         var summary = summaries(orgId, List.of(id)).get(id);
-        if (summary == null) throw ApiException.notFound();
+        if (summary == null) throw new NotFoundException();
         return summary;
     }
 
@@ -101,11 +102,11 @@ public class LocationQueries {
     }
 
     public void requireExists(UUID orgId, UUID id) {
-        locations.findByOrganizationIdAndId(orgId, id).orElseThrow(ApiException::notFound);
+        locations.findByOrganizationIdAndId(orgId, id).orElseThrow(NotFoundException::new);
     }
 
     public void requireActiveLeaf(UUID orgId, UUID id) {
-        var location = locations.findByOrganizationIdAndId(orgId, id).orElseThrow(ApiException::notFound);
+        var location = locations.findByOrganizationIdAndId(orgId, id).orElseThrow(NotFoundException::new);
         if (location.archived || locations.existsByOrganizationIdAndParentIdAndArchivedFalse(orgId, id)) {
             throw notLeaf();
         }
@@ -117,7 +118,7 @@ public class LocationQueries {
      */
     @Transactional
     public void lockActiveLeafForShare(UUID orgId, UUID id) {
-        var location = locations.lockForShare(orgId, id).orElseThrow(ApiException::notFound);
+        var location = locations.lockForShare(orgId, id).orElseThrow(NotFoundException::new);
         if (location.archived || locations.existsByOrganizationIdAndParentIdAndArchivedFalse(orgId, id)) {
             throw notLeaf();
         }
@@ -147,7 +148,7 @@ public class LocationQueries {
         return labels;
     }
 
-    private static ApiException notLeaf() {
-        return ApiException.conflict("LOCATION_NOT_LEAF", "Choose an active location with no active child locations.");
+    private static ConflictException notLeaf() {
+        return new ConflictException("LOCATION_NOT_LEAF", "Choose an active location with no active child locations.");
     }
 }

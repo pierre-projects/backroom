@@ -6,7 +6,9 @@ import static com.backroom.access.Role.values;
 
 import com.backroom.access.AccessPolicy;
 import com.backroom.audit.AuditService;
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.InvalidRequestException;
+import com.backroom.shared.error.NotFoundException;
+import com.backroom.shared.error.PayloadTooLargeException;
 import java.io.Writer;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -19,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import javax.sql.DataSource;
-import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,7 +52,7 @@ public class ExportService {
             return Arrays.stream(values())
                     .filter(kind -> kind.file.equals(file))
                     .findFirst()
-                    .orElseThrow(ApiException::notFound);
+                    .orElseThrow(NotFoundException::new);
         }
     }
     /** What one export will contain; checked and audited before any bytes are sent. */
@@ -148,12 +149,11 @@ public class ExportService {
         var kind = Kind.of(file);
         var end = to == null ? LocalDate.now(ZoneOffset.UTC) : to;
         var start = from == null ? end.minusDays(DEFAULT_DAYS) : from;
-        if (start.isAfter(end)) throw ApiException.badRequest("The start date must be on or before the end date.");
+        if (start.isAfter(end)) throw new InvalidRequestException("The start date must be on or before the end date.");
         var plan = new Plan(kind, orgId, start, end, 0);
         var rows = count(plan);
         if (rows > MAX_ROWS) {
-            throw new ApiException(
-                    HttpStatus.valueOf(413),
+            throw new PayloadTooLargeException(
                     "EXPORT_TOO_LARGE",
                     "That export has " + rows + " rows; the limit is " + MAX_ROWS + ". Choose a shorter date range.");
         }

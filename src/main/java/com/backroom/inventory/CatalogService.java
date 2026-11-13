@@ -6,7 +6,9 @@ import static com.backroom.access.Role.OWNER;
 import com.backroom.access.AccessPolicy;
 import com.backroom.audit.AuditService;
 import com.backroom.locations.LocationQueries;
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.ConflictException;
+import com.backroom.shared.error.InvalidRequestException;
+import com.backroom.shared.error.NotFoundException;
 import com.backroom.shared.web.PageResponse;
 import java.math.BigDecimal;
 import java.util.Collection;
@@ -113,7 +115,7 @@ public class CatalogService {
         var sku = normalizeSku(input.sku());
         checkSku(orgId, sku, id);
         if (input.unit() != item.unit && movements.existsByOrganizationIdAndItemId(orgId, id)) {
-            throw ApiException.conflict(
+            throw new ConflictException(
                     "UNIT_LOCKED", "The unit can't change after stock has been recorded. Create a new item instead.");
         }
         item.name = input.name().strip();
@@ -127,11 +129,11 @@ public class CatalogService {
     public void archive(UUID orgId, UUID id, Long version) {
         access.lock(orgId, OWNER, MANAGER);
         // Exclusive row lock: waits for in-flight stock commands, which share-lock the item.
-        var item = items.lockForUpdate(orgId, id).orElseThrow(ApiException::notFound);
+        var item = items.lockForUpdate(orgId, id).orElseThrow(NotFoundException::new);
         item.checkVersion(version);
         if (item.archived) return;
         if (balances.existsByOrganizationIdAndItemIdAndQuantityGreaterThan(orgId, id, BigDecimal.ZERO)) {
-            throw ApiException.conflict(
+            throw new ConflictException(
                     "ITEM_HAS_STOCK", "Use, move or count this item's remaining stock to zero before archiving it.");
         }
         item.archived = true;
@@ -177,11 +179,11 @@ public class CatalogService {
         access.lock(orgId, OWNER, MANAGER);
         find(orgId, itemId);
         // Lock order matches stock commands: placement, then balance.
-        var placement = placements.lockSlot(orgId, itemId, locationId).orElseThrow(ApiException::notFound);
+        var placement = placements.lockSlot(orgId, itemId, locationId).orElseThrow(NotFoundException::new);
         if (!placement.active) return;
         var balance = balances.lockSlot(orgId, itemId, locationId);
         if (balance.isPresent() && balance.get().quantity.signum() > 0) {
-            throw ApiException.conflict(
+            throw new ConflictException(
                     "PLACEMENT_HAS_STOCK",
                     "This location still holds stock of the item. Use, move or count it to zero first.");
         }
@@ -196,29 +198,29 @@ public class CatalogService {
             case "name" -> Sort.by("name", "id");
             case "name_desc" -> Sort.by(Sort.Order.desc("name"), Sort.Order.desc("id"));
             case "newest" -> Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
-            default -> throw ApiException.badRequest("Sort must be name, name_desc or newest.");
+            default -> throw new InvalidRequestException("Sort must be name, name_desc or newest.");
         };
     }
 
     private Item find(UUID orgId, UUID id) {
-        return items.findByOrganizationIdAndId(orgId, id).orElseThrow(ApiException::notFound);
+        return items.findByOrganizationIdAndId(orgId, id).orElseThrow(NotFoundException::new);
     }
 
     private void editable(Item item) {
-        if (item.archived) throw ApiException.conflict("ARCHIVED", "Archived items cannot be changed.");
+        if (item.archived) throw new ConflictException("ARCHIVED", "Archived items cannot be changed.");
     }
 
     private String normalizeSku(String value) {
         if (value == null || value.isBlank()) return null;
         var normalized = value.strip().toUpperCase(Locale.ROOT);
         if (normalized.length() > 80)
-            throw ApiException.badRequest("SKU must be at most 80 characters after normalization.");
+            throw new InvalidRequestException("SKU must be at most 80 characters after normalization.");
         return normalized;
     }
 
     private void checkSku(UUID orgId, String sku, UUID id) {
         if (sku != null && items.existsByOrganizationIdAndSkuAndIdNot(orgId, sku, id)) {
-            throw ApiException.conflict("SKU_IN_USE", "This SKU is already reserved, including archived items.");
+            throw new ConflictException("SKU_IN_USE", "This SKU is already reserved, including archived items.");
         }
     }
 
@@ -254,7 +256,7 @@ public class CatalogService {
                 .findByOrganizationIdAndItemIdAndLocationId(orgId, itemId, locationId)
                 .filter(found -> found.active)
                 .orElseThrow(() ->
-                        ApiException.conflict("NOT_PLACED", "Add this location to the item before setting a minimum."));
+                        new ConflictException("NOT_PLACED", "Add this location to the item before setting a minimum."));
         placement.minimumQuantity = value == null ? null : Quantities.positive(item.unit, value);
         placements.flush();
         var name = locations.names(orgId, List.of(locationId)).get(locationId);

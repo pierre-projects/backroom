@@ -3,7 +3,8 @@ package com.backroom.access;
 import static com.backroom.access.Role.OWNER;
 
 import com.backroom.audit.AuditService;
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.ConflictException;
+import com.backroom.shared.error.NotFoundException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -68,19 +69,19 @@ public class PasswordResetService {
         memberships
                 .findByOrganizationIdAndUserId(orgId, userId)
                 .filter(member -> member.active)
-                .orElseThrow(ApiException::notFound);
+                .orElseThrow(NotFoundException::new);
         for (var membership : memberships.findByUserIdAndActiveTrue(userId)) {
             var owner = memberships
                     .findByOrganizationIdAndUserId(membership.getOrganizationId(), issuer.userId())
                     .filter(member -> member.active && member.role == OWNER)
                     .isPresent();
             if (!owner) {
-                throw ApiException.conflict(
+                throw new ConflictException(
                         "RESET_NOT_ALLOWED",
                         "This person also belongs to a business you don't own, so you can't reset their password. An Owner of every business they belong to can.");
             }
         }
-        var account = accounts.findById(userId).orElseThrow(ApiException::notFound);
+        var account = accounts.findById(userId).orElseThrow(NotFoundException::new);
         var now = clock.instant();
         resets.findByUserIdAndUsedAtIsNullAndRevokedAtIsNull(userId).forEach(open -> open.revokedAt = now);
         var bytes = new byte[32];
@@ -159,8 +160,8 @@ public class PasswordResetService {
         return cached.version() == principal.credentialsVersion();
     }
 
-    private static ApiException unavailable() {
-        return ApiException.conflict(
+    private static ConflictException unavailable() {
+        return new ConflictException(
                 "RESET_UNAVAILABLE",
                 "This reset link has expired or has already been used. Ask an Owner for a new one.");
     }

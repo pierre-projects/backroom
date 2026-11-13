@@ -5,7 +5,12 @@ import static com.backroom.access.Role.OWNER;
 
 import com.backroom.access.AccessPolicy;
 import com.backroom.audit.AuditService;
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.ConflictException;
+import com.backroom.shared.error.DomainException;
+import com.backroom.shared.error.InvalidRequestException;
+import com.backroom.shared.error.NotFoundException;
+import com.backroom.shared.error.PayloadTooLargeException;
+import com.backroom.shared.error.UnsupportedMediaTypeException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.time.Clock;
@@ -16,7 +21,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import javax.imageio.ImageIO;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,12 +56,11 @@ public class ItemPhotoService {
 
     public Saved set(UUID orgId, UUID itemId, String contentType, byte[] bytes) {
         access.lock(orgId, OWNER, MANAGER);
-        var item = items.findByOrganizationIdAndId(orgId, itemId).orElseThrow(ApiException::notFound);
-        if (item.archived) throw ApiException.conflict("ARCHIVED", "Archived items cannot be changed.");
+        var item = items.findByOrganizationIdAndId(orgId, itemId).orElseThrow(NotFoundException::new);
+        if (item.archived) throw new ConflictException("ARCHIVED", "Archived items cannot be changed.");
         var type = contentType == null ? "" : contentType.split(";")[0].strip().toLowerCase(Locale.ROOT);
         if (!type.equals("image/jpeg"))
-            throw new ApiException(
-                    HttpStatus.UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_IMAGE", "Upload the photo as a JPEG.");
+            throw new UnsupportedMediaTypeException("UNSUPPORTED_IMAGE", "Upload the photo as a JPEG.");
         if (bytes.length > MAX_BYTES) throw tooLarge();
         var size = inspect(bytes);
         var photo = photos.findByOrganizationIdAndItemId(orgId, itemId).orElseGet(() -> new ItemPhoto(orgId, itemId));
@@ -85,7 +88,7 @@ public class ItemPhotoService {
 
     public void remove(UUID orgId, UUID itemId) {
         access.lock(orgId, OWNER, MANAGER);
-        var item = items.findByOrganizationIdAndId(orgId, itemId).orElseThrow(ApiException::notFound);
+        var item = items.findByOrganizationIdAndId(orgId, itemId).orElseThrow(NotFoundException::new);
         var photo = photos.findByOrganizationIdAndItemId(orgId, itemId).orElse(null);
         if (photo == null) return;
         photos.delete(photo);
@@ -104,7 +107,7 @@ public class ItemPhotoService {
     @Transactional(readOnly = true)
     public Photo get(UUID orgId, UUID itemId) {
         access.require(orgId);
-        var photo = photos.findByOrganizationIdAndItemId(orgId, itemId).orElseThrow(ApiException::notFound);
+        var photo = photos.findByOrganizationIdAndItemId(orgId, itemId).orElseThrow(NotFoundException::new);
         return new Photo(photo.bytes, photo.contentType, photo.photoVersion());
     }
 
@@ -118,13 +121,12 @@ public class ItemPhotoService {
         return result;
     }
 
-    static ApiException tooLarge() {
-        return new ApiException(
-                HttpStatus.valueOf(413), "PHOTO_TOO_LARGE", "That photo is too large. Use one under 600 KB.");
+    static PayloadTooLargeException tooLarge() {
+        return new PayloadTooLargeException("PHOTO_TOO_LARGE", "That photo is too large. Use one under 600 KB.");
     }
 
-    private static ApiException invalid() {
-        return new ApiException(HttpStatus.BAD_REQUEST, "INVALID_IMAGE", "That file isn't a readable JPEG photo.");
+    private static InvalidRequestException invalid() {
+        return new InvalidRequestException("INVALID_IMAGE", "That file isn't a readable JPEG photo.");
     }
     /** Returns {width, height} of a valid JPEG within the size limits. */
     private static int[] inspect(byte[] bytes) {
@@ -139,10 +141,8 @@ public class ItemPhotoService {
                 int width = reader.getWidth(0), height = reader.getHeight(0);
                 if (width < 1 || height < 1) throw invalid();
                 if (width > MAX_SIDE || height > MAX_SIDE) {
-                    throw new ApiException(
-                            HttpStatus.BAD_REQUEST,
-                            "IMAGE_TOO_BIG",
-                            "Photos can be at most " + MAX_SIDE + " pixels on a side.");
+                    throw new InvalidRequestException(
+                            "IMAGE_TOO_BIG", "Photos can be at most " + MAX_SIDE + " pixels on a side.");
                 }
                 if (reader.read(0) == null) throw invalid();
                 return new int[] {width, height};
@@ -150,7 +150,7 @@ public class ItemPhotoService {
                 reader.dispose();
             }
         } catch (IOException | RuntimeException error) {
-            if (error instanceof ApiException api) throw api;
+            if (error instanceof DomainException domain) throw domain;
             throw invalid();
         }
     }

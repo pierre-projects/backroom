@@ -1,7 +1,7 @@
 package com.backroom.inventory;
 
 import com.backroom.locations.LocationMutationPolicy;
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.ConflictException;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 
@@ -19,11 +19,11 @@ class PlacementLocationPolicy implements LocationMutationPolicy {
     public void assertNoActivePlacements(UUID orgId, UUID locationId) {
         if (balances.existsByOrganizationIdAndLocationIdAndQuantityGreaterThan(
                 orgId, locationId, java.math.BigDecimal.ZERO)) {
-            throw ApiException.conflict(
+            throw new ConflictException(
                     "LOCATION_HAS_STOCK", "This location still holds stock. Move or use it up first.");
         }
         if (placements.existsByOrganizationIdAndLocationIdAndActiveTrue(orgId, locationId)) {
-            throw ApiException.conflict(
+            throw new ConflictException(
                     "LOCATION_HAS_PLACEMENTS", "Remove or move this location's expected item placements first.");
         }
     }

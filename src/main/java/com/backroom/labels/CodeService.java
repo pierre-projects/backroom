@@ -7,12 +7,13 @@ import com.backroom.access.AccessPolicy;
 import com.backroom.audit.AuditService;
 import com.backroom.inventory.ItemQueries;
 import com.backroom.locations.LocationQueries;
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.ConflictException;
+import com.backroom.shared.error.InvalidRequestException;
+import com.backroom.shared.error.NotFoundException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,7 +68,7 @@ public class CodeService {
         var locationId = target.type() == LabelDtos.TargetType.LOCATION ? target.id() : null;
         var existing = codes.findActiveQr(orgId, itemId, locationId);
         if (existing.isPresent()) return existing.get();
-        if (archived) throw ApiException.conflict("ARCHIVED", "Archived items and locations can't get new labels.");
+        if (archived) throw new ConflictException("ARCHIVED", "Archived items and locations can't get new labels.");
         // 50 random bits: a collision is vanishingly unlikely, and the unique index would reject one rather than reuse
         // it.
         var code = codes.saveAndFlush(new ResourceCode(
@@ -84,11 +85,10 @@ public class CodeService {
     public LabelDtos.CodeView registerBarcode(UUID orgId, UUID itemId, LabelDtos.BarcodeInput input) {
         access.lock(orgId, OWNER, MANAGER);
         var item = items.require(orgId, itemId);
-        if (item.archived()) throw ApiException.conflict("ARCHIVED", "Archived items can't get new barcodes.");
+        if (item.archived()) throw new ConflictException("ARCHIVED", "Archived items can't get new barcodes.");
         var candidates = Gtin.candidates(input.value(), input.format());
         if (candidates.isEmpty()) {
-            throw new ApiException(
-                    HttpStatus.BAD_REQUEST,
+            throw new InvalidRequestException(
                     "INVALID_BARCODE",
                     "That isn't a valid UPC or EAN barcode. Check the digits, including the last one.");
         }
@@ -97,7 +97,7 @@ public class CodeService {
         for (var code : active) {
             if (itemId.equals(code.itemId)) return view(code);
             var holder = items.require(orgId, code.itemId);
-            throw ApiException.conflict(
+            throw new ConflictException(
                     "BARCODE_IN_USE",
                     "This barcode is already registered to " + holder.name() + ". Remove it there first.");
         }
@@ -114,7 +114,7 @@ public class CodeService {
 
     public void revoke(UUID orgId, UUID codeId, Long expectedVersion) {
         access.lock(orgId, OWNER, MANAGER);
-        var code = codes.findByOrganizationIdAndId(orgId, codeId).orElseThrow(ApiException::notFound);
+        var code = codes.findByOrganizationIdAndId(orgId, codeId).orElseThrow(NotFoundException::new);
         code.checkVersion(expectedVersion);
         if (!code.active()) return;
         code.status = ResourceCode.Status.REVOKED;

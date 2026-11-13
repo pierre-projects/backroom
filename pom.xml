@@ -20,6 +20,8 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <!-- Spring Modulith minor versions track Spring Boot's: Boot 4.1 pairs with Modulith 2.1. -->
         <spring-modulith.version>2.1.2</spring-modulith.version>
+        <!-- Keep in step with the ArchUnit version Spring Modulith uses. -->
+        <archunit.version>1.4.2</archunit.version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -90,6 +92,12 @@
         <dependency>
             <groupId>org.springframework.modulith</groupId>
             <artifactId>spring-modulith-docs</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit</artifactId>
+            <version>${archunit.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>

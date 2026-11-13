@@ -19,7 +19,9 @@ import com.backroom.inventory.Quantities;
 import com.backroom.inventory.StockDtos;
 import com.backroom.inventory.StockService;
 import com.backroom.locations.LocationQueries;
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.ConflictException;
+import com.backroom.shared.error.ForbiddenException;
+import com.backroom.shared.error.NotFoundException;
 import com.backroom.shared.web.PageResponse;
 import java.time.Instant;
 import java.util.EnumSet;
@@ -70,7 +72,7 @@ public class RestockService {
     public RestockDtos.RequestView submit(UUID orgId, RestockDtos.Submit in) {
         access.lock(orgId); // any active member; also serializes request numbers
         var item = items.require(orgId, in.itemId());
-        if (item.archived()) throw ApiException.conflict("ARCHIVED", "Archived items can't be requested.");
+        if (item.archived()) throw new ConflictException("ARCHIVED", "Archived items can't be requested.");
         locations.requireActiveLeaf(orgId, in.locationId());
         var quantity = Quantities.positive(item.unit(), in.quantity());
         var actor = access.actor();
@@ -133,7 +135,7 @@ public class RestockService {
         var role = access.require(orgId);
         var request = lockForDecision(orgId, id, in.expectedVersion());
         var actor = access.actor();
-        if (role == EMPLOYEE && !request.requesterId.equals(actor.userId())) throw ApiException.forbidden();
+        if (role == EMPLOYEE && !request.requesterId.equals(actor.userId())) throw new ForbiddenException();
         if (request.status != SUBMITTED) throw invalid("Only requests that haven't been reviewed can be cancelled.");
         request.status = CANCELLED;
         request.closedBy = actor.userId();
@@ -173,7 +175,7 @@ public class RestockService {
      */
     public RestockDtos.RequestView receive(UUID orgId, UUID id, RestockDtos.Receive in) {
         access.require(orgId);
-        var request = requests.lockById(orgId, id).orElseThrow(ApiException::notFound);
+        var request = requests.lockById(orgId, id).orElseThrow(NotFoundException::new);
         var item = items.require(orgId, request.itemId);
         var quantity = Quantities.positive(item.unit(), in.quantity());
         var actor = access.actor();
@@ -191,15 +193,15 @@ public class RestockService {
                         orgId);
                 return detail(orgId, request, true);
             }
-            throw ApiException.conflict(
+            throw new ConflictException(
                     "IDEMPOTENCY_KEY_REUSED", "This operation key was already used for a different request.");
         }
         if (request.status == SUBMITTED)
-            throw ApiException.conflict("NOT_APPROVED", "This request hasn't been approved yet.");
+            throw new ConflictException("NOT_APPROVED", "This request hasn't been approved yet.");
         if (!RECEIVING.contains(request.status))
             throw invalid("This request is closed. Record extra stock as an ordinary receipt.");
         if (quantity.compareTo(request.remaining()) > 0) {
-            throw ApiException.conflict(
+            throw new ConflictException(
                     "OVER_RECEIPT",
                     "Only " + Quantities.text(request.remaining())
                             + " is still expected on this request. Record extra stock as an ordinary receipt.");
@@ -270,7 +272,7 @@ public class RestockService {
     @Transactional(readOnly = true)
     public RestockDtos.RequestView get(UUID orgId, UUID id) {
         access.require(orgId);
-        return detail(orgId, requests.findByOrganizationIdAndId(orgId, id).orElseThrow(ApiException::notFound), false);
+        return detail(orgId, requests.findByOrganizationIdAndId(orgId, id).orElseThrow(NotFoundException::new), false);
     }
 
     @Transactional(readOnly = true)
@@ -284,13 +286,13 @@ public class RestockService {
     // ---------- Helpers ----------
 
     private RestockRequest lockForDecision(UUID orgId, UUID id, Long expectedVersion) {
-        var request = requests.lockById(orgId, id).orElseThrow(ApiException::notFound);
+        var request = requests.lockById(orgId, id).orElseThrow(NotFoundException::new);
         request.checkVersion(expectedVersion);
         return request;
     }
 
-    private static ApiException invalid(String message) {
-        return ApiException.conflict("INVALID_TRANSITION", message);
+    private static ConflictException invalid(String message) {
+        return new ConflictException("INVALID_TRANSITION", message);
     }
 
     private void touch(RestockRequest request) {

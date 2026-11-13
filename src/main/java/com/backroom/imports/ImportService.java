@@ -14,7 +14,9 @@ import com.backroom.locations.LocationContentsCounter;
 import com.backroom.locations.LocationDtos;
 import com.backroom.locations.LocationQueries;
 import com.backroom.locations.LocationService;
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.ConflictException;
+import com.backroom.shared.error.InvalidRequestException;
+import com.backroom.shared.error.PayloadTooLargeException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -26,7 +28,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -132,7 +133,7 @@ public class ImportService {
         // The organization lock serializes imports in a business, so a retry waits for the original and then replays
         // it.
         access.lock(orgId, OWNER, MANAGER);
-        if (input.importKey() == null) throw ApiException.badRequest("An import key is required.");
+        if (input.importKey() == null) throw new InvalidRequestException("An import key is required.");
         var csv = input.csv() == null ? "" : input.csv();
         if (csv.getBytes(StandardCharsets.UTF_8).length > MAX_BYTES) throw tooLarge();
         var include = new TreeSet<>(input.include() == null ? List.<Integer>of() : input.include());
@@ -144,7 +145,7 @@ public class ImportService {
         var previous = batches.findByOrganizationIdAndImportKey(orgId, input.importKey());
         if (previous.isPresent()) {
             if (!previous.get().fileSha256.equals(hash)) {
-                throw ApiException.conflict(
+                throw new ConflictException(
                         "IMPORT_KEY_REUSED",
                         "This import was already applied with a different file. Start a new import.");
             }
@@ -275,11 +276,9 @@ public class ImportService {
                 batch.errors);
     }
 
-    static ApiException tooLarge() {
-        return new ApiException(
-                HttpStatus.valueOf(413),
-                "IMPORT_TOO_LARGE",
-                "That file is larger than 1 MB. Split it into smaller files.");
+    static PayloadTooLargeException tooLarge() {
+        return new PayloadTooLargeException(
+                "IMPORT_TOO_LARGE", "That file is larger than 1 MB. Split it into smaller files.");
     }
 
     private static String sha256(String text) {

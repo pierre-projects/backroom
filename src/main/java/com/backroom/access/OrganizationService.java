@@ -3,7 +3,8 @@ package com.backroom.access;
 import static com.backroom.access.Role.OWNER;
 
 import com.backroom.audit.AuditService;
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.ConflictException;
+import com.backroom.shared.error.NotFoundException;
 import com.backroom.shared.web.PageResponse;
 import java.util.HashMap;
 import java.util.Map;
@@ -49,7 +50,7 @@ public class OrganizationService {
     @Transactional(readOnly = true)
     public AccessDtos.OrganizationView get(UUID orgId) {
         var role = access.require(orgId);
-        return view(organizations.findById(orgId).orElseThrow(ApiException::notFound), role);
+        return view(organizations.findById(orgId).orElseThrow(NotFoundException::new), role);
     }
 
     public AccessDtos.OrganizationView create(AccessDtos.OrganizationInput input) {
@@ -62,7 +63,7 @@ public class OrganizationService {
 
     public AccessDtos.OrganizationView edit(UUID orgId, AccessDtos.OrganizationEdit input) {
         access.lock(orgId, OWNER);
-        var org = organizations.findById(orgId).orElseThrow(ApiException::notFound);
+        var org = organizations.findById(orgId).orElseThrow(NotFoundException::new);
         org.checkVersion(input.expectedVersion());
         org.name = input.name().strip();
         organizations.flush();
@@ -86,19 +87,19 @@ public class OrganizationService {
         var member = memberships
                 .findByOrganizationIdAndUserId(orgId, userId)
                 .filter(value -> value.active)
-                .orElseThrow(ApiException::notFound);
+                .orElseThrow(NotFoundException::new);
         protectOwner(orgId, member, role != OWNER);
         if (member.role != role) {
             member.role = role;
             memberships.flush();
             record(orgId, "MEMBERSHIP_ROLE_CHANGED", "MEMBERSHIP", member.getId(), Map.of("role", role.name()));
         }
-        return memberView(member, accounts.findById(userId).orElseThrow(ApiException::notFound));
+        return memberView(member, accounts.findById(userId).orElseThrow(NotFoundException::new));
     }
 
     public void deactivate(UUID orgId, UUID userId) {
         access.lock(orgId, OWNER);
-        var member = memberships.findByOrganizationIdAndUserId(orgId, userId).orElseThrow(ApiException::notFound);
+        var member = memberships.findByOrganizationIdAndUserId(orgId, userId).orElseThrow(NotFoundException::new);
         if (!member.active) return;
         protectOwner(orgId, member, true);
         member.active = false;
@@ -110,7 +111,7 @@ public class OrganizationService {
         if (member.role == OWNER
                 && losesOwnership
                 && memberships.countByOrganizationIdAndRoleAndActiveTrue(orgId, OWNER) <= 1) {
-            throw ApiException.conflict("LAST_OWNER", "An organization must retain an active Owner.");
+            throw new ConflictException("LAST_OWNER", "An organization must retain an active Owner.");
         }
     }
 

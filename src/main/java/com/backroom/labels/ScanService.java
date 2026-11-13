@@ -13,7 +13,7 @@ import com.backroom.access.OrganizationService;
 import com.backroom.access.Role;
 import com.backroom.inventory.ItemQueries;
 import com.backroom.locations.LocationQueries;
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.NotFoundException;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -82,9 +82,9 @@ public class ScanService {
 
     /** For a QR link opened with the phone's own camera: which organization and page it belongs to. */
     public LabelDtos.LinkView open(String rawToken) {
-        var token = Tokens.parse(rawToken).orElseThrow(ApiException::notFound);
-        var code = codes.findByKindAndValue(ResourceCode.Kind.GENERATED, token).orElseThrow(ApiException::notFound);
-        if (!access.isActiveMember(code.getOrganizationId())) throw ApiException.notFound();
+        var token = Tokens.parse(rawToken).orElseThrow(NotFoundException::new);
+        var code = codes.findByKindAndValue(ResourceCode.Kind.GENERATED, token).orElseThrow(NotFoundException::new);
+        if (!access.isActiveMember(code.getOrganizationId())) throw new NotFoundException();
         if (!code.active()) return new LabelDtos.LinkView(REVOKED, code.getOrganizationId(), null, null);
         var item = code.itemId != null;
         return new LabelDtos.LinkView(

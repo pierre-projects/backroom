@@ -1,6 +1,6 @@
 package com.backroom.labels;
 
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.InvalidRequestException;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
@@ -39,7 +39,8 @@ class LabelsController {
             @PathVariable UUID orgId,
             @RequestParam(required = false) UUID itemId,
             @RequestParam(required = false) UUID locationId) {
-        if ((itemId == null) == (locationId == null)) throw ApiException.badRequest("Choose an item or a location.");
+        if ((itemId == null) == (locationId == null))
+            throw new InvalidRequestException("Choose an item or a location.");
         return itemId != null
                 ? codes.list(orgId, LabelDtos.TargetType.ITEM, itemId)
                 : codes.list(orgId, LabelDtos.TargetType.LOCATION, locationId);

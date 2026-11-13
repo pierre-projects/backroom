@@ -18,7 +18,7 @@ Vite's proxy; deployment needs one Java process and one database.
 | imports | CSV import of items, places and starting quantities; writes only through other modules' services |
 | audit | Durable business activity |
 | assets | Equipment, when that capability ships |
-| shared | Technical primitives only, depending on no feature module: `persistence` (base entities), `web` (errors, paging, request ids, SPA routes), `config` (application and production settings) |
+| shared | Technical primitives only, depending on no feature module: `error` (business exceptions services throw), `persistence` (base entities), `web` (HTTP error mapping, paging, request ids, SPA routes), `config` (application and production settings) |
 
 Phase 1 implements access, locations, catalog/placements within inventory, audit,
 and shared technical configuration. Phase 2 adds balances, stock operations and
@@ -41,7 +41,9 @@ Package layout and code conventions are recorded in
 [ADR-0001](adr/0001-backend-package-structure.md). `ModuleStructureTests`
 enforces the boundaries with Spring Modulith: each top-level package is a
 module, there are no cycles between modules, and sub-packages are internal
-unless declared as a `@NamedInterface`. The same test writes module diagrams to
+unless declared as a `@NamedInterface`. `ArchitectureTests` keeps HTTP types
+(`org.springframework.http`, `.web`, `jakarta.servlet`) in controllers and the
+web layer; services throw `shared.error` exceptions. The same test writes module diagrams to
 `target/spring-modulith-docs`.
 
 ## Decisions

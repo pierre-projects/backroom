@@ -5,7 +5,9 @@ import static com.backroom.access.Role.MANAGER;
 import static com.backroom.access.Role.OWNER;
 
 import com.backroom.audit.AuditService;
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.ConflictException;
+import com.backroom.shared.error.InvalidRequestException;
+import com.backroom.shared.error.NotFoundException;
 import com.backroom.shared.web.PageResponse;
 import jakarta.persistence.EntityManager;
 import java.nio.charset.StandardCharsets;
@@ -54,7 +56,8 @@ public class InvitationService {
     public AccessDtos.CreatedInvitation create(UUID orgId, Role role) {
         access.lock(orgId, OWNER);
         if (role != MANAGER && role != EMPLOYEE)
-            throw ApiException.badRequest("Invite a Manager or Employee. Promote Owners through member management.");
+            throw new InvalidRequestException(
+                    "Invite a Manager or Employee. Promote Owners through member management.");
         var bytes = new byte[32];
         random.nextBytes(bytes);
         var token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
@@ -75,7 +78,7 @@ public class InvitationService {
 
     public void revoke(UUID orgId, UUID invitationId) {
         access.lock(orgId, OWNER);
-        var invite = invitations.lockByOrganizationAndId(orgId, invitationId).orElseThrow(ApiException::notFound);
+        var invite = invitations.lockByOrganizationAndId(orgId, invitationId).orElseThrow(NotFoundException::new);
         entityManager.refresh(invite);
         if (invite.revokedAt != null) return;
         ensurePending(invite);
@@ -87,25 +90,25 @@ public class InvitationService {
     @Transactional(readOnly = true)
     public AccessDtos.InvitationPreview preview(String token) {
         access.actor();
-        var invite = invitations.findByTokenHash(digest(token)).orElseThrow(ApiException::notFound);
+        var invite = invitations.findByTokenHash(digest(token)).orElseThrow(NotFoundException::new);
         ensurePending(invite);
-        var org = organizations.findById(invite.getOrganizationId()).orElseThrow(ApiException::notFound);
+        var org = organizations.findById(invite.getOrganizationId()).orElseThrow(NotFoundException::new);
         return new AccessDtos.InvitationPreview(org.getId(), org.name, invite.role, invite.expiresAt);
     }
 
     public AccessDtos.OrganizationView accept(String token) {
         var actor = access.actor();
-        var reference = invitations.findByTokenHash(digest(token)).orElseThrow(ApiException::notFound);
+        var reference = invitations.findByTokenHash(digest(token)).orElseThrow(NotFoundException::new);
         var orgId = reference.getOrganizationId();
         access.lockOrganization(orgId);
         var invite =
-                invitations.lockByOrganizationAndId(orgId, reference.getId()).orElseThrow(ApiException::notFound);
+                invitations.lockByOrganizationAndId(orgId, reference.getId()).orElseThrow(NotFoundException::new);
         entityManager.refresh(invite);
         ensurePending(invite);
         var member =
                 memberships.findByOrganizationIdAndUserId(orgId, actor.userId()).orElse(null);
         if (member != null && member.active) {
-            throw ApiException.conflict(
+            throw new ConflictException(
                     "ALREADY_MEMBER", "You already belong to this organization. Your role has not changed.");
         }
         if (member == null) member = new Membership(orgId, actor.userId(), invite.role);
@@ -116,13 +119,13 @@ public class InvitationService {
         invite.acceptedBy = actor.userId();
         invitations.flush();
         record(invite, "INVITATION_ACCEPTED", Map.of("role", invite.role.name()));
-        var org = organizations.findById(orgId).orElseThrow(ApiException::notFound);
+        var org = organizations.findById(orgId).orElseThrow(NotFoundException::new);
         return new AccessDtos.OrganizationView(orgId, org.name, org.getVersion(), member.role);
     }
 
     private void ensurePending(Invitation invite) {
         if (!"PENDING".equals(status(invite))) {
-            throw ApiException.conflict(
+            throw new ConflictException(
                     "INVITATION_UNAVAILABLE", "This invitation has expired, been revoked, or already been used.");
         }
     }

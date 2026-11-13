@@ -1,9 +1,8 @@
 package com.backroom.inventory;
 
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.InvalidRequestException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import org.springframework.http.HttpStatus;
 
 /** Exact quantity rules shared by every stock command. Values are stored as numeric(15,3). */
 public final class Quantities {
@@ -35,7 +34,7 @@ public final class Quantities {
         return value.signum() == 0 ? "0" : value.stripTrailingZeros().toPlainString();
     }
 
-    private static ApiException invalid(String message) {
-        return new ApiException(HttpStatus.BAD_REQUEST, "INVALID_QUANTITY", message);
+    private static InvalidRequestException invalid(String message) {
+        return new InvalidRequestException("INVALID_QUANTITY", message);
     }
 }

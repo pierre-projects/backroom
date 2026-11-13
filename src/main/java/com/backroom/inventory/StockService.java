@@ -14,7 +14,9 @@ import static com.backroom.inventory.StockOperationType.WASTE;
 import com.backroom.access.AccessPolicy;
 import com.backroom.audit.AuditService;
 import com.backroom.locations.LocationQueries;
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.ConflictException;
+import com.backroom.shared.error.InvalidRequestException;
+import com.backroom.shared.error.NotFoundException;
 import com.backroom.shared.web.PageResponse;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -35,7 +37,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -120,7 +121,7 @@ public class StockService {
         var locked = lockBalances(orgId, item.getId(), List.of(in.locationId()));
         hooks.afterBalancesLocked(OPENING, item.getId());
         if (movements.existsByOrganizationIdAndItemIdAndLocationId(orgId, item.getId(), in.locationId())) {
-            throw ApiException.conflict(
+            throw new ConflictException(
                     "OPENING_ALREADY_RECORDED",
                     "This location already has stock history. Receive or count stock instead.");
         }
@@ -164,7 +165,7 @@ public class StockService {
         var replay = replayIfKnown(orgId, in.operationKey(), in.fingerprint());
         if (replay != null) return replay;
         if (in.fromLocationId().equals(in.toLocationId())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "SAME_LOCATION", "Choose a different destination location.");
+            throw new InvalidRequestException("SAME_LOCATION", "Choose a different destination location.");
         }
         var item = lockItem(orgId, in.itemId());
         locations.requireExists(orgId, in.fromLocationId());
@@ -202,9 +203,9 @@ public class StockService {
                 lockBalances(orgId, item.getId(), List.of(in.locationId())).get(in.locationId());
         hooks.afterBalancesLocked(COUNT, item.getId());
         if (balance == null)
-            throw ApiException.conflict("NOT_PLACED", "Add this location to the item before counting it.");
+            throw new ConflictException("NOT_PLACED", "Add this location to the item before counting it.");
         if (!Objects.equals(balance.getVersion(), in.expectedBalanceVersion())) {
-            throw ApiException.conflict(
+            throw new ConflictException(
                     "STALE_COUNT",
                     "Stock here changed after you started counting. Check the latest quantity and count again.");
         }
@@ -236,9 +237,9 @@ public class StockService {
         var fingerprint = in.fingerprint(operationId);
         var replay = replayIfKnown(orgId, in.operationKey(), fingerprint);
         if (replay != null) return replay;
-        var original = operations.findByOrganizationIdAndId(orgId, operationId).orElseThrow(ApiException::notFound);
+        var original = operations.findByOrganizationIdAndId(orgId, operationId).orElseThrow(NotFoundException::new);
         if (!original.type.reversible()) {
-            throw ApiException.conflict(
+            throw new ConflictException(
                     "NOT_REVERSIBLE",
                     original.type == COUNT
                             ? "Counts can't be reversed. Count the location again instead."
@@ -246,7 +247,7 @@ public class StockService {
         }
         var item = lockItem(orgId, original.itemId);
         if (operations.existsByOrganizationIdAndReversesOperationId(orgId, operationId)) {
-            throw ApiException.conflict("ALREADY_REVERSED", "This operation has already been reversed.");
+            throw new ConflictException("ALREADY_REVERSED", "This operation has already been reversed.");
         }
         var operation = claim(orgId, REVERSAL, item, in.operationKey(), fingerprint, null, in.note(), operationId);
         // Other modules (restocking) adjust their records here, before balances are locked.
@@ -290,7 +291,7 @@ public class StockService {
         access.require(orgId);
         var existing = operations
                 .findByOrganizationIdAndOperationKey(orgId, operationKey)
-                .orElseThrow(() -> ApiException.conflict("CONCURRENT_CHANGE", "This record changed. Try again."));
+                .orElseThrow(() -> new ConflictException("CONCURRENT_CHANGE", "This record changed. Try again."));
         return replay(orgId, existing, fingerprint);
     }
 
@@ -299,7 +300,7 @@ public class StockService {
     @Transactional(readOnly = true)
     public List<StockDtos.BalanceView> balances(UUID orgId, UUID itemId) {
         access.require(orgId);
-        items.findByOrganizationIdAndId(orgId, itemId).orElseThrow(ApiException::notFound);
+        items.findByOrganizationIdAndId(orgId, itemId).orElseThrow(NotFoundException::new);
         var active = placements.activeLocations(orgId, itemId);
         var rows = balances.findByOrganizationIdAndItemId(orgId, itemId).stream()
                 .filter(balance -> active.contains(balance.locationId) || balance.quantity.signum() > 0)
@@ -368,7 +369,7 @@ public class StockService {
     public PageResponse<StockDtos.MovementView> movements(
             UUID orgId, UUID itemId, UUID locationId, int page, int size) {
         access.require(orgId);
-        if (itemId != null) items.findByOrganizationIdAndId(orgId, itemId).orElseThrow(ApiException::notFound);
+        if (itemId != null) items.findByOrganizationIdAndId(orgId, itemId).orElseThrow(NotFoundException::new);
         if (locationId != null) locations.requireExists(orgId, locationId);
         var result = movements.search(
                 orgId,
@@ -392,7 +393,7 @@ public class StockService {
     @Transactional(readOnly = true)
     public StockDtos.OperationView operation(UUID orgId, UUID operationId) {
         access.require(orgId);
-        var operation = operations.findByOrganizationIdAndId(orgId, operationId).orElseThrow(ApiException::notFound);
+        var operation = operations.findByOrganizationIdAndId(orgId, operationId).orElseThrow(NotFoundException::new);
         return fullView(orgId, operation, false);
     }
 
@@ -422,7 +423,7 @@ public class StockService {
     private StockDtos.OperationView replay(UUID orgId, StockOperation existing, String fingerprint) {
         var actor = access.actor();
         if (!existing.actorId.equals(actor.userId()) || !existing.payloadHash.equals(hash(fingerprint))) {
-            throw ApiException.conflict(
+            throw new ConflictException(
                     "IDEMPOTENCY_KEY_REUSED", "This operation key was already used for a different request.");
         }
         log.info(
@@ -435,8 +436,8 @@ public class StockService {
 
     /** Shared row lock: the item can't be archived or have its unit changed while stock is recorded against it. */
     private Item lockItem(UUID orgId, UUID itemId) {
-        var item = items.lockForShare(orgId, itemId).orElseThrow(ApiException::notFound);
-        if (item.archived) throw ApiException.conflict("ARCHIVED", "Archived items can't change stock.");
+        var item = items.lockForShare(orgId, itemId).orElseThrow(NotFoundException::new);
+        if (item.archived) throw new ConflictException("ARCHIVED", "Archived items can't change stock.");
         return item;
     }
 
@@ -471,7 +472,7 @@ public class StockService {
     private void prepareDestination(UUID orgId, UUID itemId, UUID locationId) {
         locations.lockActiveLeafForShare(orgId, locationId);
         placements.insertIfMissing(orgId, itemId, locationId);
-        var placement = placements.lockSlot(orgId, itemId, locationId).orElseThrow(ApiException::notFound);
+        var placement = placements.lockSlot(orgId, itemId, locationId).orElseThrow(NotFoundException::new);
         if (!placement.active) {
             placement.active = true;
             placements.flush();
@@ -497,8 +498,8 @@ public class StockService {
                 operation.getOrganizationId(), operation.getId(), operation.itemId, balance.locationId, change, after));
     }
 
-    private static ApiException insufficient() {
-        return ApiException.conflict("INSUFFICIENT_STOCK", "There isn't enough stock at this location for that.");
+    private static ConflictException insufficient() {
+        return new ConflictException("INSUFFICIENT_STOCK", "There isn't enough stock at this location for that.");
     }
 
     // ---------- Views and audit ----------

@@ -1,6 +1,6 @@
 package com.backroom.inventory;
 
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.NotFoundException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -24,7 +24,7 @@ public class ItemQueries {
     }
 
     public ItemSummary require(UUID orgId, UUID id) {
-        return summary(items.findByOrganizationIdAndId(orgId, id).orElseThrow(ApiException::notFound));
+        return summary(items.findByOrganizationIdAndId(orgId, id).orElseThrow(NotFoundException::new));
     }
 
     public Map<UUID, ItemSummary> summaries(UUID orgId, Collection<UUID> ids) {

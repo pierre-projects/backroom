@@ -1,6 +1,6 @@
 package com.backroom.shared.persistence;
 
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.ConflictException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
@@ -33,7 +33,7 @@ public abstract class RecordEntity {
 
     public void checkVersion(Long expected) {
         if (expected == null || !expected.equals(version)) {
-            throw ApiException.conflict("STALE_VERSION", "This record changed. Reload it before saving.");
+            throw new ConflictException("STALE_VERSION", "This record changed. Reload it before saving.");
         }
     }
 }

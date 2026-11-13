@@ -1,6 +1,6 @@
 package com.backroom.access;
 
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.ConflictException;
 import java.util.Locale;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -27,7 +27,7 @@ public class AccountService implements UserDetailsService {
     public AccessDtos.UserView register(AccessDtos.Registration input) {
         var email = normalizeEmail(input.email());
         if (accounts.existsByEmail(email)) {
-            throw ApiException.conflict("EMAIL_IN_USE", "An account with this email already exists.");
+            throw new ConflictException("EMAIL_IN_USE", "An account with this email already exists.");
         }
         var account = accounts.saveAndFlush(
                 new Account(input.displayName().strip(), email, encoder.encode(input.password())));

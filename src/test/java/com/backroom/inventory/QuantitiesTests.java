@@ -3,7 +3,7 @@ package com.backroom.inventory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.InvalidRequestException;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 
@@ -13,7 +13,7 @@ class QuantitiesTests {
         assertThat(Quantities.positive(Unit.EACH, new BigDecimal("3"))).isEqualByComparingTo("3");
         assertThat(Quantities.positive(Unit.EACH, new BigDecimal("3.000"))).isEqualByComparingTo("3");
         assertThatThrownBy(() -> Quantities.positive(Unit.EACH, new BigDecimal("1.5")))
-                .isInstanceOf(ApiException.class)
+                .isInstanceOf(InvalidRequestException.class)
                 .extracting("errorCode")
                 .isEqualTo("INVALID_QUANTITY");
     }
@@ -23,18 +23,18 @@ class QuantitiesTests {
         assertThat(Quantities.positive(Unit.KILOGRAM, new BigDecimal("0.125")).scale())
                 .isEqualTo(3);
         assertThatThrownBy(() -> Quantities.positive(Unit.LITER, new BigDecimal("0.0001")))
-                .isInstanceOf(ApiException.class);
+                .isInstanceOf(InvalidRequestException.class);
     }
 
     @Test
     void rejectsZeroNegativeMissingAndOversizedValues() {
         assertThatThrownBy(() -> Quantities.positive(Unit.GRAM, BigDecimal.ZERO))
-                .isInstanceOf(ApiException.class);
+                .isInstanceOf(InvalidRequestException.class);
         assertThatThrownBy(() -> Quantities.positive(Unit.GRAM, new BigDecimal("-1")))
-                .isInstanceOf(ApiException.class);
-        assertThatThrownBy(() -> Quantities.positive(Unit.GRAM, null)).isInstanceOf(ApiException.class);
+                .isInstanceOf(InvalidRequestException.class);
+        assertThatThrownBy(() -> Quantities.positive(Unit.GRAM, null)).isInstanceOf(InvalidRequestException.class);
         assertThatThrownBy(() -> Quantities.positive(Unit.GRAM, new BigDecimal("1000000000000")))
-                .isInstanceOf(ApiException.class);
+                .isInstanceOf(InvalidRequestException.class);
         assertThat(Quantities.nonNegative(Unit.GRAM, BigDecimal.ZERO)).isEqualByComparingTo("0");
     }
 

@@ -4,7 +4,9 @@ import com.backroom.inventory.Quantities;
 import com.backroom.inventory.Unit;
 import com.backroom.locations.LocationQueries;
 import com.backroom.locations.LocationType;
-import com.backroom.shared.web.ApiException;
+import com.backroom.shared.error.DomainException;
+import com.backroom.shared.error.InvalidRequestException;
+import com.backroom.shared.error.PayloadTooLargeException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -17,7 +19,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import org.springframework.http.HttpStatus;
 
 /**
  * Turns a CSV file into an import plan without touching the database: which rows are new, duplicates or errors, which
@@ -138,7 +139,7 @@ final class ImportPlanner {
 
     static List<Parsed> parse(String csv) {
         var records = CsvReader.read(csv);
-        if (records.isEmpty()) throw ApiException.badRequest("The file is empty. Start from the template.");
+        if (records.isEmpty()) throw new InvalidRequestException("The file is empty. Start from the template.");
         var columns = new HashMap<String, Integer>();
         var header = records.getFirst().cells();
         for (int index = 0; index < header.size(); index++) {
@@ -146,18 +147,16 @@ final class ImportPlanner {
             if (field != null) columns.putIfAbsent(field, index);
         }
         if (!columns.containsKey("item") || !columns.containsKey("unit")) {
-            throw new ApiException(
-                    HttpStatus.BAD_REQUEST,
+            throw new InvalidRequestException(
                     "IMPORT_HEADER",
                     "The first row must name the columns, including Item and Unit. Start from the template.");
         }
         var data = records.subList(1, records.size()).stream()
                 .filter(record -> !record.blank())
                 .toList();
-        if (data.isEmpty()) throw ApiException.badRequest("The file has a header but no rows to import.");
+        if (data.isEmpty()) throw new InvalidRequestException("The file has a header but no rows to import.");
         if (data.size() > MAX_ROWS) {
-            throw new ApiException(
-                    HttpStatus.valueOf(413),
+            throw new PayloadTooLargeException(
                     "IMPORT_TOO_LARGE",
                     "That file has " + data.size() + " rows; the limit is " + MAX_ROWS
                             + ". Split it into smaller files.");
@@ -238,7 +237,7 @@ final class ImportPlanner {
         if (unit == null) return null;
         try {
             return positive ? Quantities.positive(unit, value) : Quantities.nonNegative(unit, value);
-        } catch (ApiException error) {
+        } catch (DomainException error) {
             errors.add(label + ": " + error.getMessage());
             return null;
         }
