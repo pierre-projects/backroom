@@ -7,7 +7,7 @@ import type { LocationType, Unit } from './types';
 
 /*
  * Browse patterns shared by Inventory, Locations and Home: a remembered grid/list choice, photo-ready visual tiles,
- * and cards. Tiles stay neutral (no accent): teal is reserved for actions and "you are here".
+ * and cards. Tiles stay neutral (no accent): crimson is reserved for actions and "you are here".
  */
 
 export type BrowseView = 'grid' | 'list';
