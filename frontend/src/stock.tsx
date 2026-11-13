@@ -32,9 +32,9 @@ export function useStockLocations(base: string) {
   return { leaves, error: all.error, reload: all.reload, label: (id: string) => { const found = byId.get(id); return found ? label(found) : ''; } };
 }
 
-export type StockAction = 'receive' | 'usage' | 'waste' | 'transfer' | 'count' | 'opening';
+export type StockAction = 'receive' | 'usage' | 'waste' | 'sale' | 'transfer' | 'count' | 'opening';
 const titles: Record<StockAction, string> = {
-  receive: 'Receive stock', usage: 'Record usage', waste: 'Record waste', transfer: 'Transfer stock', count: 'Count stock', opening: 'Set starting quantity',
+  receive: 'Receive stock', usage: 'Record usage', waste: 'Record waste', sale: 'Record sale', transfer: 'Transfer stock', count: 'Count stock', opening: 'Set starting quantity',
 };
 const clean = (value: FormDataEntryValue | null) => String(value ?? '').trim().replace(',', '.');
 
@@ -51,7 +51,7 @@ export function StockDialog({ action, item, base, balances, locationId, close, d
   const [error, setError] = useState<unknown>();
   const locations = useStockLocations(base);
   const stocked = balances.filter(balance => Number(balance.quantity) > 0);
-  const removal = action === 'usage' || action === 'waste';
+  const removal = action === 'usage' || action === 'waste' || action === 'sale';
   const known = stocked.find(balance => balance.locationId === locationId)
     ?? (!locationId && stocked.length === 1 ? stocked[0] : undefined);
   const [from, setFrom] = useState(known?.locationId ?? (removal ? '' : stocked[0]?.locationId ?? ''));
@@ -75,11 +75,12 @@ export function StockDialog({ action, item, base, balances, locationId, close, d
       } else if (action === 'opening') {
         await send<StockOperation>(base + '/inventory/opening-balances', 'POST', { operationKey, itemId: item.id, locationId: target, quantity, note });
         done('Starting quantity at ' + pathOf(target) + ' set to ' + amount);
-      } else if (action === 'usage' || action === 'waste') {
-        const operation = await send<StockOperation>(base + '/inventory/removals', 'POST', { operationKey, itemId: item.id, locationId: target, quantity, note, reason: action === 'waste' ? 'WASTE' : 'USAGE' });
+      } else if (removal) {
+        const reason = action === 'waste' ? 'WASTE' : action === 'sale' ? 'SALE' : 'USAGE';
+        const operation = await send<StockOperation>(base + '/inventory/removals', 'POST', { operationKey, itemId: item.id, locationId: target, quantity, note, reason });
         const movement = operation.movements.find(entry => entry.locationId === target);
         const balanceText = movement ? '. ' + formatQuantity(movement.balanceAfter, item.unit) + ' on hand there.' : '';
-        done((action === 'waste' ? 'Recorded ' + amount + ' of waste at ' : 'Used ' + amount + ' from ') + pathOf(target) + balanceText);
+        done((action === 'waste' ? 'Recorded ' + amount + ' of waste at ' : action === 'sale' ? 'Sold ' + amount + ' from ' : 'Used ' + amount + ' from ') + pathOf(target) + balanceText);
       } else if (action === 'transfer') {
         const to = String(form.get('toLocationId'));
         await send<StockOperation>(base + '/inventory/transfers', 'POST', { operationKey, itemId: item.id, fromLocationId: from, toLocationId: to, quantity, note });
@@ -104,7 +105,7 @@ export function StockDialog({ action, item, base, balances, locationId, close, d
     </select>
   </Field>;
   const noteField = <Field label="Note (optional)"><input name="note" maxLength={500} autoComplete="off" /></Field>;
-  const noStock = (action === 'usage' || action === 'waste' || action === 'transfer') && stocked.length === 0;
+  const noStock = (removal || action === 'transfer') && stocked.length === 0;
   const noLocations = (action === 'receive' || action === 'opening' || action === 'transfer') && locations.leaves?.length === 0;
 
   return <Dialog title={titles[action]} close={close}>
@@ -203,6 +204,7 @@ export function SlotSheet({ slot, item, canManage, close, pick, remove, request,
     <div className="sheet-options">
       {hasStock && option('use', 'Record usage', 'usage')}
       {hasStock && option('waste', 'Record waste', 'waste', 'Spoiled, broken or expired')}
+      {hasStock && option('sale', 'Record sale', 'sale', 'Sold to a customer; no prices are kept')}
       {option('receive', 'Receive stock here', 'receive')}
       {request && <button type="button" className="menu-item sheet-option" onClick={request}><Icon name="plus" /><span>Request more here<small>{slot.low ? 'Prefilled with what is missing' : 'Ask a manager to restock this location'}</small></span></button>}
       {canManage && hasStock && option('transfer', 'Transfer from here', 'transfer')}
@@ -215,13 +217,13 @@ export function SlotSheet({ slot, item, canManage, close, pick, remove, request,
 }
 
 const movementTitles: Record<StockOperationType, string> = {
-  OPENING: 'Starting quantity', RECEIPT: 'Received', USAGE: 'Used', WASTE: 'Wasted', TRANSFER: 'Moved', COUNT: 'Count adjustment', REVERSAL: 'Reversal',
+  OPENING: 'Starting quantity', RECEIPT: 'Received', USAGE: 'Used', WASTE: 'Wasted', SALE: 'Sold', TRANSFER: 'Moved', COUNT: 'Count adjustment', REVERSAL: 'Reversal',
 };
 const movementIcons: Record<StockOperationType, IconName> = {
-  OPENING: 'start', RECEIPT: 'receive', USAGE: 'use', WASTE: 'waste', TRANSFER: 'transfer', COUNT: 'count', REVERSAL: 'undo',
+  OPENING: 'start', RECEIPT: 'receive', USAGE: 'use', WASTE: 'waste', SALE: 'sale', TRANSFER: 'transfer', COUNT: 'count', REVERSAL: 'undo',
 };
 const operationNouns: Record<StockOperationType, string> = {
-  OPENING: 'starting quantity', RECEIPT: 'receipt', USAGE: 'usage', WASTE: 'waste', TRANSFER: 'transfer', COUNT: 'count', REVERSAL: 'reversal',
+  OPENING: 'starting quantity', RECEIPT: 'receipt', USAGE: 'usage', WASTE: 'waste', SALE: 'sale', TRANSFER: 'transfer', COUNT: 'count', REVERSAL: 'reversal',
 };
 export function movementTitle(movement: StockMovement) {
   if (movement.operationType === 'TRANSFER') return Number(movement.quantityChange) < 0 ? 'Moved out' : 'Moved in';

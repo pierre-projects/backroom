@@ -22,7 +22,7 @@ export interface Page<T> { items: T[]; page: number; size: number; totalElements
 export const unitNames: Record<Unit, string> = { EACH: 'Each', GRAM: 'Gram', KILOGRAM: 'Kilogram', MILLILITER: 'Milliliter', LITER: 'Liter' };
 export const roleNames: Record<Role, string> = { OWNER: 'Owner', MANAGER: 'Manager', EMPLOYEE: 'Employee' };
 export const unitShort: Record<Unit, string> = { EACH: '', GRAM: 'g', KILOGRAM: 'kg', MILLILITER: 'mL', LITER: 'L' };
-export type StockOperationType = 'OPENING' | 'RECEIPT' | 'USAGE' | 'WASTE' | 'TRANSFER' | 'COUNT' | 'REVERSAL';
+export type StockOperationType = 'OPENING' | 'RECEIPT' | 'USAGE' | 'WASTE' | 'SALE' | 'TRANSFER' | 'COUNT' | 'REVERSAL';
 export interface StockBalance { itemId: string; locationId: string; locationName: string; parentName: string | null; quantity: string; version: number; hasHistory: boolean; minimum: string | null; low: boolean }
 /** One slot below its minimum, from /inventory/low-stock. */
 export interface LowStockRow { itemId: string; itemName: string; sku: string | null; unit: Unit; locationId: string; locationName: string; parentName: string | null; quantity: string; minimum: string; shortfall: string }
