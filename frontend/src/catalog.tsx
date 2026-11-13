@@ -5,12 +5,13 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { api, query, send } from './api';
 import { Badge, Dialog, Empty, ErrorMessage, Field, Loading, PageHeader, Pager, SuccessMessage, useResource } from './components';
 import { Icon } from './icons';
+import type { IconName } from './icons';
 import type { Item, Page, StockBalance, StockMovement, StorageLocation } from './types';
 import { unitNames } from './types';
 import { MinimumDialog, MinimumNote, MovementList, ReverseDialog, SlotSheet, StockDialog, StockRowActions, formatQuantity, locationPath, shortfall, useStockLocations } from './stock';
 import type { StockAction } from './stock';
 import { CodesPanel } from './codes';
-import { ItemRequestsPanel, NewRequestDialog } from './requests';
+import { ItemRequestsPanel, NewRequestDialog, ago } from './requests';
 import { SelectionBar, useLabelSelection } from './labels';
 import { useWorkspace } from './workspace';
 import { Breadcrumbs, BrowseCard, FolderSwitch, FolderTile, SearchScanLink, StatsStrip, ViewToggle, VisualTile, newBadge, resizePhoto, spaceFacts, unitIcons, useBrowseView, useShowFolders } from './browse';
@@ -240,22 +241,55 @@ export function ItemDetail() {
   const hasStock = slots.some(slot => Number(slot.quantity) > 0);
   const unitLocked = slots.some(slot => slot.hasHistory) || (history.data?.totalElements ?? 0) > 0;
   const unplaced = locations.leaves?.filter(choice => !slots.some(slot => slot.locationId === choice.id)) ?? [];
+  const back = nav.back({ to: root + '/items', label: 'Inventory' });
+  const placed = slots.length === 1 ? slots[0] : undefined;
+  const minimums = slots.filter(slot => slot.minimum);
+  const updated = history.data?.items[0]?.occurredAt ?? value.createdAt;
+  const reveal = (id: string, focus = false) => { const target = document.getElementById(id); target?.scrollIntoView({ behavior: 'smooth', block: 'start' }); if (focus) target?.focus({ preventScroll: true }); };
+  const quick = (label: string, icon: IconName, onClick: () => void, primary = false) =>
+    <button type="button" className={'quick-action' + (primary ? ' primary' : '')} onClick={onClick}><span className="quick-action-circle" aria-hidden="true"><Icon name={icon} /></span><span className="quick-action-label">{label}</span></button>;
   return <>
-    <PageHeader back={nav.back({ to: root + '/items', label: 'Inventory' })} title={value.name}
-      media={<><VisualTile size="lg" name={value.name} icon={unitIcons[value.unit]} photo={itemPhoto(base, value)} />
-        {editable && <PhotoControl base={base} item={value} changed={message => { setStatus(message); item.reload(); }} />}</>}>
-      {!value.archived && hasStock && <button type="button" className="button primary" onClick={() => setAction({ kind: 'usage' })}><Icon name="use" />Record usage</button>}
-      {!value.archived && <button type="button" className={'button ' + (hasStock ? 'secondary' : 'primary')} onClick={() => setAction({ kind: 'receive' })}><Icon name="receive" />Receive stock</button>}
-      {!value.archived && <button type="button" className="button secondary" onClick={() => setRequesting({})}><Icon name="plus" />Request more</button>}
-      {editable && hasStock && <button type="button" className="button secondary" onClick={() => setAction({ kind: 'transfer' })}><Icon name="transfer" />Transfer</button>}
-    </PageHeader>
-    <dl className="detail-grid stock-summary">
-      <div><dt>On hand</dt><dd className="numeric detail-total">{formatQuantity(value.onHand, value.unit)}</dd></div>
-      <div><dt>SKU</dt><dd className="mono">{value.sku ?? 'Not set'}</dd></div>
-      <div><dt>Base unit</dt><dd>{unitNames[value.unit]}</dd></div>
-      {value.archived && <div><dt>Status</dt><dd><Badge tone="warning">Archived</Badge></dd></div>}
-      {!value.archived && value.low && <div><dt>Status</dt><dd><Badge tone="warning">Low</Badge> <span className="muted">below a minimum</span></dd></div>}
-    </dl>
+    <div className="page-heading item-hero">
+      <Link className="back-link" to={back.to} onClick={'onClick' in back ? back.onClick : undefined}><Icon name="chevronLeft" className="small" />{back.label}</Link>
+      <div className="item-hero-grid">
+        <div className="page-heading-media item-hero-media">
+          <div className="item-hero-stage">
+            <VisualTile size="hero" name={value.name} icon={unitIcons[value.unit]} photo={itemPhoto(base, value)} />
+            <button type="button" className="hero-pill" aria-label="Labels and barcodes" title="Labels and barcodes" onClick={() => reveal('codes-' + value.id)}><Icon name="label" /></button>
+          </div>
+          {editable && <PhotoControl base={base} item={value} changed={message => { setStatus(message); item.reload(); }} />}
+        </div>
+        <div className="page-heading-text item-hero-body">
+          <p className="item-folder"><Icon name="folder" className="small" />{placed
+            ? <RecordLink from={value.name} to={root + '/locations/' + placed.locationId}>{locationPath(placed)}</RecordLink>
+            : <span>{slots.length ? slots.length + ' locations' : 'Not placed yet'}</span>}</p>
+          <h1>{value.name}</h1>
+          <dl className="item-facts">
+            <div><dt>SKU</dt><dd className="mono">{value.sku ?? 'Not set'}</dd></div>
+            {updated && <div><dt>Updated</dt><dd><time dateTime={updated} title={new Date(updated).toLocaleString()}>{ago(updated)}</time></dd></div>}
+          </dl>
+          {!value.archived && <div className="quick-actions" role="group" aria-label="Item actions">
+            {hasStock && quick('Record usage', 'use', () => setAction({ kind: 'usage' }), true)}
+            {quick('Receive stock', 'receive', () => setAction({ kind: 'receive' }), !hasStock)}
+            {editable && hasStock && quick('Transfer', 'transfer', () => setAction({ kind: 'transfer' }))}
+            {quick('Request more', 'plus', () => setRequesting({}))}
+            {quick('History', 'history', () => reveal('history-heading', true))}
+          </div>}
+          <dl className="metric-grid stock-summary">
+            <div><dt>On hand</dt><dd className="numeric detail-total">{formatQuantity(value.onHand, value.unit)}</dd>
+              {!value.archived && <span className="metric-steppers">
+                <button type="button" className="stepper" aria-label="Use some" title="Record usage" disabled={!hasStock} onClick={() => setAction({ kind: 'usage' })}><Icon name="minus" /></button>
+                <button type="button" className="stepper" aria-label="Add some" title="Receive stock" onClick={() => setAction({ kind: 'receive' })}><Icon name="plus" /></button>
+              </span>}</div>
+            <div><dt><Icon name="bell" className="small" />Min level</dt><dd className="numeric">{minimums.length === 0 ? <span className="muted">Not set</span>
+              : minimums.length === 1 ? formatQuantity(minimums[0]!.minimum!, value.unit) : minimums.length + ' shelves'}</dd></div>
+            <div><dt>Base unit</dt><dd>{unitNames[value.unit]}</dd></div>
+            <div><dt>Status</dt><dd>{value.archived ? <Badge tone="warning">Archived</Badge> : value.low ? <><Badge tone="warning">Low</Badge> <span className="muted">below a minimum</span></>
+              : hasStock ? <Badge tone="success">In stock</Badge> : <Badge>No stock</Badge>}</dd></div>
+          </dl>
+        </div>
+      </div>
+    </div>
     {status && <SuccessMessage>{status}</SuccessMessage>}
     <ErrorMessage error={error} />
     <section className="panel table-panel" aria-labelledby="stock-heading">
