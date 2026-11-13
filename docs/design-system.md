@@ -172,6 +172,15 @@ Detail pages show a back link above the title. It returns to where the person ca
 | **Spaces strip** | On Home, up to six top-level rooms as compact bordered links (small tile, name, contents) with **All locations** at the right of its heading. It never shows counts that aren't real and is hidden until a location exists. |
 | **Sold** | **Record sale** sits in **More actions** after waste, with the hint "Sold to a customer; no prices are kept". Its history title is **Sold** with a tag icon. The confirmation follows the removal pattern. |
 
+## Import patterns
+
+| Pattern | Rules |
+| --- | --- |
+| **Choose a file** | A short sentence on what a row is, a small column table (Column · Needed? · Example), limits in help text, then **Choose a CSV file** (primary, upload icon) beside **Download template**. Nothing is saved at this step. |
+| **Review** | Titled "Review catalog.csv". A row of count badges: new (success), already exist (neutral), possible duplicates (warning), with problems (danger), new locations (accent). Then the locations to be created (open when five or fewer) and one line of help per kind of skip. The primary button states the result: **Import 3 rows** (disabled as **Nothing to import**). **Choose another file** restarts. |
+| **Rows table** | Line (the spreadsheet's own number), item with SKU and unit, place with "12 to start · min 4", status badge with its reason underneath (problem reasons in danger text). Possible duplicates get an **Include** checkbox; included rows switch to a success **Included** badge. On phones each row restacks with a "Line 4" label. |
+| **Result** | **Import finished**, a success notice, and a short list of non-zero counts ("3 items created", "2 rows skipped as duplicates"). Actions: **Open Inventory** (primary), **Open Locations**, **Import another file**. A replayed import says nothing was added twice. |
+
 ## Writing
 
 - Sentence case everywhere. Name things the way a café or shop would: items, locations, shelves, people.
