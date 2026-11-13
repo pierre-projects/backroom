@@ -1,0 +1,9 @@
+# Public marketing and legal pages are crawlable; the signed-in app, label links and one-time links are not.
+User-agent: *
+Allow: /
+Disallow: /app
+Disallow: /api/
+Disallow: /s/
+Disallow: /invite
+Disallow: /reset
+# Add once the production hostname is chosen: Sitemap: https://{{PUBLIC_HOST}}/sitemap.xml

@@ -5,6 +5,7 @@ import { clearWorkspaceNavigation } from './navigation';
 import { ApiError, api, refreshCsrf, send } from './api';
 import { Brand, ErrorMessage, Field, Loading, PageHeader, useResource, Pager } from './components';
 import { Icon } from './icons';
+import { LegalLinks } from './site';
 import type { InvitationPreview, Organization, Page, User } from './types';
 import { roleNames } from './types';
 
@@ -96,6 +97,7 @@ export function AuthForm({ initialMode = 'signin', invitation = false }: { initi
       <Field label="Email"><input name="email" type="email" autoComplete="username" inputMode="email" maxLength={254} required /></Field>
       <Field label="Password"><input name="password" type="password" autoComplete={register ? 'new-password' : 'current-password'} minLength={12} required />{register && <small>At least 12 characters.</small>}</Field>
       <button className="button primary full-width" disabled={pending}>{pending ? (register ? 'Creating account…' : 'Signing in…') : register ? 'Create account' : 'Sign in'}</button>
+      {register && <p className="auth-consent">By creating an account you agree to the <Link to="/terms">Terms of Service</Link> and <Link to="/privacy">Privacy Policy</Link>.</p>}
     </form>
     {!register && <details className="forgot">
       <summary>Forgot your password?</summary>
@@ -113,7 +115,7 @@ export function AuthPage({ mode }: { mode: 'signin' | 'register' }) {
   const [params] = useSearchParams();
   if (auth.loading) return <div className="auth-shell"><Loading /></div>;
   if (auth.user) return <Navigate to={safeNext(params.get('next')) ?? '/app'} replace />;
-  return <div className="auth-shell"><Brand /><AuthForm key={mode} initialMode={mode} /></div>;
+  return <div className="auth-shell"><Brand /><AuthForm key={mode} initialMode={mode} /><LegalLinks /></div>;
 }
 export function InvitationPage() {
   const auth = useAuth();
@@ -143,7 +145,7 @@ export function InvitationPage() {
     : <section className="auth-card"><h1>Join a business</h1><ErrorMessage error={error} />{!preview && !error && <Loading />}
       {preview && <><div className="invite-summary"><h2>{preview.organizationName}</h2><p>Role: <strong>{roleNames[preview.role]}</strong></p><p className="muted">Invitation expires {new Date(preview.expiresAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}</p></div>
         <button className="button primary full-width" disabled={pending} onClick={() => void accept()}>{pending ? 'Joining…' : 'Accept invitation'}</button></>}
-      <p className="auth-switch"><Link to="/app">Not now — go to your businesses</Link></p></section>}</div>;
+      <p className="auth-switch"><Link to="/app">Not now — go to your businesses</Link></p></section>}<LegalLinks /></div>;
 }
 interface ResetPreview { displayName: string; email: string; expiresAt: string }
 /** Opened from an Owner's one-time link: set a new password, then sign straight in. */
@@ -193,7 +195,7 @@ export function ResetPasswordPage() {
         </form>
         <p className="auth-switch muted">Link expires {new Date(preview.expiresAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</p>
       </>}
-    </section>}</div>;
+    </section>}<LegalLinks /></div>;
 }
 export function OrganizationChooser() {
   useEffect(clearWorkspaceNavigation, []);

@@ -33,6 +33,7 @@ Design:
 
 - [Design system 3.1 (coral)](docs/design-system.md) and its [component reference](docs/design-walkthrough.html)
 - [Frontend codebook](docs/frontend-codebook.md)
+- [Landing site and legal pages brief](docs/landing-and-legal-brief.md): fill in `frontend/src/site-config.ts` before launch
 - [Sortly inspiration: design system and UX rules](docs/sortly-inspiration.md)
 - [UI/UX overhaul brief and its outcome](docs/backroom-ui-ux-overhaul.md)
 - [UX audit and redesign handoff (implemented)](design-plans/README.md)

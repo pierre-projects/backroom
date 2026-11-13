@@ -1,0 +1,156 @@
+/*
+ * Public marketing and legal pages (landing, terms, privacy, security, contact).
+ * Layout: sticky white header, full-width bands that alternate white and gray, picture-and-text rows
+ * that swap sides, and a dark footer. Uses tokens from styles.css; the footer adds its own dark shades.
+ */
+.site { --site-max: 72rem; --footer-bg: #22252c; --footer-text: #ffffff; --footer-muted: rgb(255 255 255 / 0.74); --footer-line: rgb(255 255 255 / 0.14); background: var(--surface); }
+.site main:focus { outline: none; }
+.site-container { width: min(100% - 2rem, var(--site-max)); margin: 0 auto; }
+.site .accent { color: var(--accent); }
+
+/* ---------- Header ---------- */
+.site-header { position: sticky; top: 0; z-index: 20; background: var(--surface); border-bottom: 1px solid var(--border); }
+.header-row { display: flex; align-items: center; gap: var(--space-6); min-height: 4rem; }
+.header-nav { display: none; gap: var(--space-1); margin: 0 auto; }
+.header-nav a { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 var(--space-3); color: var(--text); font-size: var(--text-md); font-weight: 500; text-decoration: none; border-radius: var(--radius-control); }
+.header-nav a:hover { background: var(--surface-sunken); color: var(--text); }
+.site-header .header-actions { display: flex; align-items: center; gap: var(--space-2); margin-left: auto; }
+.header-signin { background: var(--surface-sunken); color: var(--text); border-color: transparent; }
+.header-signin:hover { background: var(--border); color: var(--text); }
+@media (min-width: 64rem) {
+  .header-nav { display: flex; }
+  .site-header .header-actions { margin-left: 0; }
+}
+
+/* ---------- Bands ---------- */
+.band { padding: 4.5rem 0; background: var(--surface); scroll-margin-top: 4rem; }
+.band-grey { background: var(--bg); }
+.band h2 { font-size: clamp(1.625rem, 1.2rem + 1.4vw, 2.25rem); line-height: 1.2; letter-spacing: -0.02em; font-weight: 700; }
+.band p, .band li { line-height: 1.6; }
+.section-head { max-width: 40rem; margin: 0 auto var(--space-8); text-align: center; }
+.section-head p { margin: var(--space-3) 0 0; color: var(--text-muted); font-size: var(--text-lg); }
+.site-cta { min-height: 2.75rem; padding-inline: var(--space-6); }
+.landing-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-6); margin-top: var(--space-8); }
+.landing-actions.center { justify-content: center; }
+.arrow-link { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 2.75rem; color: var(--accent); font-weight: 600; text-decoration: none; }
+.arrow-link span { font-size: 1.25em; line-height: 1; transition: transform var(--duration-control, 120ms) ease; }
+.arrow-link:hover span { transform: translateX(3px); }
+
+/* ---------- Hero ---------- */
+.hero { padding-top: 4rem; padding-bottom: 0; overflow: hidden; }
+.hero-inner { text-align: center; }
+.hero h1 { max-width: 52rem; margin: 0 auto; font-size: clamp(2.125rem, 1.3rem + 3.2vw, 3.5rem); line-height: 1.1; letter-spacing: -0.03em; font-weight: 700; }
+.hero-lead { max-width: 40rem; margin: var(--space-5) auto 0; font-size: clamp(1rem, 0.95rem + 0.3vw, 1.125rem); line-height: 1.6; color: var(--text-muted); }
+.hero-image { display: block; width: 100%; max-width: 64rem; height: auto; margin: 3rem auto 0; border-radius: var(--radius-sheet) var(--radius-sheet) 0 0; box-shadow: var(--shadow-overlay); }
+
+/* ---------- Audience strip ---------- */
+.audience { padding: 3.5rem 0; text-align: center; }
+.audience h2 { font-size: clamp(1.25rem, 1.05rem + 0.8vw, 1.625rem); font-weight: 600; }
+.audience-list { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3) var(--space-8); margin: var(--space-8) 0 0; padding: 0; }
+.audience-list li { color: var(--text-muted); font-size: clamp(1.0625rem, 0.95rem + 0.5vw, 1.375rem); font-weight: 700; letter-spacing: -0.01em; }
+
+/* ---------- Picture-and-text rows ---------- */
+.showcase-inner { display: grid; gap: var(--space-8); align-items: center; }
+.showcase-eyebrow { display: flex; align-items: center; gap: var(--space-3); margin: 0 0 var(--space-4); font-weight: 600; color: var(--text); }
+.eyebrow-icon { display: inline-grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: var(--radius-control); border: 1.5px solid var(--accent); color: var(--accent); }
+.eyebrow-icon .icon { width: 1.25rem; height: 1.25rem; }
+.showcase h3 { font-size: clamp(1.625rem, 1.2rem + 1.4vw, 2.25rem); line-height: 1.2; letter-spacing: -0.02em; font-weight: 700; }
+.point-list { list-style: none; margin: var(--space-6) 0 0; padding: 0; display: grid; gap: var(--space-4); }
+.point-list li { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr); gap: var(--space-4); align-items: start; font-size: var(--text-lg); color: var(--text); }
+.point-list .icon { width: 1.5rem; height: 1.5rem; color: var(--text-muted); }
+.showcase-image { display: block; width: 100%; height: auto; border-radius: var(--radius-sheet); box-shadow: var(--shadow-overlay); }
+@media (min-width: 64rem) {
+  .showcase-inner { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 4rem; }
+  .showcase.reverse .showcase-copy { order: 2; }
+}
+
+/* ---------- Features, audiences, trust ---------- */
+.feature-grid, .trust-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-8) var(--space-6); }
+.feature-grid h3, .scenario h3, .band .trust-list h3 { margin-top: var(--space-3); font-size: var(--text-lg); line-height: 1.5rem; }
+.feature-grid p, .scenario p, .band .trust-list p { margin: var(--space-2) 0 0; color: var(--text-muted); font-size: var(--text-md); }
+.feature-icon { display: inline-grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: var(--radius-control); background: var(--accent-soft); color: var(--accent); }
+.feature-icon .icon { width: 1.375rem; height: 1.375rem; }
+@media (min-width: 40rem) { .feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 64rem) {
+  .feature-grid, .band .trust-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+.scenario-grid { display: grid; gap: var(--space-5); }
+.scenario { padding: var(--space-6); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sheet); box-shadow: var(--shadow-card); }
+.band:not(.band-grey) .scenario { background: var(--bg); box-shadow: none; }
+.scenario h3 { margin-top: 0; font-size: var(--text-xl); }
+.scenario p { font-size: var(--text-lg); }
+@media (min-width: 64rem) { .scenario-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---------- FAQ ---------- */
+.faq-list { max-width: 48rem; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sheet); }
+.faq-list details { border-top: 1px solid var(--border); }
+.faq-list details:first-child { border-top: 0; }
+.faq-list summary { display: flex; align-items: center; min-height: 3.5rem; padding: var(--space-3) var(--space-6); font-size: var(--text-lg); font-weight: 600; cursor: pointer; list-style-position: inside; }
+.faq-list summary:hover { background: var(--surface-hover); }
+.faq-list summary::marker { color: var(--accent); }
+.faq-list details p { margin: 0; padding: 0 var(--space-6) var(--space-5); color: var(--text-muted); font-size: var(--text-lg); }
+
+/* ---------- Closing call to action ---------- */
+.closing-cta { text-align: center; }
+.closing-cta h2 { font-size: clamp(1.875rem, 1.3rem + 2vw, 2.75rem); }
+.closing-cta p { max-width: 34rem; margin: var(--space-4) auto 0; color: var(--text-muted); font-size: var(--text-lg); }
+
+/* ---------- Footer ---------- */
+.site-footer { padding: 4rem 0 var(--space-8); background: var(--footer-bg); color: var(--footer-muted); font-size: var(--text-md); }
+.site-footer .brand, .site-footer .brand:hover { color: var(--footer-text); }
+.footer-top { display: grid; gap: var(--space-8) var(--space-6); grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: var(--space-8); }
+.footer-column h2, .footer-panel h2 { font-size: var(--text-md); line-height: 1.25rem; color: var(--footer-text); font-weight: 700; }
+.footer-column ul { list-style: none; margin: var(--space-3) 0 0; padding: 0; }
+.footer-column a { display: inline-flex; align-items: center; min-height: 2.25rem; color: var(--footer-muted); text-decoration: none; }
+.footer-column a:hover { color: var(--footer-text); text-decoration: underline; }
+.footer-panel { grid-column: 1 / -1; }
+.footer-panel p { margin: var(--space-3) 0 var(--space-5); line-height: 1.6; max-width: 26rem; }
+.footer-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.footer-secondary { background: transparent; color: var(--footer-text); border-color: rgb(255 255 255 / 0.5); }
+.footer-secondary:hover { background: rgb(255 255 255 / 0.1); color: var(--footer-text); }
+.footer-bottom { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-6); margin-top: 3rem; padding-top: var(--space-5); border-top: 1px solid var(--footer-line); font-size: var(--text-sm); }
+.site-footer .legal-links a { color: var(--footer-muted); }
+.site-footer .legal-links a:hover { color: var(--footer-text); }
+.site-footer .status-dot { background: rgb(255 255 255 / 0.5); }
+.site-footer .status-dot.connected { background: #4ade80; }
+.site-footer .status-dot.unavailable { background: #fb7185; }
+@media (min-width: 64rem) {
+  .footer-top { grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.4fr); }
+  .footer-panel { grid-column: auto; }
+}
+
+/* ---------- Legal links (footer and sign-in pages) ---------- */
+.legal-links { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); }
+.legal-links a { display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--text-muted); }
+.legal-links a:hover { color: var(--text); }
+.auth-shell > .legal-links { margin-top: auto; padding-top: var(--space-8); justify-content: center; font-size: var(--text-sm); }
+.auth-consent { margin: var(--space-4) 0 0; font-size: var(--text-sm); color: var(--text-muted); text-align: center; line-height: 1.5; }
+
+/* ---------- Legal documents ---------- */
+.legal { max-width: 46rem; padding: var(--space-12) 0; }
+.legal h1 { font-size: clamp(1.75rem, 1.3rem + 1.6vw, 2.25rem); line-height: 1.2; letter-spacing: -0.02em; }
+.legal-updated { margin: var(--space-2) 0 0; color: var(--text-muted); }
+.legal > section { margin-top: var(--space-8); scroll-margin-top: var(--space-6); }
+.legal > section > h2 { font-size: var(--text-xl); line-height: 1.75rem; }
+.legal h3 { margin-top: var(--space-5); font-size: var(--text-lg); }
+.legal p, .legal ul { margin: var(--space-3) 0 0; font-size: var(--text-lg); line-height: 1.6; }
+.legal ul { padding-left: var(--space-6); }
+.legal li + li { margin-top: var(--space-2); }
+.legal-summary { margin-top: var(--space-6); padding: var(--space-5) var(--space-6); background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: var(--radius-panel); }
+.legal-summary h2 { font-size: var(--text-lg); }
+.legal-summary .muted { font-size: var(--text-md); }
+.legal-toc { margin-top: var(--space-6); }
+.legal-toc ol { margin: 0; padding-left: var(--space-6); columns: 2 14rem; column-gap: var(--space-8); }
+.legal-toc li { break-inside: avoid; }
+.legal-toc a { display: inline-block; padding: var(--space-1) 0; }
+.legal .security-list { list-style: none; display: grid; gap: var(--space-5); margin-top: var(--space-8); padding: 0; }
+.legal .security-list li { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: var(--space-3); }
+.legal .security-list .icon { width: 1.5rem; height: 1.5rem; margin-top: 0.125rem; color: var(--accent); }
+.legal .security-list h2 { font-size: var(--text-lg); line-height: 1.5rem; }
+.legal .security-list p { margin-top: var(--space-2); }
+.legal-contact { margin-top: var(--space-8); padding: var(--space-5) var(--space-6); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-panel); }
+.legal-contact h2 { font-size: var(--text-xl); }
+.contact-list { margin: var(--space-6) 0 0; }
+.contact-list div { display: grid; grid-template-columns: 5rem minmax(0, 1fr); gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--border); font-size: var(--text-lg); }
+.contact-list dt { font-weight: 600; }
+.contact-list dd { margin: 0; overflow-wrap: anywhere; }

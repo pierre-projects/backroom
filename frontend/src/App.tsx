@@ -1,8 +1,6 @@
-import { useEffect, useState } from 'react';
 import { BrowserRouter, Link, Navigate, Route, Routes, useParams } from 'react-router';
-import { AuthPage, AuthProvider, InvitationPage, OrganizationChooser, Protected, ResetPasswordPage, useAuth } from './auth';
+import { AuthPage, AuthProvider, InvitationPage, OrganizationChooser, Protected, ResetPasswordPage } from './auth';
 import { Brand } from './components';
-import { Icon } from './icons';
 import { CatalogPage, ItemDetail } from './catalog';
 import { LocationsPage } from './locations';
 import { ActivityPage, PeoplePage } from './people';
@@ -15,35 +13,8 @@ import { HomePage } from './home';
 import { SearchPage } from './search';
 import { ExportsPage } from './exports';
 import { ImportItemsPage } from './imports';
+import { ContactPage, LandingPage, PrivacyPage, SecurityPage, TermsPage } from './site';
 
-function Landing() {
-  const auth = useAuth();
-  const [connected, setConnected] = useState<boolean | null>(null);
-  useEffect(() => {
-    const controller = new AbortController();
-    void fetch('/actuator/health', { signal: controller.signal }).then(async response => {
-      const data = await response.json() as { status?: string };
-      if (!controller.signal.aborted) setConnected(response.ok && data.status === 'UP');
-    }).catch(() => { if (!controller.signal.aborted) setConnected(false); });
-    return () => controller.abort();
-  }, []);
-  return <div className="public-shell">
-    <header className="public-header"><Brand /><div className="header-actions">{auth.user ? <Link className="button secondary" to="/app">Your businesses</Link> : <Link className="button ghost" to="/signin">Sign in</Link>}</div></header>
-    <main className="landing-main" id="main">
-      <h1>Know what you stock and where it’s kept.</h1>
-      <p className="landing-lead">Backroom gives small teams one catalog of items, a map of their rooms, shelves and bins, and the right access for each person.</p>
-      <div className="landing-actions">{auth.user
-        ? <Link className="button primary" to="/app">Open your workspace</Link>
-        : <><Link className="button primary" to="/register">Create an account</Link><Link className="button secondary" to="/signin">Sign in</Link></>}</div>
-      <ul className="feature-list">
-        <li><Icon name="catalog" /><div><strong>Catalog</strong><span>Items with SKUs and the unit you count them in.</span></div></li>
-        <li><Icon name="location" /><div><strong>Locations</strong><span>Rooms, shelves, cabinets and bins, and the items expected in each.</span></div></li>
-        <li><Icon name="people" /><div><strong>People</strong><span>Owners, managers and employees, each with the access they need.</span></div></li>
-      </ul>
-    </main>
-    <footer className="public-footer"><span>Backroom</span><span className="status-line" role="status"><span className={'status-dot ' + (connected ? 'connected' : connected === false ? 'unavailable' : '')} aria-hidden="true" />{connected ? 'Service available' : connected === false ? 'Service unavailable — try again shortly' : 'Checking service…'}</span></footer>
-  </div>;
-}
 function LocationRoute() {
   const { locationId } = useParams();
   return <LocationsPage key={locationId ?? 'roots'} />;
@@ -54,7 +25,11 @@ function ItemRoute() {
 }
 export function App() {
   return <BrowserRouter><AuthProvider><Routes>
-    <Route path="/" element={<Landing />} />
+    <Route path="/" element={<LandingPage />} />
+    <Route path="/terms" element={<TermsPage />} />
+    <Route path="/privacy" element={<PrivacyPage />} />
+    <Route path="/security" element={<SecurityPage />} />
+    <Route path="/contact" element={<ContactPage />} />
     <Route path="/signin" element={<AuthPage mode="signin" />} />
     <Route path="/register" element={<AuthPage mode="register" />} />
     <Route path="/invite" element={<InvitationPage />} />
