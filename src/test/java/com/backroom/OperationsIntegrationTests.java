@@ -65,7 +65,12 @@ class OperationsIntegrationTests extends ApiTestSupport {
                 .andReturn();
         var body = result.getResponse().getContentAsString();
         assertThat(body).doesNotContain("Simulated failure").doesNotContain("Exception");
-        assertThat(output.getAll()).contains("[" + incoming + "]").contains("An unexpected application failure occurred");
+        // Plain-text logs use [requestId]; a prior prod-profile boot in this JVM can leave ECS JSON console logging on.
+        var logs = output.getAll();
+        assertThat(logs).contains("An unexpected application failure occurred");
+        assertThat(logs).satisfiesAnyOf(
+                text -> assertThat(text).contains("[" + incoming + "]"),
+                text -> assertThat(text).contains("\"requestId\":\"" + incoming + "\""));
 
         var generated = mvc.perform(get("/api/v1/test-only/failure").with(user("test-only")))
                 .andExpect(status().isInternalServerError()).andReturn().getResponse();
