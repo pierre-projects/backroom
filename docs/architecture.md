@@ -38,7 +38,11 @@ organization access and own transaction boundaries. Inventory will own every
 balance change; restocking will use inventory services. Modules should not bypass
 one another through repositories. JPA entities are not API responses.
 Package layout and code conventions are recorded in
-[ADR-0001](adr/0001-backend-package-structure.md).
+[ADR-0001](adr/0001-backend-package-structure.md). `ModuleStructureTests`
+enforces the boundaries with Spring Modulith: each top-level package is a
+module, there are no cycles between modules, and sub-packages are internal
+unless declared as a `@NamedInterface`. The same test writes module diagrams to
+`target/spring-modulith-docs`.
 
 ## Decisions
 

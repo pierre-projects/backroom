@@ -184,8 +184,12 @@ available for a module that outgrows a flat package.
 3. [x] Move `SecurityConfiguration` to `access/security`; split `shared` into
        `persistence`, `web`, `config` (F4, F9). `shared` now imports no
        feature module; the `RequestIdFilter` tests moved to `shared/web`.
-4. [ ] Add Spring Modulith test dependency and `ModuleStructureTests`; declare
-       `shared` as a shared module and fix what it reports (F3).
+4. [x] Add Spring Modulith 2.1 and `ModuleStructureTests`, which runs
+       `verify()` and writes module diagrams to `target/spring-modulith-docs`
+       (F3). The only findings were the `shared` sub-packages; `shared.web`
+       and `shared.persistence` are now declared `@NamedInterface`s, and
+       `shared.config` stays internal. No cycles, and no feature module
+       reached into another module's internals.
 5. [ ] Move and rename integration tests per module; move `ApiTestSupport` and
        the Postgres config into `support/` (F5).
 6. [ ] Introduce domain exceptions and drop `HttpStatus` from services (F7).
