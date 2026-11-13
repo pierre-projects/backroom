@@ -1,6 +1,6 @@
 package com.backroom.access;
 
-import com.backroom.shared.RecordEntity;
+import com.backroom.shared.persistence.RecordEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;

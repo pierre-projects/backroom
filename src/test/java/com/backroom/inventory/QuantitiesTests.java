@@ -3,7 +3,7 @@ package com.backroom.inventory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.backroom.shared.ApiException;
+import com.backroom.shared.web.ApiException;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 

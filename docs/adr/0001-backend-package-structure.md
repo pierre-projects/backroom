@@ -181,8 +181,9 @@ available for a module that outgrows a flat package.
        `.git-blame-ignore-revs`.
 2. [x] Split multi-type files into one type per file; remove the empty
        `StockRecords`, `StockRepositories` and `RestockRecords` holders (F1).
-3. [ ] Move `SecurityConfiguration` to `access/security`; split `shared` into
-       `persistence`, `web`, `config` (F4, F9).
+3. [x] Move `SecurityConfiguration` to `access/security`; split `shared` into
+       `persistence`, `web`, `config` (F4, F9). `shared` now imports no
+       feature module; the `RequestIdFilter` tests moved to `shared/web`.
 4. [ ] Add Spring Modulith test dependency and `ModuleStructureTests`; declare
        `shared` as a shared module and fix what it reports (F3).
 5. [ ] Move and rename integration tests per module; move `ApiTestSupport` and

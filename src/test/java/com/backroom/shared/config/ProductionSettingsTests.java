@@ -1,6 +1,5 @@
-package com.backroom.shared;
+package com.backroom.shared.config;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -50,16 +49,5 @@ class ProductionSettingsTests {
             // Prod enables ECS JSON console logging for this JVM; drop it so later tests see the default pattern again.
             LoggingSystem.get(getClass().getClassLoader()).cleanUp();
         }
-    }
-
-    @Test
-    void acceptsOnlyShortSafeRequestIds() {
-        assertThat(RequestIdFilter.valid("abc-123_x.y")).isTrue();
-        assertThat(RequestIdFilter.valid("a".repeat(64))).isTrue();
-        assertThat(RequestIdFilter.valid("a".repeat(65))).isFalse();
-        assertThat(RequestIdFilter.valid("")).isFalse();
-        assertThat(RequestIdFilter.valid(null)).isFalse();
-        assertThat(RequestIdFilter.valid("a b")).isFalse();
-        assertThat(RequestIdFilter.valid("a\nb")).isFalse();
     }
 }

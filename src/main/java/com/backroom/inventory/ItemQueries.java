@@ -1,6 +1,6 @@
 package com.backroom.inventory;
 
-import com.backroom.shared.ApiException;
+import com.backroom.shared.web.ApiException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,7 +37,7 @@ public class ItemQueries {
     }
     /** Unarchived items whose name or SKU contains the text, by name. */
     public List<ItemSummary> search(UUID orgId, String q, int limit) {
-        return items.search(orgId, false, q, null, false, com.backroom.shared.PageResponse.named(0, limit)).stream()
+        return items.search(orgId, false, q, null, false, com.backroom.shared.web.PageResponse.named(0, limit)).stream()
                 .map(ItemQueries::summary)
                 .toList();
     }

@@ -1,6 +1,6 @@
 package com.backroom.labels;
 
-import com.backroom.shared.TenantRecord;
+import com.backroom.shared.persistence.TenantRecord;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

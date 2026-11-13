@@ -1,6 +1,6 @@
 package com.backroom.access;
 
-import com.backroom.shared.ApiException;
+import com.backroom.shared.web.ApiException;
 import jakarta.persistence.EntityManager;
 import java.util.Arrays;
 import java.util.UUID;

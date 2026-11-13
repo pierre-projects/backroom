@@ -1,4 +1,4 @@
-package com.backroom.shared;
+package com.backroom.shared.web;
 
 import org.springframework.http.HttpStatus;
 

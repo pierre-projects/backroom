@@ -3,8 +3,8 @@ package com.backroom.access;
 import static com.backroom.access.Role.OWNER;
 
 import com.backroom.audit.AuditService;
-import com.backroom.shared.ApiException;
-import com.backroom.shared.PageResponse;
+import com.backroom.shared.web.ApiException;
+import com.backroom.shared.web.PageResponse;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;

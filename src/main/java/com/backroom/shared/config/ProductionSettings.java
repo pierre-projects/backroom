@@ -1,4 +1,4 @@
-package com.backroom.shared;
+package com.backroom.shared.config;
 
 import java.net.URI;
 import java.net.URISyntaxException;

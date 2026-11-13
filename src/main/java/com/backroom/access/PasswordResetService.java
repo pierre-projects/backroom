@@ -3,7 +3,7 @@ package com.backroom.access;
 import static com.backroom.access.Role.OWNER;
 
 import com.backroom.audit.AuditService;
-import com.backroom.shared.ApiException;
+import com.backroom.shared.web.ApiException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

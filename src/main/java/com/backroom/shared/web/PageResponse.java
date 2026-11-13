@@ -1,4 +1,4 @@
-package com.backroom.shared;
+package com.backroom.shared.web;
 
 import java.util.List;
 import org.springframework.data.domain.Page;

@@ -1,4 +1,4 @@
-package com.backroom.shared;
+package com.backroom.shared.config;
 
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;

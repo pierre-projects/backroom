@@ -13,7 +13,7 @@ import com.backroom.access.OrganizationService;
 import com.backroom.access.Role;
 import com.backroom.inventory.ItemQueries;
 import com.backroom.locations.LocationQueries;
-import com.backroom.shared.ApiException;
+import com.backroom.shared.web.ApiException;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

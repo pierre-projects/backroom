@@ -1,6 +1,6 @@
 package com.backroom.access;
 
-import com.backroom.shared.ApiException;
+import com.backroom.shared.web.ApiException;
 import java.util.Locale;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

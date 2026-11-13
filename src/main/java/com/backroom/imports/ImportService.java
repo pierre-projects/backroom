@@ -14,7 +14,7 @@ import com.backroom.locations.LocationContentsCounter;
 import com.backroom.locations.LocationDtos;
 import com.backroom.locations.LocationQueries;
 import com.backroom.locations.LocationService;
-import com.backroom.shared.ApiException;
+import com.backroom.shared.web.ApiException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

@@ -1,6 +1,6 @@
 package com.backroom.restocking;
 
-import com.backroom.shared.PageResponse;
+import com.backroom.shared.web.PageResponse;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;

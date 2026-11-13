@@ -7,7 +7,7 @@ import com.backroom.access.AccessPolicy;
 import com.backroom.audit.AuditService;
 import com.backroom.inventory.ItemQueries;
 import com.backroom.locations.LocationQueries;
-import com.backroom.shared.ApiException;
+import com.backroom.shared.web.ApiException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;

@@ -5,7 +5,7 @@ import static com.backroom.access.Role.OWNER;
 
 import com.backroom.access.AccessPolicy;
 import com.backroom.audit.AuditService;
-import com.backroom.shared.ApiException;
+import com.backroom.shared.web.ApiException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.time.Clock;

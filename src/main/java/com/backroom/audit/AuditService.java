@@ -1,6 +1,6 @@
 package com.backroom.audit;
 
-import com.backroom.shared.PageResponse;
+import com.backroom.shared.web.PageResponse;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.LinkedHashMap;

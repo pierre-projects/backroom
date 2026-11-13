@@ -4,7 +4,7 @@ import com.backroom.inventory.Quantities;
 import com.backroom.inventory.Unit;
 import com.backroom.locations.LocationQueries;
 import com.backroom.locations.LocationType;
-import com.backroom.shared.ApiException;
+import com.backroom.shared.web.ApiException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;

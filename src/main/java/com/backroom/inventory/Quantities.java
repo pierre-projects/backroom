@@ -1,6 +1,6 @@
 package com.backroom.inventory;
 
-import com.backroom.shared.ApiException;
+import com.backroom.shared.web.ApiException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import org.springframework.http.HttpStatus;

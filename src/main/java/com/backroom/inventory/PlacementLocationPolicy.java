@@ -1,7 +1,7 @@
 package com.backroom.inventory;
 
 import com.backroom.locations.LocationMutationPolicy;
-import com.backroom.shared.ApiException;
+import com.backroom.shared.web.ApiException;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 

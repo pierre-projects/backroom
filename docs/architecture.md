@@ -8,7 +8,7 @@ Vite's proxy; deployment needs one Java process and one database.
 
 | Package | Responsibility |
 | --- | --- |
-| access | Authentication, organizations, memberships, invitations |
+| access | Authentication, organizations, memberships, invitations; Spring Security setup in `access.security` |
 | locations | Storage hierarchy and addresses |
 | inventory | Items, placements, balances, movements, transfers, counts |
 | restocking | Requests, review, actual receipt |
@@ -18,7 +18,7 @@ Vite's proxy; deployment needs one Java process and one database.
 | imports | CSV import of items, places and starting quantities; writes only through other modules' services |
 | audit | Durable business activity |
 | assets | Equipment, when that capability ships |
-| shared | Small technical configuration and primitives |
+| shared | Technical primitives only, depending on no feature module: `persistence` (base entities), `web` (errors, paging, request ids, SPA routes), `config` (application and production settings) |
 
 Phase 1 implements access, locations, catalog/placements within inventory, audit,
 and shared technical configuration. Phase 2 adds balances, stock operations and
@@ -37,6 +37,8 @@ Controllers will accept DTOs and call application services. Services will enforc
 organization access and own transaction boundaries. Inventory will own every
 balance change; restocking will use inventory services. Modules should not bypass
 one another through repositories. JPA entities are not API responses.
+Package layout and code conventions are recorded in
+[ADR-0001](adr/0001-backend-package-structure.md).
 
 ## Decisions
 

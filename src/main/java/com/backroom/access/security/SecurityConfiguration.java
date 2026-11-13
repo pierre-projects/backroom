@@ -1,10 +1,10 @@
-package com.backroom.shared.security;
+package com.backroom.access.security;
 
 import com.backroom.access.AccessDtos;
 import com.backroom.access.AccountPrincipal;
 import com.backroom.access.PasswordResetService;
 import com.backroom.access.PasswordValidator;
-import com.backroom.shared.ProblemResponses;
+import com.backroom.shared.web.ProblemResponses;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

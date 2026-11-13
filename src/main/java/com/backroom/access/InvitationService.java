@@ -5,8 +5,8 @@ import static com.backroom.access.Role.MANAGER;
 import static com.backroom.access.Role.OWNER;
 
 import com.backroom.audit.AuditService;
-import com.backroom.shared.ApiException;
-import com.backroom.shared.PageResponse;
+import com.backroom.shared.web.ApiException;
+import com.backroom.shared.web.PageResponse;
 import jakarta.persistence.EntityManager;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

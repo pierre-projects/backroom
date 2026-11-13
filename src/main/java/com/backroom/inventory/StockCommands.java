@@ -1,6 +1,6 @@
 package com.backroom.inventory;
 
-import com.backroom.shared.ApiException;
+import com.backroom.shared.web.ApiException;
 import java.util.UUID;
 import java.util.function.Supplier;
 import org.springframework.dao.DataIntegrityViolationException;

@@ -1,4 +1,4 @@
-package com.backroom.shared;
+package com.backroom.shared.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;

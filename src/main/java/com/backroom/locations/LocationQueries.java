@@ -1,6 +1,6 @@
 package com.backroom.locations;
 
-import com.backroom.shared.ApiException;
+import com.backroom.shared.web.ApiException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -63,7 +63,7 @@ public class LocationQueries {
     /** Unarchived locations whose name contains the text, by name, with their parent's name. */
     public List<Summary> search(UUID orgId, String q, int limit) {
         var found = locations
-                .search(orgId, null, false, false, false, q, com.backroom.shared.PageResponse.named(0, limit))
+                .search(orgId, null, false, false, false, q, com.backroom.shared.web.PageResponse.named(0, limit))
                 .getContent();
         var parents = names(
                 orgId,

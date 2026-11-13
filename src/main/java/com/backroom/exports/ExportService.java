@@ -6,7 +6,7 @@ import static com.backroom.access.Role.values;
 
 import com.backroom.access.AccessPolicy;
 import com.backroom.audit.AuditService;
-import com.backroom.shared.ApiException;
+import com.backroom.shared.web.ApiException;
 import java.io.Writer;
 import java.sql.ResultSet;
 import java.sql.SQLException;

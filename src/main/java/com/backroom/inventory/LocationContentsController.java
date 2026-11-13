@@ -1,6 +1,6 @@
 package com.backroom.inventory;
 
-import com.backroom.shared.PageResponse;
+import com.backroom.shared.web.PageResponse;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

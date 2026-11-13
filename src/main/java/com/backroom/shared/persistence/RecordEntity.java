@@ -1,5 +1,6 @@
-package com.backroom.shared;
+package com.backroom.shared.persistence;
 
+import com.backroom.shared.web.ApiException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;

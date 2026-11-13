@@ -1,6 +1,6 @@
 package com.backroom.labels;
 
-import com.backroom.shared.ApiException;
+import com.backroom.shared.web.ApiException;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;

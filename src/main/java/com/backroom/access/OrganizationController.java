@@ -1,7 +1,7 @@
 package com.backroom.access;
 
 import com.backroom.audit.AuditService;
-import com.backroom.shared.PageResponse;
+import com.backroom.shared.web.PageResponse;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import java.util.UUID;
