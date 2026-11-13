@@ -529,7 +529,8 @@
 .quiet-empty { margin: 0 0 var(--space-6); font-size: var(--text-sm); }
 
 /* Item photo control under the hero tile */
-.photo-control { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); margin-top: var(--space-2); max-width: 12rem; }
+.photo-control { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-4); margin-top: var(--space-1); }
+.photo-control .error-message, .photo-control [role="alert"] { flex-basis: 100%; }
 .photo-pick { cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-1); min-height: 2.75rem; }
 .photo-control input:focus-visible + .photo-pick, .photo-pick:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
 .photo-control .text-button { min-height: 2.75rem; }
