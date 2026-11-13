@@ -30,7 +30,7 @@ Rules:
 ```css
 :root {
   --bg: #f4f5f7;  --surface: #ffffff;  --surface-sunken: #eef0f3;  --surface-hover: #f7f8fa;
-  --text: #111827;  --text-muted: #6b7280;  --text-subtle: #9ca3af;
+  --text: #111827;  --text-muted: #636975;  --text-subtle: #9ca3af;
   --border: #e5e7eb;  --border-strong: #80868f;
   --accent: #c2331f;  --accent-hover: #a82b1a;  --accent-pressed: #8e2415;  --accent-soft: #fdece8;
   --on-accent: #ffffff;  --focus: #c2331f;

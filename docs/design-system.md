@@ -28,7 +28,7 @@ All values live as CSS custom properties in [`styles.css`](../frontend/src/style
 | `--surface` | `#FFFFFF` | Cards, tables, header bar, dialogs, inputs |
 | `--surface-sunken` | `#EEF0F3` | Neutral badges, photo placeholders, hover on ghost controls, read-only fields |
 | `--text` | `#111827` | Headings, record names, body |
-| `--text-muted` | `#6B7280` | Descriptions, SKUs, table headers, metadata |
+| `--text-muted` | `#636975` | Descriptions, SKUs, table headers, metadata |
 | `--text-subtle` | `#9CA3AF` | Placeholders, disabled text, chevrons only — never for information |
 | `--border` | `#E5E7EB` | Card edges and row dividers |
 | `--border-strong` | `#80868F` | Input and secondary-button edges |
@@ -43,9 +43,9 @@ All values live as CSS custom properties in [`styles.css`](../frontend/src/style
 | `--warning` / `--warning-soft` | `#8A4B0F` / `#FCF0E0` | Low and Archived status, pending invitations |
 | `--danger` / `--danger-soft` | `#8F1D3F` / `#FBE9EF` | Errors, destructive buttons. Plum so a destructive confirm never looks like the coral primary |
 
-**Measured contrast** (WCAG 2 relative luminance, rechecked November 13, 2026): text on surface 17.7∶1, muted on surface 4.8∶1, white on accent 5.5∶1, white on the sidebar 4.6∶1, white on danger 8.7∶1, accent on its soft tint 4.8∶1, control edge on canvas 3.4∶1, each feedback color on its tint ≥ 5.7∶1.
+**Measured contrast** (WCAG 2 relative luminance, rechecked November 13, 2026): text on surface 17.7∶1, muted on surface 5.5∶1, muted on canvas 5.1∶1, muted on sunken 4.8∶1, white on accent 5.5∶1, white on the sidebar 4.6∶1, white on danger 8.7∶1, accent on its soft tint 4.8∶1, control edge on canvas 3.4∶1, each feedback color on its tint ≥ 5.7∶1.
 
-**Known gap:** muted text on the canvas (`--text-muted` on `--bg`) is 4.4∶1, just under the 4.5∶1 AA minimum for 14 px text. It appears where page descriptions (`.page-description`) sit directly on the canvas. Until the token is darkened, keep muted text on `--surface` cards; a darker muted value such as `#636975` would pass on both backgrounds.
+Muted was darkened from `#6B7280` to `#636975` in 3.1 because the old value measured 4.4∶1 on the canvas, under AA for the page descriptions that sit there. Recheck all three backgrounds when changing it.
 
 Rule of thumb: apart from the rail, about 90% of any screen is `--bg`, `--surface` and text grays. The accent fills at most one button per group of actions; companions use the coral **outline** or white **secondary** style.
 

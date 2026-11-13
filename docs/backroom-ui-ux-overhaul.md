@@ -18,7 +18,7 @@ This brief has been carried out. Read the rest as the record of what was asked, 
 | Equipment / assets, custody | Deferred honestly; no fake asset UI | [Architecture](architecture.md) |
 | Location photos, tags, custom fields, suppliers/POs/POS, email recovery | Not built | — |
 
-The role-based Home, direct stock row actions, shelf-choice rules, contextual back, **Download a label** and scan confirm-before-mutate from §2 all survived and are covered by the browser suite. Two follow-ups remain from the 3.1 audit: muted text on the gray canvas is 4.4∶1, just under AA (see [design system](design-system.md#color)), and `design-specimen.png` still shows the pre-coral UI.
+The role-based Home, direct stock row actions, shelf-choice rules, contextual back, **Download a label** and scan confirm-before-mutate from §2 all survived and are covered by the browser suite. The 3.1 audit found muted text on the gray canvas at 4.4∶1, under AA; `--text-muted` was darkened to `#636975` (5.1∶1). One follow-up remains: `design-specimen.png` still shows the pre-coral UI.
 
 **Baseline commit context:** Phases 1–5 plus the frontend UX follow-up in `9d99249` (*direct stock actions, role-based Home and return navigation*). Re-read the live tree before proposing changes — do not treat older screenshots or pre-follow-up docs as current UI.
 
