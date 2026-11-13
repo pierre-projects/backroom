@@ -13,6 +13,12 @@ import { CodesPanel } from './codes';
 import { ItemRequestsPanel, NewRequestDialog } from './requests';
 import { SelectionBar, useLabelSelection } from './labels';
 import { useWorkspace } from './workspace';
+import { BrowseCard, ViewToggle, VisualTile, unitIcons, useBrowseView } from './browse';
+
+/** URL of an item's photo, versioned so a changed photo is fetched again; null until one is uploaded. */
+export function itemPhoto(base: string, item: { id: string; photoVersion?: number | null }) {
+  return item.photoVersion ? '/api/v1' + base + '/items/' + item.id + '/photo?v=' + item.photoVersion : null;
+}
 
 function ItemForm({ item, saved, cancel, unitLocked = false }: { item?: Item; saved: (item: Item) => void; cancel: () => void; unitLocked?: boolean }) {
   const { base } = useWorkspace();
@@ -28,12 +34,14 @@ function ItemForm({ item, saved, cancel, unitLocked = false }: { item?: Item; sa
       saved(result);
     } catch (value) { setError(value); } finally { setPending(false); }
   }
+  const skuField = <Field label="SKU (optional)"><input name="sku" defaultValue={item?.sku ?? ''} maxLength={80} autoCapitalize="characters" /><small>Saved in uppercase. Stays reserved after the item is archived.</small></Field>;
   return <form onSubmit={submit}>
     <ErrorMessage error={error} />
     <Field label="Item name"><input name="name" defaultValue={item?.name} maxLength={160} required /></Field>
-    <Field label="SKU (optional)"><input name="sku" defaultValue={item?.sku ?? ''} maxLength={80} autoCapitalize="characters" /><small>Saved in uppercase. Stays reserved after the item is archived.</small></Field>
     <Field label="Base unit"><select name="unit" defaultValue={item?.unit ?? 'EACH'} disabled={unitLocked}>{Object.entries(unitNames).map(([value, name]) => <option value={value} key={value}>{name}</option>)}</select><small>{unitLocked ? 'Locked because stock has been recorded in this unit.' : 'The unit you count this item in. Packs or cases can be separate items.'}</small></Field>
     {unitLocked && <input type="hidden" name="unit" value={item?.unit} />}
+    {/* Creating asks only for what Backroom needs to count; editing shows everything. */}
+    {item ? skuField : <details className="optional-details"><summary>Optional details</summary>{skuField}</details>}
     <div className="form-actions"><button className="button secondary" type="button" onClick={cancel}>Cancel</button><button className="button primary" disabled={pending}>{pending ? 'Saving…' : item ? 'Save item' : 'Create item'}</button></div>
   </form>;
 }
@@ -61,6 +69,10 @@ export function CatalogPage() {
   const root = '/app/organizations/' + organization.id;
   const addButton = <button type="button" className="button primary" onClick={() => setCreating(true)}><Icon name="plus" />Add item</button>;
   const selection = useLabelSelection();
+  const [view, setView] = useBrowseView('items');
+  const itemChooser = (item: Item) => <label className="select-line"><input type="checkbox" checked={selection.selected.includes(item.id)} disabled={item.archived}
+    onChange={() => selection.toggle(item.id)} /><span className="record-link">{item.name}</span></label>;
+  const itemBadges = (item: Item) => <>{item.archived && <Badge>Archived</Badge>}{item.low && !item.archived && <Badge tone="warning">Low</Badge>}</>;
   return <>
     <PageHeader title="Inventory" description="What you stock, how much, and where.">{canEdit && <>{addButton}<button type="button" className="button secondary" aria-pressed={selection.selecting} onClick={selection.toggleMode}><Icon name="label" />{selection.selecting ? 'Cancel' : 'Print labels'}</button></>}</PageHeader>
     {selection.selecting && <SelectionBar count={selection.selected.length} noun="item" href={root + '/labels?items=' + selection.selected.join(',')} />}
@@ -77,24 +89,32 @@ export function CatalogPage() {
           </select>
           <label className="checkbox"><input type="checkbox" checked={lowOnly} onChange={event => setLowOnly(event.target.checked)} /> Low stock only</label>
           <label className="checkbox"><input type="checkbox" checked={archived} onChange={event => { setFilter('archived', event.target.checked ? '1' : ''); }} /> Include archived</label>
+          <ViewToggle view={view} onChange={setView} label="Inventory layout" />
         </div>
       </div>
       <ErrorMessage error={items.error} retry={items.reload} />
       {!items.data && !items.error && <div className="panel table-panel"><Loading variant="list" label="Loading items" /></div>}
       {items.data && (items.data.items.length ? <div className="panel table-panel">
         <div className="inventory-count">{items.data.totalElements} {items.data.totalElements === 1 ? 'item' : 'items'}</div>
-        <table className="data-table inventory-table">
+        {view === 'grid'
+          ? <ul className="browse-grid" aria-label="Items">{items.data.items.map(item => <BrowseCard key={item.id}
+            selected={selection.selecting && selection.selected.includes(item.id)} muted={item.archived}
+            visual={<VisualTile name={item.name} icon={unitIcons[item.unit]} photo={itemPhoto(base, item)} />}
+            title={selection.selecting ? itemChooser(item) : <RecordLink from="Inventory" className="record-link" to={root + '/items/' + item.id}>{item.name}</RecordLink>}
+            meta={<><span><span className="numeric quantity-strong">{formatQuantity(item.onHand, item.unit)}</span> on hand</span>{item.sku && <span className="mono">{item.sku}</span>}</>}
+            badges={itemBadges(item)} />)}</ul>
+          : <table className="data-table inventory-table">
           <thead><tr><th scope="col">Item</th><th scope="col">SKU</th><th scope="col" className="cell-number">On hand</th><th scope="col"><span className="sr-only">Open</span></th></tr></thead>
           <tbody>{items.data.items.map(item => <tr key={item.id} className={selection.selecting ? 'selectable' : 'linked'}>
-            <td><span className="name-line">{selection.selecting
-              ? <label className="select-line"><input type="checkbox" checked={selection.selected.includes(item.id)} disabled={item.archived} onChange={() => selection.toggle(item.id)} /><span className="record-link">{item.name}</span></label>
-              : <RecordLink from="Inventory" className="record-link" to={root + '/items/' + item.id}>{item.name}</RecordLink>}{item.archived && <Badge>Archived</Badge>}{item.low && !item.archived && <Badge tone="warning">Low</Badge>}</span>
-              <span className="cell-secondary mobile-only">{item.sku ? <span className="mono">{item.sku}</span> : 'No SKU'}</span></td>
+            <td><span className="tile-cell"><VisualTile size="sm" name={item.name} icon={unitIcons[item.unit]} photo={itemPhoto(base, item)} /><span>
+              <span className="name-line">{selection.selecting ? itemChooser(item)
+              : <RecordLink from="Inventory" className="record-link" to={root + '/items/' + item.id}>{item.name}</RecordLink>}{itemBadges(item)}</span>
+              <span className="cell-secondary mobile-only">{item.sku ? <span className="mono">{item.sku}</span> : 'No SKU'}</span></span></span></td>
             <td className="desktop-only mono">{item.sku ?? <><span aria-hidden="true">—</span><span className="sr-only">No SKU</span></>}</td>
             <td className="cell-number numeric inventory-quantity">{formatQuantity(item.onHand, item.unit)}<span className="cell-secondary mobile-only"> on hand</span></td>
             <td className="cell-chevron"><Icon name="chevronRight" /></td>
           </tr>)}</tbody>
-        </table>
+        </table>}
         <Pager data={items.data} onPage={number => setFilter('page', number ? String(number) : '')} />
       </div> : at && !q && !lowOnly
         ? <Empty icon="location" title={'Nothing is kept at ' + places.label(at)} action={<button type="button" className="button secondary" onClick={() => setFilter('location', '')}>Show all locations</button>}>Items appear here once they have stock or an expected place at this location.</Empty>

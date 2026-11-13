@@ -54,6 +54,9 @@ test('owner onboarding, placements, invitation acceptance and employee restricti
   await page.getByRole('link', { name: /Inventory/, exact: false }).first().click();
   await page.getByRole('button', { name: 'Add item', exact: true }).click();
   await page.getByLabel('Item name', { exact: true }).fill('Coffee beans');
+  // Creating asks for name and unit; SKU waits under Optional details.
+  await expect(page.getByLabel('SKU (optional)', { exact: true })).toBeHidden();
+  await page.getByText('Optional details', { exact: true }).click();
   await page.getByLabel('SKU (optional)', { exact: true }).fill(' beans-01 ');
   await page.getByLabel('Base unit', { exact: true }).selectOption('KILOGRAM');
   await page.getByRole('button', { name: 'Create item', exact: true }).click();
