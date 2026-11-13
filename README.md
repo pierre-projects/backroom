@@ -21,6 +21,7 @@ quantities, inventory actions, scanning, and replenishment come in later phases.
 - [Operations: deploying, backups, restore drill, logs and incidents](docs/operations.md)
 - [Design system and visual specimen](docs/design-system.md)
 - [Sortly inspiration: design system and UX rules](docs/sortly-inspiration.md)
+- [UI/UX overhaul brief (agent prompt)](docs/backroom-ui-ux-overhaul.md)
 - [Frontend codebook](docs/frontend-codebook.md)
 
 ## Requirements
