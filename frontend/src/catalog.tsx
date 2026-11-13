@@ -1,8 +1,8 @@
 import { RecordLink, useRecordNavigation } from './navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { query, send } from './api';
+import { api, query, send } from './api';
 import { Badge, Dialog, Empty, ErrorMessage, Field, Loading, PageHeader, Pager, SuccessMessage, useResource } from './components';
 import { Icon } from './icons';
 import type { Item, Page, StockBalance, StockMovement } from './types';
@@ -13,7 +13,7 @@ import { CodesPanel } from './codes';
 import { ItemRequestsPanel, NewRequestDialog } from './requests';
 import { SelectionBar, useLabelSelection } from './labels';
 import { useWorkspace } from './workspace';
-import { BrowseCard, ViewToggle, VisualTile, unitIcons, useBrowseView } from './browse';
+import { BrowseCard, ViewToggle, VisualTile, resizePhoto, unitIcons, useBrowseView } from './browse';
 
 /** URL of an item's photo, versioned so a changed photo is fetched again; null until one is uploaded. */
 export function itemPhoto(base: string, item: { id: string; photoVersion?: number | null }) {
@@ -44,6 +44,33 @@ export function ItemForm({ item, saved, cancel, unitLocked = false }: { item?: I
     {item ? skuField : <details className="optional-details"><summary>Optional details</summary>{skuField}</details>}
     <div className="form-actions"><button className="button secondary" type="button" onClick={cancel}>Cancel</button><button className="button primary" disabled={pending}>{pending ? 'Saving…' : item ? 'Save item' : 'Create item'}</button></div>
   </form>;
+}
+
+/** Add, change or remove an item's photo (Owners and Managers). Phones can take one with the camera. */
+function PhotoControl({ base, item, changed }: { base: string; item: Item; changed: (message: string) => void }) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<unknown>();
+  const input = useId();
+  async function choose(file: File | undefined) {
+    if (!file) return;
+    setPending(true); setError(undefined);
+    try {
+      await api(base + '/items/' + item.id + '/photo', { method: 'PUT', body: await resizePhoto(file) });
+      changed(item.photoVersion ? 'Photo changed' : 'Photo added');
+    } catch (value) { setError(value); } finally { setPending(false); }
+  }
+  async function remove() {
+    setPending(true); setError(undefined);
+    try { await send(base + '/items/' + item.id + '/photo', 'DELETE'); changed('Photo removed'); }
+    catch (value) { setError(value); } finally { setPending(false); }
+  }
+  return <div className="photo-control">
+    <input id={input} className="sr-only" type="file" accept="image/*" disabled={pending}
+      onChange={event => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; void choose(file); }} />
+    <label className="text-button photo-pick" htmlFor={input}><Icon name="camera" className="small" />{pending ? 'Saving…' : item.photoVersion ? 'Change photo' : 'Add photo'}</label>
+    {item.photoVersion && <button type="button" className="text-button" disabled={pending} onClick={() => void remove()}>Remove photo</button>}
+    <ErrorMessage error={error} />
+  </div>;
 }
 
 export function CatalogPage() {
@@ -183,7 +210,8 @@ export function ItemDetail() {
   const unplaced = locations.leaves?.filter(choice => !slots.some(slot => slot.locationId === choice.id)) ?? [];
   return <>
     <PageHeader back={nav.back({ to: root + '/items', label: 'Inventory' })} title={value.name}
-      media={<VisualTile size="lg" name={value.name} icon={unitIcons[value.unit]} photo={itemPhoto(base, value)} />}>
+      media={<><VisualTile size="lg" name={value.name} icon={unitIcons[value.unit]} photo={itemPhoto(base, value)} />
+        {editable && <PhotoControl base={base} item={value} changed={message => { setStatus(message); item.reload(); }} />}</>}>
       {!value.archived && hasStock && <button type="button" className="button primary" onClick={() => setAction({ kind: 'usage' })}><Icon name="use" />Record usage</button>}
       {!value.archived && <button type="button" className={'button ' + (hasStock ? 'secondary' : 'primary')} onClick={() => setAction({ kind: 'receive' })}><Icon name="receive" />Receive stock</button>}
       {!value.archived && <button type="button" className="button secondary" onClick={() => setRequesting({})}><Icon name="plus" />Request more</button>}

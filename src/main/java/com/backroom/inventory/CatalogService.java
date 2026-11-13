@@ -21,10 +21,11 @@ public class CatalogService {
     private final LocationQueries locations;
     private final AccessPolicy access;
     private final AuditService audit;
+    private final ItemPhotoService photos;
     CatalogService(ItemRepository items, PlacementRepository placements, StockBalanceRepository balances, StockMovementRepository movements,
-                   LocationQueries locations, AccessPolicy access, AuditService audit) {
+                   LocationQueries locations, AccessPolicy access, AuditService audit, ItemPhotoService photos) {
         this.items=items; this.placements=placements; this.balances=balances; this.movements=movements;
-        this.locations=locations; this.access=access; this.audit=audit;
+        this.locations=locations; this.access=access; this.audit=audit; this.photos=photos;
     }
     @Transactional(readOnly=true)
     public PageResponse<CatalogDtos.View> list(UUID orgId, boolean includeArchived, String q, UUID locationId, boolean lowStock, int page, int size) {
@@ -34,7 +35,8 @@ public class CatalogService {
         var ids=result.stream().map(Item::getId).toList();
         var totals=totals(orgId, ids);
         var low=ids.isEmpty() ? Set.<UUID>of() : balances.lowAmong(orgId, ids);
-        return PageResponse.from(result.map(item -> view(item, totals.get(item.getId()), low.contains(item.getId()))));
+        var pictures=photos.versions(orgId, ids);
+        return PageResponse.from(result.map(item -> view(item, totals.get(item.getId()), low.contains(item.getId()), pictures.get(item.getId()))));
     }
     @Transactional(readOnly=true)
     public CatalogDtos.View get(UUID orgId, UUID id) { access.require(orgId); return view(find(orgId, id)); }
@@ -45,7 +47,8 @@ public class CatalogService {
         var here=new HashMap<UUID, BigDecimal>();
         if (!result.isEmpty()) balances.findByOrganizationIdAndLocationIdAndItemIdIn(orgId, locationId, result.stream().map(Item::getId).toList())
                 .forEach(balance -> here.put(balance.itemId, balance.quantity));
-        return PageResponse.from(result.map(item -> view(item, here.getOrDefault(item.getId(), BigDecimal.ZERO))));
+        var pictures=photos.versions(orgId, result.stream().map(Item::getId).toList());
+        return PageResponse.from(result.map(item -> view(item, here.getOrDefault(item.getId(), BigDecimal.ZERO), false, pictures.get(item.getId()))));
     }
     public CatalogDtos.View create(UUID orgId, CatalogDtos.Input input) {
         access.lock(orgId, OWNER, MANAGER);
@@ -130,12 +133,12 @@ public class CatalogService {
     }
     private CatalogDtos.View view(Item item) {
         var ids=List.of(item.getId());
-        return view(item, totals(item.getOrganizationId(), ids).get(item.getId()), !balances.lowAmong(item.getOrganizationId(), ids).isEmpty());
+        return view(item, totals(item.getOrganizationId(), ids).get(item.getId()), !balances.lowAmong(item.getOrganizationId(), ids).isEmpty(),
+                photos.versions(item.getOrganizationId(), ids).get(item.getId()));
     }
-    private CatalogDtos.View view(Item item, BigDecimal onHand) { return view(item, onHand, false); }
-    private CatalogDtos.View view(Item item, BigDecimal onHand, boolean low) {
+    private CatalogDtos.View view(Item item, BigDecimal onHand, boolean low, Long photoVersion) {
         return new CatalogDtos.View(item.getId(), item.name, item.sku, item.unit, item.archived, item.getVersion(),
-                Quantities.text(onHand == null ? BigDecimal.ZERO : onHand), low);
+                Quantities.text(onHand == null ? BigDecimal.ZERO : onHand), low, photoVersion);
     }
 
     /** Sets or clears the minimum for an item at one of its active locations. Owners and Managers. */

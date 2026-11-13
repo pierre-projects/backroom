@@ -48,6 +48,20 @@ export function initials(name: string) {
 export const unitIcons: Record<Unit, IconName> = { EACH: 'box', GRAM: 'weight', KILOGRAM: 'weight', MILLILITER: 'drop', LITER: 'drop' };
 export const spaceIcons: Record<LocationType, IconName> = { ROOM: 'location', SHELF: 'shelf', CABINET: 'cabinet', BIN: 'box' };
 
+/** Shrinks a chosen photo to at most 1024 px on its longest side and re-encodes it as JPEG before upload. */
+export async function resizePhoto(file: File, side = 1024): Promise<Blob> {
+  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  const scale = Math.min(1, side / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('This browser can\u2019t prepare photos.');
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  return await new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('This photo couldn\u2019t be read.')), 'image/jpeg', 0.82));
+}
+
 /** The photo when there is one; otherwise initials and a small kind icon, so layouts stay photo-first. Decorative. */
 export function VisualTile({ name, icon, photo, size = 'md' }: { name: string; icon?: IconName; photo?: string | null; size?: 'sm' | 'md' | 'lg' }) {
   return <span className={'visual-tile ' + size + (photo ? ' has-photo' : '')} aria-hidden="true">

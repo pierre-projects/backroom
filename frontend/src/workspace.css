@@ -527,3 +527,13 @@
 @media (max-width: 39.99rem) { .spaces-strip ul { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (prefers-reduced-motion: reduce) { .browse-card, .space-chip, .view-toggle-button { transition: none; } }
 .quiet-empty { margin: 0 0 var(--space-6); font-size: var(--text-sm); }
+
+/* Item photo control under the hero tile */
+.photo-control { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); margin-top: var(--space-2); max-width: 12rem; }
+.photo-pick { cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-1); min-height: 2.75rem; }
+.photo-control input:focus-visible + .photo-pick, .photo-pick:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+.photo-control .text-button { min-height: 2.75rem; }
+@media (max-width: 39.99rem) {
+  .page-heading-media { display: flex; align-items: flex-start; gap: var(--space-3); }
+  .photo-control { margin-top: 0; }
+}
