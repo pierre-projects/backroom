@@ -151,9 +151,11 @@ test('organization switching, metadata editing, archival and expired sessions', 
   await page.getByRole('button', { name: 'Archive item', exact: true }).click();
   await page.getByRole('button', { name: 'Archive', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'No items yet', exact: true })).toBeVisible();
-  // The filter lives in the URL, so the box flips once the router has updated; wait for that rather than assuming it.
-  await page.getByLabel('Include archived', { exact: true }).click();
-  await expect(page.getByLabel('Include archived', { exact: true })).toBeChecked();
+  // Controlled URL-backed checkbox: Playwright's check() can race the React/searchParams update.
+  const includeArchived = page.getByLabel('Include archived', { exact: true });
+  await includeArchived.click();
+  await expect(includeArchived).toBeChecked();
+  await expect(page).toHaveURL(/[?&]archived=1(?:&|$)/);
   await expect(page.getByRole('link', { name: 'Bottle display', exact: true })).toBeVisible();
 
   const token = await csrf(context.request);
