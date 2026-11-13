@@ -104,7 +104,7 @@ export function CatalogPage() {
         ? <Empty icon="search" title={'No items match “' + q + '”'} action={<button type="button" className="button secondary" onClick={() => { setFilter('q', ''); }}>Clear search</button>}>Check the spelling, or search by SKU instead.</Empty>
         : <Empty icon="catalog" title="No items yet" action={canEdit ? undefined : <Link className="button secondary" to={root + '/locations'}>View locations</Link>}>{canEdit ? 'Use Add item to create your first one and choose the unit you count it in.' : 'Items your team adds will appear here.'}</Empty>)}
     </section>
-    {creating && <Dialog title="Add item" close={() => setCreating(false)}><ItemForm cancel={() => setCreating(false)} saved={item => navigate(root + '/items/' + item.id)} /></Dialog>}
+    {creating && <Dialog title="Add item" close={() => setCreating(false)}><ItemForm cancel={() => setCreating(false)} saved={item => { setCreating(false); navigate(root + '/items/' + item.id); }} /></Dialog>}
   </>;
 }
 
