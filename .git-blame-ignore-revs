@@ -1,0 +1,6 @@
+# Commits that only reformat or move code. Enable locally with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# GitHub applies this file automatically.
+
+# refactor: one type per file and enforced Java formatting
+638875e2b3fa771340f2411d6aa57fcec1d9efd2
