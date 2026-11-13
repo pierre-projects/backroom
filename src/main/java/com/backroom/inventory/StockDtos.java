@@ -12,7 +12,7 @@ import java.util.*;
  */
 public final class StockDtos {
     private StockDtos() {}
-    public enum RemovalReason { USAGE, WASTE }
+    public enum RemovalReason { USAGE, WASTE, SALE }
 
     public record Receipt(@NotNull UUID operationKey, @NotNull UUID itemId, @NotNull UUID locationId,
                           @NotNull BigDecimal quantity, @Size(max=120) String reference, @Size(max=500) String note) {

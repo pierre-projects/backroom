@@ -131,6 +131,8 @@ GET https://<host>/actuator/health/readiness   → 200 {"status":"UP"}
 ./scripts/backup.ps1 -Keep 30        # longer retention
 ```
 
+**Item photos** are stored in the database (about 100–200 KB each after the browser resizes them), so they are in every dump. A catalog of 500 photographed items adds roughly 50–100 MB to each backup; plan retention and host storage accordingly.
+
 **Schedule:**
 
 | When | What |

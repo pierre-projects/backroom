@@ -288,8 +288,8 @@ class FoundationIntegrationTests {
         phaseZero.migrate();
         assertThat(jdbc.queryForObject("select to_regclass(?)::text", String.class, schema+".flyway_schema_history")).isNotNull();
         var upgraded=Flyway.configure().dataSource(source).defaultSchema(schema).locations("classpath:db/migration").load();
-        assertThat(upgraded.migrate().migrationsExecuted).isEqualTo(8);
-        assertThat(upgraded.info().applied()).hasSize(9); // Schema creation plus eight versioned migrations.
+        assertThat(upgraded.migrate().migrationsExecuted).isEqualTo(10);
+        assertThat(upgraded.info().applied()).hasSize(11); // Schema creation plus ten versioned migrations.
         assertThat(upgraded.migrate().migrationsExecuted).isZero();
     }
 

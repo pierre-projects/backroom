@@ -246,42 +246,44 @@ Do not lead with SKU grids or settings. Lead with quantity, place, and what to d
 
 ---
 
-## 8. Screen checklist (for later design/build)
+## 8. Screen checklist
+
+Status after [Phase 6](phase-6.md). Real item photos shipped; location photos are deferred.
 
 Use this when designing or reviewing a surface — not a build ticket list.
 
 ### Inventory
 
-- [ ] Visual tile/photo on every item  
-- [ ] Grid and list toggle  
-- [ ] Search + location + low + archived  
-- [ ] Low items visually marked  
-- [ ] Add item: name + unit; optional SKU  
+- [x] Visual tile/photo on every item  
+- [x] Grid and list toggle  
+- [x] Search + location + low + archived  
+- [x] Low items visually marked  
+- [x] Add item: name + unit; optional SKU  
 
 ### Locations / spaces
 
-- [ ] Breadcrumb trail  
-- [ ] Child spaces then items  
-- [ ] Parent name on ambiguous shelves  
-- [ ] Update stock from inside a space  
+- [x] Breadcrumb trail  
+- [x] Child spaces then items (rooms; shelves and bins lead with their items, since that is where stock lives)  
+- [x] Parent name on ambiguous shelves  
+- [x] Update stock from inside a space  
 
 ### Item detail
 
-- [ ] Hero: visual, on hand, status  
-- [ ] Stock by location with paths  
-- [ ] Primary stock actions obvious  
-- [ ] History after stock  
+- [x] Hero: visual, on hand, status  
+- [x] Stock by location with paths  
+- [x] Primary stock actions obvious  
+- [x] History after stock  
 
 ### Home
 
-- [ ] Low stock and requests before quieter activity  
-- [ ] Search available  
-- [ ] Clear next action from each attention row  
+- [x] Low stock and requests before quieter activity  
+- [x] Search available  
+- [x] Clear next action from each attention row  
 
 ### Responsive
 
-- [ ] Phone: tabs, sheets, large targets  
-- [ ] Desktop: sidebar, trail, multi-column browse  
+- [x] Phone: tabs, sheets, large targets  
+- [x] Desktop: sidebar, trail, multi-column browse  
 
 ---
 

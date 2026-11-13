@@ -4,6 +4,14 @@
  */
 const paths = {
   home: <><path d="M3.5 9 10 3.5 16.5 9" /><path d="M5 8v8.5h10V8M8.5 16.5v-4.5h3v4.5" /></>,
+  grid: <><rect x="3.5" y="3.5" width="5.5" height="5.5" rx="1" /><rect x="11" y="3.5" width="5.5" height="5.5" rx="1" /><rect x="3.5" y="11" width="5.5" height="5.5" rx="1" /><rect x="11" y="11" width="5.5" height="5.5" rx="1" /></>,
+  list: <><path d="M7.5 5.5h9M7.5 10h9M7.5 14.5h9" /><path d="M3.5 5.5h.01M3.5 10h.01M3.5 14.5h.01" /></>,
+  shelf: <><path d="M3.5 3.5v13M16.5 3.5v13M3.5 7h13M3.5 12h13" /><path d="M6 12V9.5h3V12M11 7V5h2.5v2" /></>,
+  cabinet: <><rect x="4" y="3" width="12" height="14" rx="1.5" /><path d="M10 3v14M8 9.5v1M12 9.5v1" /></>,
+  drop: <path d="M10 3.5c2.6 3.3 4.5 5.9 4.5 8.2a4.5 4.5 0 0 1-9 0c0-2.3 1.9-4.9 4.5-8.2z" />,
+  weight: <><path d="M7.5 6.5a2.5 2.5 0 1 1 5 0" /><path d="M5.5 6.5h9l1.5 10h-12z" /></>,
+  sale: <><path d="M3.5 10.2V4.5a1 1 0 0 1 1-1h5.7l6.3 6.3-6.7 6.7z" /><circle cx="7.2" cy="7.2" r="1" /></>,
+  camera: <><path d="M3.5 7a1.5 1.5 0 0 1 1.5-1.5h2L8.3 4h3.4L13 5.5h2A1.5 1.5 0 0 1 16.5 7v7.5A1.5 1.5 0 0 1 15 16H5a1.5 1.5 0 0 1-1.5-1.5z" /><circle cx="10" cy="10.5" r="2.75" /></>,
   download: <><path d="M10 3.5v9M6 9l4 4 4-4" /><path d="M4 16.5h12" /></>,
   catalog: <><path d="M3.5 6.5 10 3l6.5 3.5v7L10 17l-6.5-3.5z" /><path d="M3.5 6.5 10 10l6.5-3.5M10 10v7" /></>,
   location: <><path d="M3 17V7.5L10 3l7 4.5V17" /><path d="M6.5 17v-6h7v6M6.5 14h7" /></>,

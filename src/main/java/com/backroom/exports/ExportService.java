@@ -46,7 +46,7 @@ public class ExportService {
 
     private static final Map<String, String> UNITS = Map.of("EACH", "each", "GRAM", "g", "KILOGRAM", "kg", "MILLILITER", "mL", "LITER", "L");
     private static final Map<String, String> OPERATIONS = Map.of("OPENING", "Starting quantity", "RECEIPT", "Received", "USAGE", "Used",
-            "WASTE", "Wasted", "TRANSFER", "Transfer", "COUNT", "Count", "REVERSAL", "Reversal");
+            "WASTE", "Wasted", "SALE", "Sold", "TRANSFER", "Transfer", "COUNT", "Count", "REVERSAL", "Reversal");
     private static final Map<String, String> STATUSES = Map.of("SUBMITTED", "Submitted", "APPROVED", "Approved", "PARTIALLY_RECEIVED", "Partly received",
             "FULFILLED", "Received", "REJECTED", "Rejected", "CANCELLED", "Cancelled", "CLOSED_SHORT", "Closed short");
 

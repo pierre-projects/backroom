@@ -26,4 +26,19 @@ interface LocationRepository extends JpaRepository<StorageLocation, UUID> {
             """)
     Page<StorageLocation> search(UUID orgId, UUID parentId, boolean rootsOnly, boolean leafOnly,
                                 boolean includeArchived, String q, Pageable pageable);
+
+    /** The chain of parents, outermost first. Every step stays inside the organization; depth is capped as a safeguard. */
+    @Query(nativeQuery=true, value="""
+            with recursive up(id, name, type, parent_id, depth) as (
+                select l.id, l.name, l.type, l.parent_id, 0 from locations l where l.organization_id = :orgId and l.id = :id
+                union all
+                select p.id, p.name, p.type, p.parent_id, up.depth + 1 from locations p join up on p.id = up.parent_id
+                where p.organization_id = :orgId and up.depth < 32
+            )
+            select cast(id as varchar) as id, name, type from up where depth > 0 order by depth desc
+            """)
+    List<Object[]> ancestors(UUID orgId, UUID id);
+
+    @Query("select l.parentId, count(l) from StorageLocation l where l.organizationId = :orgId and l.parentId in :ids and l.archived = false group by l.parentId")
+    List<Object[]> childCounts(UUID orgId, Collection<UUID> ids);
 }

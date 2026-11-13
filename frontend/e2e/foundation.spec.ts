@@ -54,6 +54,9 @@ test('owner onboarding, placements, invitation acceptance and employee restricti
   await page.getByRole('link', { name: /Inventory/, exact: false }).first().click();
   await page.getByRole('button', { name: 'Add item', exact: true }).click();
   await page.getByLabel('Item name', { exact: true }).fill('Coffee beans');
+  // Creating asks for name and unit; SKU waits under Optional details.
+  await expect(page.getByLabel('SKU (optional)', { exact: true })).toBeHidden();
+  await page.getByText('Optional details', { exact: true }).click();
   await page.getByLabel('SKU (optional)', { exact: true }).fill(' beans-01 ');
   await page.getByLabel('Base unit', { exact: true }).selectOption('KILOGRAM');
   await page.getByRole('button', { name: 'Create item', exact: true }).click();
@@ -148,7 +151,9 @@ test('organization switching, metadata editing, archival and expired sessions', 
   await page.getByRole('button', { name: 'Archive item', exact: true }).click();
   await page.getByRole('button', { name: 'Archive', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'No items yet', exact: true })).toBeVisible();
-  await page.getByLabel('Include archived', { exact: true }).check();
+  // The filter lives in the URL, so the box flips once the router has updated; wait for that rather than assuming it.
+  await page.getByLabel('Include archived', { exact: true }).click();
+  await expect(page.getByLabel('Include archived', { exact: true })).toBeChecked();
   await expect(page.getByRole('link', { name: 'Bottle display', exact: true })).toBeVisible();
 
   const token = await csrf(context.request);
