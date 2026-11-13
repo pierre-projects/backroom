@@ -12,7 +12,7 @@ import type { StockAction } from './stock';
 import { CodesPanel } from './codes';
 import { NewRequestDialog } from './requests';
 import { SelectionBar, useLabelSelection } from './labels';
-import { BrowseCard, Breadcrumbs, ViewToggle, VisualTile, spaceFacts, spaceIcons, unitIcons, useBrowseView } from './browse';
+import { BrowseCard, Breadcrumbs, FolderTile, SearchScanLink, StatsStrip, ViewToggle, VisualTile, newBadge, spaceFacts, unitIcons, useBrowseView } from './browse';
 import { ItemForm, itemPhoto } from './catalog';
 import type { StockBalance } from './types';
 
@@ -101,7 +101,7 @@ export function LocationsPage() {
   // A location with no active children holds items directly; only those can take a new item.
   const leaf = Boolean(value && !value.archived && !q && !archived && list.data?.totalElements === 0);
   // Where items can go, adding an item is the main job; elsewhere it is adding storage.
-  const addButton = <button type="button" className={'button ' + (leaf ? 'secondary' : 'primary')} onClick={() => setDialog('create')}><Icon name="plus" />{value ? 'Add child location' : 'Add location'}</button>;
+  const addButton = <button type="button" className={'button ' + (leaf ? 'outline' : 'primary')} onClick={() => setDialog('create')}><Icon name="plus" />{value ? 'Add child location' : 'Add location'}</button>;
   const showContentsFirst = value?.type === 'SHELF' || value?.type === 'BIN';
   const locationChooser = (location: StorageLocation) => <label className="select-line"><input type="checkbox" checked={selection.selected.includes(location.id)}
     disabled={location.archived} onChange={() => selection.toggle(location.id)} /><span className="record-link">{location.name}</span></label>;
@@ -112,17 +112,17 @@ export function LocationsPage() {
       {!contents.data && !contents.error && <Loading variant="list" label="Loading items" />}
       {contents.data?.items.length === 0 && <p className="panel-body muted">No items are placed here yet.</p>}
       {!!contents.data?.items.length && view === 'grid' && <ul className="browse-grid" aria-label="Expected items">{contents.data.items.map(item => <BrowseCard key={item.id}
-        muted={item.archived} visual={<VisualTile name={item.name} icon={unitIcons[item.unit]} photo={itemPhoto(base, item)} />}
+        muted={item.archived} visual={<VisualTile name={item.name} icon={unitIcons[item.unit]} photo={itemPhoto(base, item)} corner={newBadge(item.createdAt)} />}
+        kicker={item.sku ? <span className="mono">{item.sku}</span> : <span>No SKU</span>}
         title={<RecordLink from={value.name} className="record-link" to={root + '/items/' + item.id}>{item.name}</RecordLink>}
         meta={<span><span className="numeric quantity-strong">{formatQuantity(item.onHand, item.unit)}</span> here</span>}
         badges={item.archived ? <Badge>Archived</Badge> : undefined}
         actions={value.archived || item.archived ? undefined : <StockRowActions quantity={item.onHand} subject={item.name} open={kind => void openSlot(item, kind)} />} />)}</ul>}
-      {!!contents.data?.items.length && view === 'list' && <table className="data-table">
-        <thead><tr><th scope="col">Item</th><th scope="col">SKU</th><th scope="col" className="cell-number">On hand here</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
+      {!!contents.data?.items.length && view === 'list' && <table className="data-table item-rows">
+        <thead><tr><th scope="col">Item</th><th scope="col" className="cell-number">On hand here</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
         <tbody>{contents.data.items.map(item => <tr key={item.id} className="linked">
-          <td><span className="tile-cell"><VisualTile size="sm" name={item.name} icon={unitIcons[item.unit]} photo={itemPhoto(base, item)} /><span><RecordLink from={value.name} className="record-link" to={root + '/items/' + item.id}>{item.name}</RecordLink><span className="cell-secondary mobile-only">{item.sku ? <span className="mono">{item.sku}</span> : 'No SKU'} · <span className="numeric">{formatQuantity(item.onHand, item.unit)}</span> here</span></span></span></td>
-          <td className="desktop-only mono">{item.sku ?? <><span aria-hidden="true">—</span><span className="sr-only">No SKU</span></>}</td>
-          <td className="desktop-only cell-number numeric">{formatQuantity(item.onHand, item.unit)}</td>
+          <td><span className="tile-cell"><VisualTile size="row" name={item.name} icon={unitIcons[item.unit]} photo={itemPhoto(base, item)} corner={newBadge(item.createdAt)} /><span className="item-stack"><span className="item-kicker desktop-kicker">{item.sku ? <span className="mono">{item.sku}</span> : 'No SKU'}</span><RecordLink from={value.name} className="record-link" to={root + '/items/' + item.id}>{item.name}</RecordLink><span className="cell-secondary mobile-only">{item.sku ? <span className="mono">{item.sku}</span> : 'No SKU'} · <span className="numeric">{formatQuantity(item.onHand, item.unit)}</span> here</span></span></span></td>
+          <td className="desktop-only cell-number numeric inventory-quantity">{formatQuantity(item.onHand, item.unit)}</td>
           <td className="cell-actions stock-actions-cell">{value.archived || item.archived ? <Icon name="chevronRight" /> :
             <StockRowActions quantity={item.onHand} subject={item.name} open={kind => void openSlot(item, kind)} />}</td>
         </tr>)}</tbody>
@@ -141,7 +141,11 @@ export function LocationsPage() {
       {editable && leaf && <button type="button" className="button primary" onClick={() => setAdding(true)}><Icon name="plus" />Add item here</button>}
       {editable && <>{addButton}{value && <><button type="button" className="button secondary" onClick={() => setDialog('edit')}>Edit location</button><button type="button" className="button secondary" onClick={() => setDialog('archive')}>Archive location</button></>}</>}
     </PageHeader>
-    {value && <div className="location-meta"><span className="location-badges"><Badge>{typeNames[value.type]}</Badge>{value.archived && <Badge tone="warning">Archived</Badge>}</span>
+    {value && <div className="location-meta"><span className="location-badges"><StatsStrip label="Location summary" stats={[
+        { label: 'Folders', value: list.data?.totalElements ?? '–' },
+        { label: 'Items here', value: contents.data?.totalElements ?? '–' },
+        { label: 'Type', value: <span className="location-type">{typeNames[value.type]}</span> },
+      ]} />{value.archived && <Badge tone="warning">Archived</Badge>}</span>
       <ViewToggle view={view} onChange={setView} label="Layout" /></div>}
 
     {selection.selecting && <SelectionBar count={selection.selected.length} noun="location" href={root + '/labels?locations=' + selection.selected.join(',')} />}
@@ -153,24 +157,25 @@ export function LocationsPage() {
       {!value && <h2 className="sr-only" id="child-locations">All locations</h2>}
       <div className="toolbar">
         <form className="search-form" role="search" onSubmit={event => { event.preventDefault(); setQ(String(new FormData(event.currentTarget).get('search')).trim()); setPage(0); }}>
-          <div className="search-input"><Icon name="search" /><input name="search" aria-label="Search locations" type="search" placeholder="Search locations" defaultValue={q} key={q} /></div>
+          <div className="search-input"><Icon name="search" /><input name="search" aria-label="Search locations" type="search" placeholder="Search locations" defaultValue={q} key={q} /><SearchScanLink root={root} /></div>
           <button className="button secondary">Search</button>
         </form>
         <label className="checkbox"><input type="checkbox" checked={archived} onChange={event => { setArchived(event.target.checked); setPage(0); }} /> Include archived</label>
         {!value && <ViewToggle view={view} onChange={setView} label="Locations layout" />}
       </div>
+      {!value && list.data && <StatsStrip label="Locations summary" stats={[{ label: q ? 'Matches' : 'Folders', value: list.data.totalElements }]} />}
       <ErrorMessage error={list.error} retry={list.reload} />
       {!list.data && !list.error && <div className="panel table-panel"><Loading variant="list" label="Loading locations" /></div>}
       {list.data && (list.data.items.length ? <div className="panel table-panel">
-        {view === 'grid' ? <ul className="browse-grid space-grid" aria-label={value ? 'Storage inside ' + value.name : 'Locations'}>{list.data.items.map(location => <BrowseCard key={location.id}
+        {view === 'grid' ? <ul className="browse-grid space-grid folder-grid" aria-label={value ? 'Storage inside ' + value.name : 'Locations'}>{list.data.items.map(location => <BrowseCard key={location.id} folder
           selected={selection.selecting && selection.selected.includes(location.id)} muted={location.archived}
-          visual={<VisualTile name={location.name} icon={spaceIcons[location.type]} />}
+          visual={<FolderTile type={location.type} />}
           title={selection.selecting ? locationChooser(location) : <RecordLink from={value?.name ?? 'Locations'} className="record-link" to={root + '/locations/' + location.id}>{location.name}</RecordLink>}
           meta={<><span>{typeNames[location.type]}</span><span>{spaceFacts(location)}</span></>}
           badges={location.archived ? <Badge>Archived</Badge> : undefined} />)}</ul> : <table className="data-table">
           <thead><tr><th scope="col">Location</th><th scope="col">Type</th><th scope="col">Contents</th><th scope="col"><span className="sr-only">Open</span></th></tr></thead>
           <tbody>{list.data.items.map(location => <tr key={location.id} className={selection.selecting ? 'selectable' : 'linked'}>
-            <td><span className="tile-cell"><VisualTile size="sm" name={location.name} icon={spaceIcons[location.type]} /><span><span className="name-line">{selection.selecting
+            <td><span className="tile-cell"><FolderTile type={location.type} size="sm" /><span><span className="name-line">{selection.selecting
               ? locationChooser(location)
               : <RecordLink from={value?.name ?? 'Locations'} className="record-link" to={root + '/locations/' + location.id}>{location.name}</RecordLink>}{location.archived && <Badge>Archived</Badge>}</span><span className="cell-secondary mobile-only">{typeNames[location.type]} · {spaceFacts(location)}</span></span></span></td>
             <td className="desktop-only">{typeNames[location.type]}</td>
