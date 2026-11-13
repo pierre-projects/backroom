@@ -98,10 +98,11 @@ export function LocationsPage() {
   if (locationId && !current.data) return <Loading />;
   const value = current.data;
   const editable = canEdit && !value?.archived;
-  const addButton = <button type="button" className="button primary" onClick={() => setDialog('create')}><Icon name="plus" />{value ? 'Add child location' : 'Add location'}</button>;
-  const showContentsFirst = value?.type === 'SHELF' || value?.type === 'BIN';
   // A location with no active children holds items directly; only those can take a new item.
   const leaf = Boolean(value && !value.archived && !q && !archived && list.data?.totalElements === 0);
+  // Where items can go, adding an item is the main job; elsewhere it is adding storage.
+  const addButton = <button type="button" className={'button ' + (leaf ? 'secondary' : 'primary')} onClick={() => setDialog('create')}><Icon name="plus" />{value ? 'Add child location' : 'Add location'}</button>;
+  const showContentsFirst = value?.type === 'SHELF' || value?.type === 'BIN';
   const locationChooser = (location: StorageLocation) => <label className="select-line"><input type="checkbox" checked={selection.selected.includes(location.id)}
     disabled={location.archived} onChange={() => selection.toggle(location.id)} /><span className="record-link">{location.name}</span></label>;
   const expectedItems = value && (
@@ -137,7 +138,7 @@ export function LocationsPage() {
       title={value?.name ?? 'Locations'}
       description={value ? undefined : 'Rooms, shelves, cabinets and bins where items are kept.'}>
       {canEdit && !value && <button type="button" className="button secondary" aria-pressed={selection.selecting} onClick={selection.toggleMode}><Icon name="label" />{selection.selecting ? 'Cancel' : 'Print labels'}</button>}
-      {editable && leaf && <button type="button" className="button secondary" onClick={() => setAdding(true)}><Icon name="plus" />Add item here</button>}
+      {editable && leaf && <button type="button" className="button primary" onClick={() => setAdding(true)}><Icon name="plus" />Add item here</button>}
       {editable && <>{addButton}{value && <><button type="button" className="button secondary" onClick={() => setDialog('edit')}>Edit location</button><button type="button" className="button secondary" onClick={() => setDialog('archive')}>Archive location</button></>}</>}
     </PageHeader>
     {value && <div className="location-meta"><span className="location-badges"><Badge>{typeNames[value.type]}</Badge>{value.archived && <Badge tone="warning">Archived</Badge>}</span>
@@ -146,7 +147,8 @@ export function LocationsPage() {
     {selection.selecting && <SelectionBar count={selection.selected.length} noun="location" href={root + '/labels?locations=' + selection.selected.join(',')} />}
     {stockStatus && <SuccessMessage>{stockStatus}</SuccessMessage>}
     {showContentsFirst && expectedItems}
-    <section aria-labelledby="child-locations">
+    {/* Where nothing is stored inside (most shelves and bins), one quiet line replaces the search and empty state. */}
+    {leaf ? <p className="muted quiet-empty">No storage inside {value!.name}.</p> : <section aria-labelledby="child-locations">
       {value && <h2 className="section-heading" id="child-locations">Storage inside {value.name}</h2>}
       {!value && <h2 className="sr-only" id="child-locations">All locations</h2>}
       <div className="toolbar">
@@ -177,12 +179,12 @@ export function LocationsPage() {
           </tr>)}</tbody>
         </table>}
         <Pager data={list.data} onPage={setPage} />
-      </div> : <Empty icon={q ? 'search' : 'location'}
+      </div> : value && !q ? <p className="muted quiet-empty">No storage inside {value.name}.</p> : <Empty icon={q ? 'search' : 'location'}
         title={q ? 'No locations match “' + q + '”' : value ? 'No child locations' : 'No locations yet'}
         action={q ? <button type="button" className="button secondary" onClick={() => { setQ(''); setPage(0); }}>Clear search</button> : undefined}>
         {q ? 'Check the spelling and try again.' : value ? 'There are no nested storage locations here.' : canEdit ? 'Use Add location to start with a room such as Stockroom, then add shelves or bins inside it.' : 'Locations your team adds will appear here.'}
       </Empty>)}
-    </section>
+    </section>}
 
     {!showContentsFirst && expectedItems}
 

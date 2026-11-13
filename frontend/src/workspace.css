@@ -468,7 +468,7 @@
 
 .visual-tile { position: relative; display: grid; place-items: center; flex: none; overflow: hidden; background: var(--surface-sunken); color: var(--text-muted); border-radius: var(--radius-control); }
 .visual-tile.sm { width: 2.5rem; height: 2.5rem; }
-.visual-tile.md { width: 100%; aspect-ratio: 4 / 3; }
+.visual-tile.md { width: 100%; aspect-ratio: 16 / 10; }
 .visual-tile.lg { width: 6rem; height: 6rem; border-radius: var(--radius-panel); }
 .visual-tile img { width: 100%; height: 100%; object-fit: cover; }
 .visual-initials { font-weight: 600; letter-spacing: .02em; font-size: var(--text-sm); }
@@ -526,3 +526,4 @@
 .space-chip strong { overflow-wrap: anywhere; }
 @media (max-width: 39.99rem) { .spaces-strip ul { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (prefers-reduced-motion: reduce) { .browse-card, .space-chip, .view-toggle-button { transition: none; } }
+.quiet-empty { margin: 0 0 var(--space-6); font-size: var(--text-sm); }
