@@ -100,7 +100,7 @@ All business routes are under `/api/v1/organizations/{orgId}`.
 
 ## Verification
 
-- **`UsabilityIntegrationTests`:**
+- **`inventory.LowStockIntegrationTests`, `search.SearchIntegrationTests`, `exports.ExportIntegrationTests` and `access.PasswordResetIntegrationTests`:**
   - **Low stock:**
     - low calculation, including exactly at the minimum, empty new slots, clearing a minimum and removing a placement;
     - the list and filters;

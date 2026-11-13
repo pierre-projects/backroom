@@ -77,7 +77,7 @@ All routes are under `/api/v1/organizations/{orgId}`.
 
 ## Verification
 
-- **`BrowseIntegrationTests`:**
+- **`locations.LocationContentsIntegrationTests`, `inventory.CatalogIntegrationTests` and `inventory.SaleIntegrationTests`:**
   - **Trail and counts:** the trail order; archived children, archived items and removed placements excluded from counts; isolation between businesses.
   - **Sales:** history, audit, CSV, insufficient stock, reversal and unknown-reason refusal.
   - **Photos:** type, garbage, size and dimension refusals; roles; versions in the item and list views; private caching headers; isolation; replace; remove; audit.

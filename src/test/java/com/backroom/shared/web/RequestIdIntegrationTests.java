@@ -1,4 +1,4 @@
-package com.backroom;
+package com.backroom.shared.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -7,29 +7,26 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.backroom.support.ApiTestSupport;
+import com.backroom.support.IntegrationTest;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Phase 5 operations: request correlation ids, quotable 5xx problems and uptime probes. */
-@SpringBootTest
-@AutoConfigureMockMvc
+/** Request correlation ids and quotable 5xx problems. */
+@IntegrationTest
 @ExtendWith(OutputCaptureExtension.class)
-@Import({
-    InfrastructureIntegrationTests.PostgresConfiguration.class,
-    OperationsIntegrationTests.FailureConfiguration.class
-})
-class OperationsIntegrationTests extends ApiTestSupport {
+@Import(RequestIdIntegrationTests.FailureConfiguration.class)
+class RequestIdIntegrationTests extends ApiTestSupport {
     static final String HEADER = "X-Request-Id";
+
     static final String UUID_PATTERN = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
 
     @Test
@@ -106,20 +103,6 @@ class OperationsIntegrationTests extends ApiTestSupport {
         mvc.perform(get("/api/v1/items"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.requestId").doesNotExist());
-    }
-
-    @Test
-    void exposesAnonymousProbesWithoutDetails() throws Exception {
-        for (var probe : new String[] {"/actuator/health/liveness", "/actuator/health/readiness"}) {
-            mvc.perform(get(probe))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.status").value("UP"))
-                    .andExpect(jsonPath("$.components").doesNotExist())
-                    .andExpect(jsonPath("$.details").doesNotExist());
-        }
-        // Individual components stay closed even though the probe groups are open.
-        mvc.perform(get("/actuator/health/db")).andExpect(status().is4xxClientError());
-        mvc.perform(get("/actuator/health/db").with(user("test-only"))).andExpect(status().isForbidden());
     }
 
     private tools.jackson.databind.JsonNode tree(String text) {

@@ -91,7 +91,7 @@ If the polyfill is slow or unreliable on the iPhone, switch the fallback to `@zx
 ## Verification
 
 - **Unit tests:** GTIN normalization and check digits (including UPC-E expansion), token generation and parsing, link recognition, label pagination, and a PDF round trip that decodes the printed QR back to its URL.
-- **`LabelsIntegrationTests`:**
+- **`labels.LabelsIntegrationTests`:**
   - codes are reused and survive renames and moves;
   - revocation is permanent and the database guards it;
   - barcode rules and role limits;

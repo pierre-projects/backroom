@@ -1,4 +1,4 @@
-package com.backroom;
+package com.backroom.inventory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -17,7 +17,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request;
 
 import com.backroom.audit.AuditService;
-import com.backroom.inventory.StockCommandHooks;
+import com.backroom.support.ApiTestSupport;
+import com.backroom.support.IntegrationTest;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -32,18 +33,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataAccessException;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import tools.jackson.databind.JsonNode;
 
-/** Phase 2 stock behaviour against real PostgreSQL, including the PRD §13 concurrency and retry scenarios. */
-@SpringBootTest
-@AutoConfigureMockMvc
-@Import(InfrastructureIntegrationTests.PostgresConfiguration.class)
-class InventoryIntegrationTests extends ApiTestSupport {
+/** Stock operations against real PostgreSQL, including the PRD §13 concurrency and retry scenarios. */
+@IntegrationTest
+class StockIntegrationTests extends ApiTestSupport {
     @MockitoSpyBean
     AuditService audit;
 
@@ -116,6 +112,7 @@ class InventoryIntegrationTests extends ApiTestSupport {
     int rows(String sql, Object... args) {
         return Objects.requireNonNull(jdbc.queryForObject(sql, Integer.class, args));
     }
+
     /** The movement ledger must explain every balance exactly. */
     void assertLedgerMatches(Shop shop) {
         var mismatches = rows("""

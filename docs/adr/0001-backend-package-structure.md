@@ -85,10 +85,15 @@ com.backroom
 
 src/test/java/com/backroom
 ├── ModuleStructureTests.java        ← Spring Modulith verify()
-├── access/      AccessApiTests.java, InvitationApiTests.java
-├── inventory/   StockApiTests.java, StockConcurrencyTests.java, QuantitiesTests.java
-├── labels/ ...
-└── support/     ApiTestSupport.java, PostgresConfiguration.java
+├── InfrastructureIntegrationTests.java, DatabaseMigrationIntegrationTests.java
+├── access/      AuthIntegrationTests, OrganizationIntegrationTests, InvitationIntegrationTests,
+│                PasswordResetIntegrationTests
+├── inventory/   StockIntegrationTests, CatalogIntegrationTests, LowStockIntegrationTests,
+│                SaleIntegrationTests, QuantitiesTests
+├── locations/   LocationHierarchyIntegrationTests, LocationContentsIntegrationTests
+├── labels/ restocking/ imports/ exports/ search/ ...
+├── shared/web/  RequestIdIntegrationTests, SpaRoutingIntegrationTests, RequestIdFilterTests
+└── support/     @IntegrationTest, ApiTestSupport, PostgresTestConfiguration, TestClockConfiguration
 ```
 
 Conventions:
@@ -103,7 +108,10 @@ Conventions:
    `ApplicationModules.of(BackroomApplication.class).verify()`, or ArchUnit if
    Modulith is not wanted). `shared` depends on no feature module.
 5. Tests live in the package of the module they cover and are named after the
-   behaviour, not the delivery phase.
+   behaviour, not the delivery phase. Database-backed tests use
+   `@IntegrationTest` and extend `support.ApiTestSupport`; a class that adds
+   beans, spies or imports gets its own Spring context, so add them only when
+   the test needs them.
 6. Entities keep fields `private`, expose getters, and change state through
    intention-revealing methods (`item.archive()`, `balance.apply(change)`).
 7. Services throw domain exceptions (`NotFound`, `Conflict(code)`,
@@ -190,8 +198,14 @@ available for a module that outgrows a flat package.
        and `shared.persistence` are now declared `@NamedInterface`s, and
        `shared.config` stays internal. No cycles, and no feature module
        reached into another module's internals.
-5. [ ] Move and rename integration tests per module; move `ApiTestSupport` and
-       the Postgres config into `support/` (F5).
+5. [x] Move and rename integration tests per module; move `ApiTestSupport` and
+       the Postgres config into `support/` (F5). The nine phase-named classes
+       became eighteen classes named after their behaviour, in the module they
+       cover; the same 85 tests run, with bodies unchanged apart from record
+       accessor calls. `@IntegrationTest` replaces the repeated
+       `@SpringBootTest`/`@AutoConfigureMockMvc`/`@Import` trio, and the
+       duplicate HTTP helpers that `FoundationIntegrationTests` kept were merged
+       into `ApiTestSupport` (its stricter `register()` now runs for every test).
 6. [ ] Introduce domain exceptions and drop `HttpStatus` from services (F7).
 7. [ ] Make entity fields private with getters and behaviour methods, module by
        module (F6).

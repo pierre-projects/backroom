@@ -1,4 +1,4 @@
-package com.backroom;
+package com.backroom.labels;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -6,22 +6,19 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+import com.backroom.support.ApiTestSupport;
+import com.backroom.support.IntegrationTest;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.pdfbox.Loader;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataAccessException;
 import tools.jackson.databind.JsonNode;
 
-/** Phase 3 codes, scan resolution and label PDFs against real PostgreSQL. */
-@SpringBootTest
-@AutoConfigureMockMvc
-@Import(InfrastructureIntegrationTests.PostgresConfiguration.class)
+/** Codes, scan resolution and label PDFs against real PostgreSQL. */
+@IntegrationTest
 class LabelsIntegrationTests extends ApiTestSupport {
     record Shop(Client owner, String base, String item, String room, String shelf) {}
 

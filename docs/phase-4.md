@@ -75,7 +75,7 @@ All routes are under `/api/v1/organizations/{orgId}/requests`.
 
 ## Verification
 
-- **`RestockingIntegrationTests`:**
+- **`restocking.RestockingIntegrationTests`:**
   - the lifecycle with partial deliveries;
   - approval with a changed quantity, and approval leaving stock unchanged;
   - transition, reason, version and role rules;

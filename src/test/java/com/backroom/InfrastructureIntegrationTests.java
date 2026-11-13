@@ -8,25 +8,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.backroom.support.IntegrationTest;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@Import(InfrastructureIntegrationTests.PostgresConfiguration.class)
+/** Real PostgreSQL and Flyway, security defaults, and what the actuator exposes. */
+@IntegrationTest
 class InfrastructureIntegrationTests {
-
     @Autowired
     private MockMvc mvc;
 
@@ -78,12 +70,17 @@ class InfrastructureIntegrationTests {
         }
     }
 
-    @TestConfiguration(proxyBeanMethods = false)
-    static class PostgresConfiguration {
-        @Bean
-        @ServiceConnection
-        PostgreSQLContainer postgres() {
-            return new PostgreSQLContainer("postgres:17-alpine");
+    @Test
+    void exposesAnonymousProbesWithoutDetails() throws Exception {
+        for (var probe : new String[] {"/actuator/health/liveness", "/actuator/health/readiness"}) {
+            mvc.perform(get(probe))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("UP"))
+                    .andExpect(jsonPath("$.components").doesNotExist())
+                    .andExpect(jsonPath("$.details").doesNotExist());
         }
+        // Individual components stay closed even though the probe groups are open.
+        mvc.perform(get("/actuator/health/db")).andExpect(status().is4xxClientError());
+        mvc.perform(get("/actuator/health/db").with(user("test-only"))).andExpect(status().isForbidden());
     }
 }

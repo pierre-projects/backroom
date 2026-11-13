@@ -90,7 +90,7 @@ Archiving an item or location, and adding a child location, take exclusive row l
 
 ## Verification
 
-- `InventoryIntegrationTests` (PostgreSQL via Testcontainers) cover:
+- `inventory.StockIntegrationTests` (PostgreSQL via Testcontainers) cover:
   - every operation and its error codes;
   - idempotent retries and reuse;
   - a concurrent duplicate receipt;

@@ -1,4 +1,4 @@
-package com.backroom;
+package com.backroom.restocking;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -15,6 +15,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import com.backroom.audit.AuditService;
 import com.backroom.inventory.StockCommandHooks;
+import com.backroom.support.ApiTestSupport;
+import com.backroom.support.IntegrationTest;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
@@ -28,17 +30,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataAccessException;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import tools.jackson.databind.JsonNode;
 
-/** Phase 4 restock requests: workflow rules, roles, idempotent deliveries and their concurrency, against real PostgreSQL. */
-@SpringBootTest
-@AutoConfigureMockMvc
-@Import(InfrastructureIntegrationTests.PostgresConfiguration.class)
+/** Restock requests: workflow rules, roles, idempotent deliveries and their concurrency, against real PostgreSQL. */
+@IntegrationTest
 class RestockingIntegrationTests extends ApiTestSupport {
     @MockitoSpyBean
     AuditService audit;

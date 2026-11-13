@@ -1,9 +1,11 @@
-package com.backroom;
+package com.backroom.imports;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
+import com.backroom.support.ApiTestSupport;
+import com.backroom.support.IntegrationTest;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -11,18 +13,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
 import org.springframework.mock.web.MockHttpServletResponse;
 import tools.jackson.databind.JsonNode;
 
-/** Phase 7: CSV import preview, apply, idempotency, limits, roles, isolation and an export → import round trip. */
-@SpringBootTest
-@AutoConfigureMockMvc
-@Import(InfrastructureIntegrationTests.PostgresConfiguration.class)
+/** CSV import preview, apply, idempotency, limits, roles, isolation and an export → import round trip. */
+@IntegrationTest
 class ImportIntegrationTests extends ApiTestSupport {
-
     record Shop(Client owner, String base, UUID orgId, String stockroom, String coffeeShelf) {}
 
     Shop shop() throws Exception {

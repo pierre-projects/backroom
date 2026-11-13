@@ -69,7 +69,7 @@ All routes are under `/api/v1/organizations/{orgId}/imports/items`, for Owners a
 ## Verification
 
 - **`CsvReaderTests`:** quotes, `""`, embedded newlines and their line numbers, BOM, `;` detection, ragged rows.
-- **`ImportIntegrationTests`:**
+- **`imports.ImportIntegrationTests`:**
   - **Preview:** every status and its message; locations to create.
   - **Apply:** items, nested locations (types and parents), balances, minimums, the import note, a ledger that matches its balances, and audit.
   - **Duplicates and retries:** an existing SKU is untouched; a possible duplicate is included on request; a replay; key reuse; a fresh preview after import.
