@@ -207,7 +207,8 @@ final class ImportPlanner {
         var orderedLocations = locations.values().stream()
                 .sorted(Comparator.comparingInt(PlannedLocation::depth).thenComparing(PlannedLocation::path)).toList();
         var rows = parsed.stream().map(row -> new Row(row.line(), row.name(), row.sku(),
-                row.unit() == null ? row.unitText() : UNIT_LABELS.get(row.unit()), resolved.containsKey(row.line()) ? resolved.get(row.line()).display() : row.locationText(),
+                row.unit() == null ? row.unitText() : UNIT_LABELS.get(row.unit()),
+                resolved.containsKey(row.line()) ? resolved.get(row.line()).display() : row.path().isEmpty() ? row.locationText() : String.join(" › ", row.path()),
                 row.quantityText(), row.minimumText(), status.get(row.line()), List.copyOf(messages.get(row.line())))).toList();
         return new Plan(rows, orderedLocations, List.copyOf(items.values()), slots);
     }

@@ -130,7 +130,7 @@ export function ImportItemsPage() {
         <table className="data-table import-table">
           <thead><tr><th scope="col">Line</th><th scope="col">Item</th><th scope="col">Place and quantity</th><th scope="col">Status</th></tr></thead>
           <tbody>{preview.rows.map(row => <tr key={row.line} className={'import-row ' + row.status.toLowerCase()}>
-            <td className="numeric cell-secondary-text"><span className="mobile-only">Line </span>{row.line}</td>
+            <td className="numeric cell-secondary-text import-line"><span className="import-line-label">Line </span>{row.line}</td>
             <td><strong>{row.item || '—'}</strong><span className="cell-secondary">{[row.sku, row.unit].filter(Boolean).join(' · ')}</span></td>
             <td>{row.location || <span className="muted">No place</span>}
               {(row.quantity || row.minimum) && <span className="cell-secondary numeric">{[row.quantity && row.quantity + ' to start', row.minimum && 'min ' + row.minimum].filter(Boolean).join(' · ')}</span>}</td>

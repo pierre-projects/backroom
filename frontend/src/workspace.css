@@ -556,3 +556,6 @@ input.sr-only:focus-visible + .file-button { outline: 2px solid var(--focus); ou
 .import-row.duplicate td:not(:last-child) { color: var(--text-muted); }
 .import-facts { list-style: none; margin: var(--space-3) 0 var(--space-4); padding: 0; display: grid; gap: var(--space-1); }
 .import-facts strong { font-size: var(--text-lg); margin-right: var(--space-1); }
+.import-line-label { display: none; }
+@media (max-width: 39.99rem) { .import-line-label { display: inline; } .import-table td.import-line { padding-bottom: 0; } }
+@media (max-width: 39.99rem) { .form-actions.start { flex-direction: column; align-items: stretch; } .form-actions.start .button { width: 100%; justify-content: center; } }
