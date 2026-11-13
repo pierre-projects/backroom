@@ -3,7 +3,7 @@ export type Unit = 'EACH' | 'GRAM' | 'KILOGRAM' | 'MILLILITER' | 'LITER';
 export type LocationType = 'ROOM' | 'SHELF' | 'CABINET' | 'BIN';
 export interface User { id: string; email: string; displayName: string }
 export interface Organization { id: string; name: string; role: Role; version: number }
-export interface Item { id: string; name: string; sku: string | null; unit: Unit; archived: boolean; version: number; onHand: string; low: boolean; photoVersion?: number | null }
+export interface Item { id: string; name: string; sku: string | null; unit: Unit; archived: boolean; version: number; onHand: string; low: boolean; photoVersion?: number | null; createdAt?: string }
 export interface StorageLocation {
   id: string; name: string; type: LocationType; parentId: string | null; archived: boolean; version: number;
   /** Outermost first; only when one location is read. */

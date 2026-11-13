@@ -74,6 +74,26 @@ class BrowseIntegrationTests extends ApiTestSupport {
         assertThat(call(other.owner, get(shop.base + "/locations/" + shop.bin), null).status()).isEqualTo(404);
     }
 
+    @Test
+    void itemListsSortByNameOrNewestAndCarryCreatedAt() throws Exception {
+        var shop = shop();
+        var beans = item(shop.owner, shop.base, "Beans", "KILOGRAM").get("id").asString();
+        var cups = item(shop.owner, shop.base, "Cups", "EACH");
+        var apron = item(shop.owner, shop.base, "Apron", "EACH").get("id").asString();
+        assertThat(cups.get("createdAt").asString()).isNotBlank();
+
+        var names = new ArrayList<String>();
+        ok(shop.owner, get(shop.base + "/items"), null).get("items").forEach(row -> names.add(row.get("name").asString()));
+        assertThat(names).containsExactly("Apron", "Beans", "Cups");
+        names.clear();
+        ok(shop.owner, get(shop.base + "/items?sort=name_desc"), null).get("items").forEach(row -> names.add(row.get("name").asString()));
+        assertThat(names).containsExactly("Cups", "Beans", "Apron");
+        var newest = ok(shop.owner, get(shop.base + "/items?sort=newest"), null).get("items");
+        assertThat(newest.get(0).get("id").asString()).isEqualTo(apron);
+        assertThat(newest.get(2).get("id").asString()).isEqualTo(beans);
+        assertThat(call(shop.owner, get(shop.base + "/items?sort=price"), null).status()).isEqualTo(400);
+    }
+
     static byte[] jpeg(int width, int height) throws Exception {
         var image = new java.awt.image.BufferedImage(width, height, java.awt.image.BufferedImage.TYPE_INT_RGB);
         var graphics = image.createGraphics();
