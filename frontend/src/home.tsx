@@ -1,8 +1,10 @@
+import { RecordLink } from './navigation';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { query } from './api';
 import { ErrorMessage, Loading, PageHeader, useResource } from './components';
 import { Icon } from './icons';
+import { labelDownloadKey } from './labels';
 import { ActivityList } from './people';
 import { SearchForm } from './search';
 import { NewRequestDialog, RequestBadge, ago, progress } from './requests';
@@ -10,67 +12,68 @@ import { formatQuantity, locationPath } from './stock';
 import type { Activity, Item, LowStockRow, Member, Page, RequestSummary, RestockRequest, StockMovement, StorageLocation } from './types';
 import { useWorkspace } from './workspace';
 
-/** Per-browser memory for the parts of onboarding the server can't see (printing) and for hiding the checklist. */
-function useLocalFlag(key: string): [boolean, () => void] {
-  const read = () => { try { return localStorage.getItem(key) === '1'; } catch { return false; } };
-  const [value, setValue] = useState(read);
-  return [value, () => { try { localStorage.setItem(key, '1'); } catch { /* private mode: keep it for this visit only */ } setValue(true); }];
+function flagSet(key: string) {
+  try { return localStorage.getItem(key) === '1'; } catch { return false; }
 }
 
-function Onboarding({ root, base, owner }: { root: string; base: string; owner: boolean }) {
+function Onboarding({ root, base, owner, hasWork, hasMovements }: {
+  root: string; base: string; owner: boolean; hasWork: boolean; hasMovements: boolean;
+}) {
   const { organization } = useWorkspace();
-  const [hidden, hide] = useLocalFlag('backroom.onboarding.hidden.' + organization.id);
-  const [printed, markPrinted] = useLocalFlag('backroom.onboarding.labels.' + organization.id);
-  const locations = useResource<Page<StorageLocation>>(hidden ? null : query(base + '/locations', { size: 1 }));
-  const items = useResource<Page<Item>>(hidden ? null : query(base + '/items', { size: 1, includeArchived: true }));
-  const stock = useResource<Page<StockMovement>>(hidden ? null : query(base + '/inventory/movements', { size: 1 }));
-  const members = useResource<Page<Member>>(hidden || !owner ? null : query(base + '/members', { size: 2 }));
-  const invitations = useResource<Page<unknown>>(hidden || !owner ? null : query(base + '/invitations', { size: 1 }));
-  if (hidden || !locations.data || !items.data || !stock.data || (owner && (!members.data || !invitations.data))) return null;
+  const [expanded, setExpanded] = useState<boolean>();
+  const open = expanded ?? (!hasWork && !flagSet('backroom.onboarding.hidden.' + organization.id));
+  const printed = flagSet(labelDownloadKey(organization.id));
+  const locations = useResource<Page<StorageLocation>>(query(base + '/locations', { size: 1 }));
+  const items = useResource<Page<Item>>(query(base + '/items', { size: 1, includeArchived: true }));
+  const members = useResource<Page<Member>>(owner ? query(base + '/members', { size: 2 }) : null);
+  const invitations = useResource<Page<unknown>>(owner ? query(base + '/invitations', { size: 1 }) : null);
+  const error = locations.error ?? items.error ?? members.error ?? invitations.error;
+  if (error) return <ErrorMessage error={error} retry={() => { locations.reload(); items.reload(); members.reload(); invitations.reload(); }} />;
+  if (!locations.data || !items.data || (owner && (!members.data || !invitations.data))) return null;
   const steps = [
     { done: locations.data.totalElements > 0, title: 'Add your storage locations', detail: 'Rooms first, then the shelves and bins inside them.', href: root + '/locations', action: 'Add a location' },
     { done: items.data.totalElements > 0, title: 'Add the items you stock', detail: 'Choose the unit you count each one in.', href: root + '/items', action: 'Add an item' },
-    { done: stock.data.totalElements > 0, title: 'Record what is on the shelves', detail: 'Open an item and set its starting quantity at each location.', href: root + '/items', action: 'Open inventory' },
-    { done: printed, title: 'Print labels and scan one', detail: 'Stick a QR label on each shelf, then try it from the Scan tab.', href: root + '/labels', action: 'Print labels', onClick: markPrinted },
+    { done: hasMovements, title: 'Record what is on the shelves', detail: 'Open an item and set its starting quantity at each location.', href: root + '/items', action: 'Open inventory' },
+    { done: printed, title: 'Download a label', detail: 'Choose a storage location and download its printable QR label.', href: root + (locations.data.totalElements ? '/locations?select=labels' : '/locations'), action: locations.data.totalElements ? 'Choose locations' : 'Open locations' },
     ...(owner ? [{ done: members.data!.totalElements > 1 || invitations.data!.totalElements > 0, title: 'Invite your team', detail: 'Send a one-time link to each manager and employee.', href: root + '/people', action: 'Invite staff' }] : []),
   ];
   const remaining = steps.filter(step => !step.done).length;
   if (remaining === 0) return null;
   const next = steps.find(step => !step.done)!;
   return <section className="panel table-panel onboarding" aria-labelledby="onboarding-heading">
-    <div className="panel-header"><div><h2 id="onboarding-heading">Set up {organization.name}</h2><p>{steps.length - remaining} of {steps.length} done. Each step takes a few minutes.</p></div>
-      <button type="button" className="text-button" onClick={hide}>Hide</button></div>
-    <ol className="checklist">{steps.map(step => <li key={step.title} className={step.done ? 'done' : step === next ? 'current' : ''}>
+    <div className="panel-header"><div><h2 id="onboarding-heading">{open ? 'Set up ' + organization.name : 'Continue setup · ' + remaining + ' remaining'}</h2><p>{steps.length - remaining} of {steps.length} done.</p></div>
+      <button type="button" className="text-button" aria-expanded={open} aria-controls="setup-steps" onClick={() => setExpanded(!open)}>{open ? 'Collapse' : 'Expand'}</button></div>
+    <ol id="setup-steps" className="checklist" hidden={!open}>{steps.map(step => <li key={step.title} className={step.done ? 'done' : step === next ? 'current' : ''}>
       <span className="checklist-mark" aria-hidden="true">{step.done && <Icon name="check" className="small" />}</span>
       <div><strong>{step.title}</strong><span className="sr-only">{step.done ? ' (done)' : ''}</span><p>{step.detail}</p></div>
-      {!step.done && <Link className={'button compact ' + (step === next ? 'primary' : 'secondary')} to={step.href} onClick={step.onClick}>{step.action}</Link>}
+      {!step.done && <Link className={'button compact ' + (step === next ? 'primary' : 'secondary')} to={step.href}>{step.action}</Link>}
     </li>)}</ol>
   </section>;
 }
 
-function LowStockCard({ root, base }: { root: string; base: string }) {
+function LowStockCard({ root, base, low }: { root: string; base: string; low: ReturnType<typeof useResource<Page<LowStockRow>>> }) {
   const navigate = useNavigate();
-  const low = useResource<Page<LowStockRow>>(query(base + '/inventory/low-stock', { size: 5 }));
+
   // Open requests show next to the slot they cover, so nobody asks twice.
   const open = useResource<Page<RestockRequest>>(low.data?.items.length ? query(base + '/requests', { filter: 'OPEN', size: 100 }) : null);
   const [requesting, setRequesting] = useState<LowStockRow>();
   const covering = (row: LowStockRow) => open.data?.items.find(request => request.itemId === row.itemId && request.locationId === row.locationId);
   return <section className="panel table-panel home-card" aria-labelledby="low-heading">
     <div className="panel-header"><div><h2 id="low-heading">Low stock</h2><p>Locations below the minimum you set.</p></div>
-      {!!low.data?.totalElements && <Link className="text-button" to={root + '/items?low=1'}>See all {low.data.totalElements}</Link>}</div>
-    <ErrorMessage error={low.error ?? open.error} retry={low.reload} />
+      {!!low.data?.totalElements && <Link className="text-button" to={root + '/items?low=1'}>See all low items</Link>}</div>
+    <ErrorMessage error={low.error ?? open.error} retry={() => { low.reload(); open.reload(); }} />
     {!low.data && !low.error && <Loading variant="list" label="Loading low stock" />}
     {low.data?.items.length === 0 && <p className="panel-body muted">Nothing is below its minimum. Set minimums from an item's stock rows to get warnings here.</p>}
     {!!low.data?.items.length && <ul className="record-list home-list">{low.data.items.map(row => {
       const request = covering(row);
       return <li key={row.itemId + row.locationId}>
         <div className="home-list-main">
-          <Link className="record-link" to={root + '/items/' + row.itemId}>{row.itemName}</Link>
+          <RecordLink from="Home" className="record-link" to={root + '/items/' + row.itemId}>{row.itemName}</RecordLink>
           <span className="cell-secondary">{locationPath(row)}</span>
           <span className="cell-secondary numeric"><strong className="warning-text">{formatQuantity(row.quantity, row.unit)}</strong> of {formatQuantity(row.minimum, row.unit)} · short {formatQuantity(row.shortfall, row.unit)}</span>
         </div>
         {request
-          ? <Link className="button secondary compact" to={root + '/requests/' + request.id}>{request.label} open</Link>
+          ? <RecordLink from="Home" className="button secondary compact" to={root + '/requests/' + request.id}>{request.label} open</RecordLink>
           : <button type="button" className="button secondary compact" disabled={!open.data && !open.error} onClick={() => setRequesting(row)}>Request<span className="sr-only"> {row.itemName} for {locationPath(row)}</span></button>}
       </li>;
     })}</ul>}
@@ -80,23 +83,18 @@ function LowStockCard({ root, base }: { root: string; base: string }) {
 }
 
 function RequestsCard({ root, base, manager }: { root: string; base: string; manager: boolean }) {
-  const summary = useResource<RequestSummary>(base + '/requests/summary');
+
   const filter = manager ? 'NEEDS_REVIEW' : 'MINE';
   const list = useResource<Page<RestockRequest>>(query(base + '/requests', { filter, size: 5 }));
-  const counts = manager
-    ? [{ label: 'Need review', value: summary.data?.needsReview, filter: 'NEEDS_REVIEW' }, { label: 'To receive', value: summary.data?.toReceive, filter: 'TO_RECEIVE' }]
-    : [{ label: 'To receive', value: summary.data?.toReceive, filter: 'TO_RECEIVE' }];
   return <section className="panel table-panel home-card" aria-labelledby="requests-heading">
-    <div className="panel-header"><div><h2 id="requests-heading">Requests</h2><p>{manager ? 'Waiting for your decision, newest first.' : 'What you asked for and where it stands.'}</p></div>
-      <Link className="text-button" to={root + '/requests'}>Open requests</Link></div>
-    <ErrorMessage error={summary.error ?? list.error} retry={() => { summary.reload(); list.reload(); }} />
-    <div className="stat-row">{counts.map(count => <Link key={count.filter} className="stat" to={root + '/requests?filter=' + count.filter}>
-      <span className="stat-value numeric">{count.value ?? '–'}</span><span className="stat-label">{count.label}</span></Link>)}</div>
+    <div className="panel-header"><div><h2 id="requests-heading">{manager ? 'Requests' : 'My requests'}</h2><p>{manager ? 'Waiting for your decision, newest first.' : 'What you asked for and where it stands.'}</p></div>
+      <Link className="text-button" to={root + (manager ? '/requests' : '/requests?filter=MINE')}>Open requests</Link></div>
+    <ErrorMessage error={list.error} retry={list.reload} />
     {!list.data && !list.error && <Loading variant="list" label="Loading requests" />}
     {list.data?.items.length === 0 && <p className="panel-body muted">{manager ? 'No requests are waiting for review.' : 'You have no requests yet. Use Request more on an item when stock runs short.'}</p>}
     {!!list.data?.items.length && <ul className="record-list home-list">{list.data.items.map(request => <li key={request.id}>
       <div className="home-list-main">
-        <Link className="record-link" to={root + '/requests/' + request.id}>{request.label} · {request.itemName}</Link>
+        <RecordLink from="Home" className="record-link" to={root + '/requests/' + request.id}>{request.label} · {request.itemName}</RecordLink>
         <span className="cell-secondary">{locationPath(request)} · {progress(request)} · {ago(request.createdAt)}</span>
       </div>
       <RequestBadge status={request.status} />
@@ -121,17 +119,33 @@ export function HomePage() {
   const root = '/app/organizations/' + organization.id;
   const [requesting, setRequesting] = useState(false);
   const navigate = useNavigate();
+  const low = useResource<Page<LowStockRow>>(query(base + '/inventory/low-stock', { size: 5 }));
+  // The tile links to the Inventory low-stock filter, which lists items, so it counts items rather than low shelves.
+  const lowItems = useResource<Page<Item>>(canEdit ? query(base + '/items', { lowStock: true, size: 1 }) : null);
+  const summary = useResource<RequestSummary>(base + '/requests/summary');
+  const stock = useResource<Page<StockMovement>>(canEdit ? query(base + '/inventory/movements', { size: 1 }) : null);
+  const hasMovements = Boolean(stock.data?.totalElements);
+  const hasWork = hasMovements || Boolean(summary.data?.needsReview);
+  const setup = canEdit && stock.data && summary.data && <Onboarding root={root} base={base} owner={organization.role === 'OWNER'}
+    hasWork={hasWork} hasMovements={hasMovements} />;
   return <>
-    <PageHeader title="Home" description={'What needs attention at ' + organization.name + '.'}>
-      <Link className="button primary" to={root + '/scan'}><Icon name="scan" />Scan</Link>
-      <button type="button" className="button secondary" onClick={() => setRequesting(true)}><Icon name="plus" />Request stock</button>
-    </PageHeader>
-    <div className="home-search"><SearchForm root={root} /></div>
-    {canEdit && <Onboarding root={root} base={base} owner={organization.role === 'OWNER'} />}
-    <div className="home-grid">
-      <LowStockCard root={root} base={base} />
-      <RequestsCard root={root} base={base} manager={canEdit} />
+    <PageHeader title="Home" description={canEdit ? 'What needs attention at ' + organization.name + '.' : 'Find stock or record a delivery.'} />
+    {canEdit && !hasWork && setup}
+    {!canEdit && <div className="shift-search"><SearchForm root={root} /><Link className="button primary" to={root + '/scan'}><Icon name="scan" />Scan</Link></div>}
+    <div className="work-counts">
+      {canEdit ? <>
+        <Link className="stat" to={root + '/requests?filter=NEEDS_REVIEW'}><strong>{summary.data?.needsReview ?? '–'}</strong> Needs review</Link>
+        <Link className="stat" to={root + '/items?low=1'}><strong>{lowItems.data?.totalElements ?? '–'}</strong> Low stock</Link>
+      </> : <Link className="stat" to={root + '/requests?filter=TO_RECEIVE'}><strong>{summary.data?.toReceive ?? '–'}</strong> To receive</Link>}
     </div>
+    <ErrorMessage error={summary.error ?? stock.error ?? lowItems.error} retry={() => { summary.reload(); stock.reload(); lowItems.reload(); }} />
+    {canEdit && <div className="shift-search"><SearchForm root={root} /><Link className="button secondary" to={root + '/scan'}><Icon name="scan" />Scan</Link></div>}
+    <div className="home-grid">
+      <RequestsCard root={root} base={base} manager={canEdit} />
+      <LowStockCard root={root} base={base} low={low} />
+    </div>
+    <button type="button" className="button secondary home-request" onClick={() => setRequesting(true)}><Icon name="plus" />Request stock</button>
+    {hasWork && setup}
     {canEdit && <ActivityCard root={root} base={base} />}
     {requesting && <NewRequestDialog close={() => setRequesting(false)} done={request => navigate(root + '/requests/' + request.id)} />}
   </>;

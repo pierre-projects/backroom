@@ -17,7 +17,7 @@ interface Preview { type: TargetType; id: string; name: string; detail: string; 
 
 /** Choose which labels to print, preview them, and download a print-ready PDF. Owners and Managers only. */
 export function PrintLabelsPage() {
-  const { base, canEdit } = useWorkspace();
+  const { base, canEdit, organization } = useWorkspace();
   const [params, setParams] = useSearchParams();
   const ids = (key: string) => (params.get(key) ?? '').split(',').filter(Boolean);
   const itemIds = ids('items'), locationIds = ids('locations');
@@ -65,6 +65,7 @@ export function PrintLabelsPage() {
       await download(base + '/labels.pdf', 'backroom-labels.pdf', {
         targets: previews.map(preview => ({ type: preview.type, id: preview.id })), layout, startPosition: layout === 'SINGLE' ? 1 : start,
       });
+      try { localStorage.setItem(labelDownloadKey(organization.id), '1'); } catch { /* Downloads also work without browser storage. */ }
       setDone('Saved backroom-labels.pdf. Print it at 100% (Actual size).');
       setRevision(value => value + 1);
     } catch (value) { setError(value); } finally { setPending(false); }
@@ -122,8 +123,10 @@ export function PrintLabelsPage() {
 }
 
 /** "Print labels" selection mode for the Inventory and Locations lists. */
-export function useLabelSelection() {
-  const [selecting, setSelecting] = useState(false);
+export function labelDownloadKey(orgId: string) { return 'backroom.labels.downloaded.' + orgId; }
+
+export function useLabelSelection(initial = false) {
+  const [selecting, setSelecting] = useState(initial);
   const [selected, setSelected] = useState<string[]>([]);
   return {
     selecting, selected,

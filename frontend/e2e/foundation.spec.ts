@@ -142,6 +142,8 @@ test('organization switching, metadata editing, archival and expired sessions', 
   await expect(page.getByRole('heading', { name: 'No items yet', exact: true })).toBeVisible();
   await page.getByRole('link', { name: /Switch business/ }).click();
   await page.getByRole('link').filter({ has: page.getByRole('heading', { name: first, exact: true }) }).click();
+  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Inventory', exact: true }).click();
   await page.getByRole('link', { name: 'Bottle display', exact: true }).click();
   await page.getByRole('button', { name: 'Archive item', exact: true }).click();
   await page.getByRole('button', { name: 'Archive', exact: true }).click();

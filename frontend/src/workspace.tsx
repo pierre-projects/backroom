@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate, useOutletContext, useParams } from 'react-router';
+import { useWorkspacePosition } from './navigation';
 import { useAuth } from './auth';
 import { send } from './api';
 import { Badge, Brand, ErrorMessage, Field, Loading, PageHeader, SuccessMessage, useResource } from './components';
@@ -65,7 +66,7 @@ export function WorkspaceLayout() {
   const auth = useAuth();
   const location = useLocation();
   const [error, setError] = useState<unknown>();
-  useEffect(() => { window.scrollTo(0, 0); }, [location.pathname]);
+  useWorkspacePosition(orgId ?? '');
   // Count on the Requests tab: decisions waiting for managers, deliveries waiting for everyone else. Refreshed on navigation.
   const summary = useResource<RequestSummary>(orgId ? '/organizations/' + orgId + '/requests/summary' : null);
   useEffect(() => { summary.reload(); }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps

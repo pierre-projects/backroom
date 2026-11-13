@@ -51,7 +51,10 @@ export function StockDialog({ action, item, base, balances, locationId, close, d
   const [error, setError] = useState<unknown>();
   const locations = useStockLocations(base);
   const stocked = balances.filter(balance => Number(balance.quantity) > 0);
-  const [from, setFrom] = useState(locationId && stocked.some(slot => slot.locationId === locationId) ? locationId : stocked[0]?.locationId ?? '');
+  const removal = action === 'usage' || action === 'waste';
+  const known = stocked.find(balance => balance.locationId === locationId)
+    ?? (!locationId && stocked.length === 1 ? stocked[0] : undefined);
+  const [from, setFrom] = useState(known?.locationId ?? (removal ? '' : stocked[0]?.locationId ?? ''));
   const slot = balances.find(balance => balance.locationId === locationId);
   const unitLabel = unitShort[item.unit] ? ' (' + unitShort[item.unit] + ')' : '';
   const available = (id: string) => balances.find(balance => balance.locationId === id)?.quantity ?? '0';
@@ -73,8 +76,10 @@ export function StockDialog({ action, item, base, balances, locationId, close, d
         await send<StockOperation>(base + '/inventory/opening-balances', 'POST', { operationKey, itemId: item.id, locationId: target, quantity, note });
         done('Starting quantity at ' + pathOf(target) + ' set to ' + amount);
       } else if (action === 'usage' || action === 'waste') {
-        await send<StockOperation>(base + '/inventory/removals', 'POST', { operationKey, itemId: item.id, locationId: target, quantity, note, reason: action === 'waste' ? 'WASTE' : 'USAGE' });
-        done((action === 'waste' ? 'Recorded ' + amount + ' of waste at ' : 'Used ' + amount + ' from ') + pathOf(target));
+        const operation = await send<StockOperation>(base + '/inventory/removals', 'POST', { operationKey, itemId: item.id, locationId: target, quantity, note, reason: action === 'waste' ? 'WASTE' : 'USAGE' });
+        const movement = operation.movements.find(entry => entry.locationId === target);
+        const balanceText = movement ? '. ' + formatQuantity(movement.balanceAfter, item.unit) + ' on hand there.' : '';
+        done((action === 'waste' ? 'Recorded ' + amount + ' of waste at ' : 'Used ' + amount + ' from ') + pathOf(target) + balanceText);
       } else if (action === 'transfer') {
         const to = String(form.get('toLocationId'));
         await send<StockOperation>(base + '/inventory/transfers', 'POST', { operationKey, itemId: item.id, fromLocationId: from, toLocationId: to, quantity, note });
@@ -88,7 +93,7 @@ export function StockDialog({ action, item, base, balances, locationId, close, d
   }
 
   const quantityField = (label: string, hint?: string) => <Field label={label + unitLabel}>
-    <input name="quantity" inputMode={item.unit === 'EACH' ? 'numeric' : 'decimal'} autoComplete="off" required
+    <input name="quantity" data-autofocus={removal && known ? true : undefined} inputMode={item.unit === 'EACH' ? 'numeric' : 'decimal'} autoComplete="off" required
       pattern={item.unit === 'EACH' ? '[0-9]+' : '[0-9]+([.,][0-9]{1,3})?'} title={item.unit === 'EACH' ? 'Whole numbers only' : 'Up to three decimal places'} />
     {hint && <small>{hint}</small>}
   </Field>;
@@ -109,9 +114,12 @@ export function StockDialog({ action, item, base, balances, locationId, close, d
       : noLocations ? <p className="muted">Create a shelf, cabinet or bin in Locations first.</p>
       : <form onSubmit={submit}>
         {(action === 'receive' || action === 'opening') && destinationChoices('locationId', 'Location')}
-        {(action === 'usage' || action === 'waste') && <Field label="From">
-          <select name="locationId" required defaultValue={from}>{stocked.map(balance => <option key={balance.locationId} value={balance.locationId}>{locationPath(balance)} · {formatQuantity(balance.quantity, item.unit)}</option>)}</select>
-        </Field>}
+        {removal && (known ? <div className="count-summary"><span>From <strong>{locationPath(known)}</strong></span>
+          <span>{formatQuantity(known.quantity, item.unit)} available</span><input type="hidden" name="locationId" value={known.locationId} /></div>
+          : <Field label="From"><select name="locationId" required value={from} onChange={event => setFrom(event.target.value)}>
+            <option value="">Choose a shelf</option>
+            {stocked.map(balance => <option key={balance.locationId} value={balance.locationId}>{locationPath(balance)} · {formatQuantity(balance.quantity, item.unit)}</option>)}
+          </select></Field>)}
         {action === 'transfer' && <>
           <Field label="From"><select name="fromLocationId" required value={from} onChange={event => setFrom(event.target.value)}>
             {stocked.map(balance => <option key={balance.locationId} value={balance.locationId}>{locationPath(balance)} · {formatQuantity(balance.quantity, item.unit)}</option>)}
@@ -128,6 +136,17 @@ export function StockDialog({ action, item, base, balances, locationId, close, d
           <button className="button primary" disabled={pending || !locations.leaves}>{pending ? 'Saving…' : titles[action]}</button></div>
       </form>}
   </Dialog>;
+}
+
+export function StockRowActions({ quantity, subject, open }: {
+  quantity: string; subject: string; open: (action?: 'usage' | 'receive') => void;
+}) {
+  const stocked = Number(quantity) > 0;
+  return <div className="stock-row-actions">
+    <button type="button" className="button secondary compact raise" onClick={() => open(stocked ? 'usage' : 'receive')}>
+      {stocked ? 'Record usage' : 'Receive stock'}<span className="sr-only"> {subject}</span></button>
+    <button type="button" className="text-button raise" onClick={() => open()}>More actions<span className="sr-only"> {subject}</span></button>
+  </div>;
 }
 
 /** Choices for one location row. Employees record usage, waste and receipts; managers also transfer, count and set starting stock. */

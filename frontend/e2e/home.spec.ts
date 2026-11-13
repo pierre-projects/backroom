@@ -44,11 +44,12 @@ test('Home guides setup, flags low stock, searches, exports and recovers a passw
   const milk = await owner<{ id: string }>('POST', base + '/items', { name: 'Oat milk', sku: 'OAT-01', unit: 'LITER' });
   await owner('POST', base + '/inventory/receipts', { operationKey: crypto.randomUUID(), itemId: milk.id, locationId: shelf.id, quantity: '3' });
   await page.reload();
+  await page.getByRole('button', { name: 'Expand', exact: true }).click();
   await expect(setup.getByText('3 of 5 done', { exact: false })).toBeVisible();
 
   // Setting a minimum from the item page makes the slot low.
   await page.goto(root + '/items/' + milk.id);
-  await page.getByRole('button', { name: 'Update Stockroom › Shelf A' }).click();
+  await page.getByRole('button', { name: 'More actions Stockroom › Shelf A' }).click();
   await page.getByRole('button', { name: /^Set minimum/ }).click();
   const minimum = page.getByRole('dialog', { name: 'Set a minimum' });
   await minimum.getByLabel('Keep at least (L)', { exact: true }).fill('5');
@@ -68,6 +69,9 @@ test('Home guides setup, flags low stock, searches, exports and recovers a passw
   await page.goto(root + '/home');
   await expect(low.getByRole('link', { name: 'R-1 open', exact: true })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Requests' }).getByRole('link', { name: /R-1 · Oat milk/ })).toBeVisible();
+  // The count tiles say what their lists show: one request to review, one low item.
+  await expect(page.getByRole('link', { name: '1 Needs review', exact: true })).toBeVisible();
+  await expect(page.getByRole('link', { name: '1 Low stock', exact: true })).toBeVisible();
 
   // The Inventory low-stock filter agrees.
   await low.getByRole('link', { name: /^See all/ }).click();

@@ -68,9 +68,9 @@ export function SuccessMessage({ children }: { children: ReactNode }) {
 export function Empty({ title, children, icon = 'box', action }: { title: string; children: ReactNode; icon?: IconName; action?: ReactNode }) {
   return <div className="empty-state"><div className="empty-icon"><Icon name={icon} /></div><h2>{title}</h2><p>{children}</p>{action}</div>;
 }
-export function PageHeader({ title, children, description, back }: { title: string; description?: string; children?: ReactNode; back?: { to: string; label: string } }) {
+export function PageHeader({ title, children, description, back }: { title: string; description?: string; children?: ReactNode; back?: { to: string; label: string; onClick?: React.MouseEventHandler<HTMLAnchorElement> } }) {
   return <div className="page-heading">
-    {back && <Link className="back-link" to={back.to}><Icon name="chevronLeft" className="small" />{back.label}</Link>}
+    {back && <Link className="back-link" to={back.to} onClick={back.onClick}><Icon name="chevronLeft" className="small" />{back.label}</Link>}
     <div className="page-heading-row"><div className="page-heading-text"><h1>{title}</h1>{description && <p className="page-description">{description}</p>}</div>{children && <div className="page-actions">{children}</div>}</div>
   </div>;
 }

@@ -1,6 +1,7 @@
+import { RecordLink, useRecordNavigation } from './navigation';
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { api, send } from './api';
 import { Badge, Dialog, ErrorMessage, Field, PageHeader } from './components';
 import { Icon } from './icons';
@@ -42,6 +43,7 @@ const problems: Record<CameraProblem, { title: string; text: string }> = {
 };
 
 export function ScanPage() {
+  const nav = useRecordNavigation();
   const { base, organization } = useWorkspace();
   const root = '/app/organizations/' + organization.id;
   const video = useRef<HTMLVideoElement>(null);
@@ -49,14 +51,15 @@ export function ScanPage() {
   const timer = useRef<number | undefined>(undefined);
   const [phase, setPhase] = useState<'idle' | 'starting' | 'scanning' | 'paused'>('idle');
   const [problem, setProblem] = useState<CameraProblem>();
-  const [result, setResult] = useState<ScanResult>();
-  const [scanned, setScanned] = useState<{ value: string; format?: string }>();
+  const [result, setResult] = useState<ScanResult | undefined>(nav.restoredScan?.result);
+  const [scanned, setScanned] = useState<{ value: string; format?: string } | undefined>(nav.restoredScan?.scanned);
   const [error, setError] = useState<unknown>();
   const [resolving, setResolving] = useState(false);
-  const [matches, setMatches] = useState<Item[]>();
+  const [matches, setMatches] = useState<Item[] | undefined>(nav.restoredScan?.matches);
   const [linking, setLinking] = useState(false);
   const resultArea = useRef<HTMLDivElement>(null);
 
+  useEffect(() => { nav.rememberScan({ result, scanned, matches }); }, [result, scanned, matches]);
   const stopCamera = () => {
     window.clearTimeout(timer.current);
     stream.current?.getTracks().forEach(track => track.stop());
@@ -156,7 +159,7 @@ export function ScanPage() {
         {matches && <div className="panel table-panel">
           <div className="panel-header"><div><h2>Items matching “{scanned?.value}”</h2></div></div>
           {matches.length === 0 ? <p className="panel-body muted">No items with that name or SKU.</p> : <ul className="record-list match-list">{matches.map(item =>
-            <li key={item.id}><Link className="record-link" to={root + '/items/' + item.id}>{item.name}</Link><span className="muted">{item.sku ?? unitNames[item.unit]}</span></li>)}</ul>}
+            <li key={item.id}><RecordLink from="scan result" className="record-link" to={root + '/items/' + item.id}>{item.name}</RecordLink><span className="muted">{item.sku ?? unitNames[item.unit]}</span></li>)}</ul>}
         </div>}
         {(result || matches) && <button type="button" className="button primary full-width" onClick={scanAgain}><Icon name="scan" />Scan again</button>}
         </div>
@@ -172,7 +175,7 @@ export function ScanPage() {
 }
 
 function ResultCard({ result, scanned, root, linkBarcode }: { result: ScanResult; scanned: string; root: string; linkBarcode: () => void }) {
-  const navigate = useNavigate();
+  const nav = useRecordNavigation();
   if (result.status === 'ITEM' || result.status === 'LOCATION') {
     const item = result.status === 'ITEM';
     const href = root + (item ? '/items/' : '/locations/') + result.id;
@@ -182,11 +185,11 @@ function ResultCard({ result, scanned, root, linkBarcode }: { result: ScanResult
       <p className="muted">{item ? [result.sku, result.unit ? unitNames[result.unit] : null].filter(Boolean).join(' · ') : result.parentName ? 'in ' + result.parentName : 'Top-level location'}</p>
       {result.archived ? <p><Badge tone="warning">Archived</Badge> <span className="muted">You can view it, but stock can't change.</span></p>
         : <div className="result-actions">
-          <Link className="button primary" to={href}>{item ? 'Open item' : 'Open location'}</Link>
+          <RecordLink from="scan result" className="button primary" to={href}>{item ? 'Open item' : 'Open location'}</RecordLink>
           {item && <>
-            <button type="button" className="button secondary" onClick={() => navigate(href + '?action=usage')}><Icon name="use" />Record usage</button>
-            <button type="button" className="button secondary" onClick={() => navigate(href + '?action=receive')}><Icon name="receive" />Receive</button>
-            <button type="button" className="button secondary" onClick={() => navigate(href + '?action=request')}><Icon name="plus" />Request restock</button>
+            <button type="button" className="button secondary" data-return-target={href + '?action=usage'} onClick={() => nav.visit(href + '?action=usage', 'scan result', href + '?action=usage')}><Icon name="use" />Record usage</button>
+            <button type="button" className="button secondary" data-return-target={href + '?action=receive'} onClick={() => nav.visit(href + '?action=receive', 'scan result', href + '?action=receive')}><Icon name="receive" />Receive</button>
+            <button type="button" className="button secondary" data-return-target={href + '?action=request'} onClick={() => nav.visit(href + '?action=request', 'scan result', href + '?action=request')}><Icon name="plus" />Request restock</button>
           </>}
         </div>}
     </div>;

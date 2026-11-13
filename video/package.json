@@ -1,0 +1,16 @@
+{
+  "name": "backroom-product-film",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "studio": "remotion studio src/index.jsx",
+    "render": "remotion render src/index.jsx BackroomDemo out/backroom-demo.mp4 --codec=h264 --pixel-format=yuv420p --crf=18 --overwrite",
+    "capture": "node scripts/capture.mjs"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.543",
+    "remotion": "4.0.543",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  }
+}

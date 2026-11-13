@@ -2,12 +2,13 @@
 
 ## What is available
 
-- **Home.** Every business opens on Home, which shows:
-  - a search field;
+- **Home.** Every business opens on Home, including from the business chooser. It shows:
+  - **count tiles** first: **Needs review** and **Low stock** (items) for Owners and Managers, **To receive** for Employees, each linking to the list it counts;
+  - a search field with **Scan** (first on the page for Employees);
   - **Low stock**: the first five locations below their minimum, each with what is missing and a **Request** button, or a link to the request already open for it;
-  - **Requests**: counts that link to the filtered list, plus requests waiting for review (Owners and Managers) or your own requests (Employees);
+  - **Requests** waiting for review (Owners and Managers) or **My requests** (Employees);
   - **Recent activity** (Owners and Managers);
-  - **Set up** checklist (Owners and Managers): add locations, add items, record stock, print labels and scan one, invite your team (Owners). Steps tick themselves from the business's data. Printing is remembered per browser, because the server doesn't record prints. **Hide** dismisses the checklist in that browser.
+  - **Set up** checklist (Owners and Managers): add locations, add items, record stock, download a label, invite your team (Owners). Steps tick themselves from the business's data; **Download a label** ticks only after a label PDF downloads in that browser, because the server doesn't record prints. A new business sees it expanded at the top. Once there is stock or a request to review it collapses to "Continue setup · n remaining" below the work.
 - **Low-stock minimums.** Each item can have a minimum at each of its locations ("keep at least 5 L on Stockroom › Shelf A").
   - A location is **low** when its quantity is below the minimum. Exactly at the minimum is not low.
   - Owners and Managers set, change or remove a minimum from an item's stock row (**Update** → **Set minimum**).
@@ -121,9 +122,20 @@ All business routes are under `/api/v1/organizations/{orgId}`.
   - the checklist counts setup progress;
   - a minimum set from the item page makes Home show low stock;
   - **Request** creates a request prefilled with the shortfall, and Home then links to it;
-  - **See all** opens the filtered Inventory;
+  - the **Needs review** and **Low stock** tiles count what their lists show;
+  - **See all low items** opens the filtered Inventory;
   - search finds the item by SKU;
   - Export data downloads a stock CSV with the right rows;
   - an Owner issues a reset link, the employee sets a new password from it, and the employee's phone session is sent back to sign-in;
   - no horizontal scroll at 390 px.
-- `foundation.spec.ts` now expects Home after creating or joining a business.
+- `foundation.spec.ts` now expects Home after creating, joining or reopening a business.
+- `inventory.spec.ts` records usage straight from a stocked row (shelf known, quantity focused, "7.5 L on hand there") and checks that an employee's **More actions** sheet has no manager actions.
+
+## Follow-up: direct stock actions and return navigation
+
+The [UX audit](../design-plans/README.md) and its [redesign](../design-plans/redesign.md) changed the frontend only (no endpoint, migration or permission change):
+
+- Stock rows on items and shelves offer **Record usage** or **Receive stock** directly, with the old sheet under **More actions**. Usage and waste never preselect a shelf they can't know.
+- Back links return to the list, search or scan result that opened a record, restoring filters, page, scroll and focus (`frontend/src/navigation.tsx`). Inventory keeps `q`, `location`, `low`, `archived` and `page` in the address.
+- **See stock history** on a delivery scrolls to and focuses the item's History.
+- Invitation role descriptions now list what Employees and Managers can actually do.

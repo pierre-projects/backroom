@@ -1,3 +1,4 @@
+import { RecordLink, useRecordNavigation } from './navigation';
 import { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
@@ -61,13 +62,13 @@ export function RequestsPage() {
     {requests.data && (requests.data.items.length === 0
       ? <Empty icon="receive" title={filterNames[filter]}>{empty[filter]}</Empty>
       : <div className="panel table-panel"><ul className="request-list">{requests.data.items.map(request => <li key={request.id}>
-        <Link className="request-row" to={root + '/requests/' + request.id}>
+        <RecordLink from="Requests" className="request-row" to={root + '/requests/' + request.id}>
           <span className="request-main"><span className="request-title"><span className="mono request-label">{request.label}</span><strong>{request.itemName}</strong></span>
             <span className="cell-secondary">{path(request)} · {progress(request)}</span>
             <span className="cell-secondary">{request.requesterName} · {ago(request.createdAt)}</span></span>
           <RequestBadge status={request.status} />
           <Icon name="chevronRight" />
-        </Link></li>)}</ul>
+        </RecordLink></li>)}</ul>
         <Pager data={requests.data} onPage={setPage} /></div>)}
     {creating && <NewRequestDialog close={() => setCreating(false)} done={request => navigate(root + '/requests/' + request.id)} />}
   </>;
@@ -142,6 +143,7 @@ export function NewRequestDialog({ item, locationId, quantity, close, done }: {
 type RequestAction = 'approve' | 'reject' | 'cancel' | 'receive' | 'close';
 
 export function RequestDetailPage() {
+  const nav = useRecordNavigation();
   const { requestId } = useParams();
   const { base, canEdit, organization } = useWorkspace();
   const auth = useAuth();
@@ -158,7 +160,7 @@ export function RequestDetailPage() {
   const finished = (message: string) => { setAction(undefined); setStatus(message); request.reload(); };
   const quantity = (text: string | null) => text === null ? '—' : formatQuantity(text, unit);
   return <>
-    <PageHeader back={{ to: root + '/requests', label: 'Requests' }} title={value.label + ' · ' + value.itemName}>
+    <PageHeader back={nav.back({ to: root + '/requests', label: 'Requests' })} title={value.label + ' · ' + value.itemName}>
       {receiving && !value.itemArchived && <button type="button" className="button primary" onClick={() => setAction('receive')}><Icon name="receive" />Record delivery</button>}
       {canEdit && value.status === 'SUBMITTED' && <><button type="button" className="button primary" onClick={() => setAction('approve')}>Approve</button>
         <button type="button" className="button secondary" onClick={() => setAction('reject')}>Reject</button></>}
@@ -176,8 +178,8 @@ export function RequestDetailPage() {
     <section className="panel" aria-labelledby="request-about">
       <h2 className="section-heading" id="request-about">Details</h2>
       <dl className="facts-list">
-        <div><dt>Item</dt><dd><Link to={root + '/items/' + value.itemId}>{value.itemName}</Link>{value.sku && <span className="muted mono"> {value.sku}</span>}</dd></div>
-        <div><dt>Deliver to</dt><dd><Link to={root + '/locations/' + value.locationId}>{path(value)}</Link></dd></div>
+        <div><dt>Item</dt><dd><RecordLink from={value.label} to={root + '/items/' + value.itemId}>{value.itemName}</RecordLink>{value.sku && <span className="muted mono"> {value.sku}</span>}</dd></div>
+        <div><dt>Deliver to</dt><dd><RecordLink from={value.label} to={root + '/locations/' + value.locationId}>{path(value)}</RecordLink></dd></div>
         {value.note && <div><dt>Note</dt><dd>{value.note}</dd></div>}
       </dl>
     </section>
@@ -190,7 +192,7 @@ export function RequestDetailPage() {
           detail={value.decisionNote} />}
         {value.receipts.map(receipt => <TimelineEntry key={receipt.id} icon="receive" who={receipt.receiverName} when={receipt.receivedAt}
           title={'Delivery of ' + quantity(receipt.quantity)} detail={receipt.reversed ? 'Reversed in stock history; no longer counted.' : undefined}
-          extra={<Link to={root + '/items/' + value.itemId}>See stock history</Link>} muted={receipt.reversed} />)}
+          extra={<RecordLink from={value.label} to={root + '/items/' + value.itemId + '#history-heading'}>See stock history</RecordLink>} muted={receipt.reversed} />)}
         {value.closedAt && <TimelineEntry icon="close" who={value.closedByName} when={value.closedAt}
           title={value.status === 'CANCELLED' ? 'Cancelled' : 'Closed short at ' + quantity(value.received)} detail={value.closeReason} />}
       </ol>

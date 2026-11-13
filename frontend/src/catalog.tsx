@@ -1,3 +1,4 @@
+import { RecordLink, useRecordNavigation } from './navigation';
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
@@ -6,7 +7,7 @@ import { Badge, Dialog, Empty, ErrorMessage, Field, Loading, PageHeader, Pager, 
 import { Icon } from './icons';
 import type { Item, Page, StockBalance, StockMovement } from './types';
 import { unitNames } from './types';
-import { MinimumDialog, MinimumNote, MovementList, ReverseDialog, SlotSheet, StockDialog, formatQuantity, locationPath, shortfall, useStockLocations } from './stock';
+import { MinimumDialog, MinimumNote, MovementList, ReverseDialog, SlotSheet, StockDialog, StockRowActions, formatQuantity, locationPath, shortfall, useStockLocations } from './stock';
 import type { StockAction } from './stock';
 import { CodesPanel } from './codes';
 import { ItemRequestsPanel, NewRequestDialog } from './requests';
@@ -39,19 +40,21 @@ function ItemForm({ item, saved, cancel, unitLocked = false }: { item?: Item; sa
 
 export function CatalogPage() {
   const { base, canEdit, organization } = useWorkspace();
-  const [page, setPage] = useState(0);
-  const [q, setQ] = useState('');
-  const [archived, setArchived] = useState(false);
   const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
+  const rawPage = Number(params.get('page'));
+  const page = Number.isSafeInteger(rawPage) && rawPage > 0 && rawPage <= 2147483647 ? rawPage : 0;
+  const q = params.get('q') ?? '';
+  const archived = params.get('archived') === '1';
   const lowOnly = params.get('low') === '1';
   const at = params.get('location') ?? '';
   const places = useStockLocations(base);
-  const setFilter = (name: 'low' | 'location', value: string) => {
+  const setFilter = (name: 'low' | 'location' | 'q' | 'archived' | 'page', value: string) => {
     const next = new URLSearchParams(params);
     if (value) next.set(name, value); else next.delete(name);
-    setParams(next, { replace: true }); setPage(0);
+    if (name !== 'page') next.delete('page');
+    setParams(next, { replace: true });
   };
   const setLowOnly = (value: boolean) => setFilter('low', value ? '1' : '');
   const items = useResource<Page<Item>>(query(base + '/items', { page, q, includeArchived: archived, lowStock: lowOnly || undefined, locationId: at || undefined }));
@@ -61,46 +64,52 @@ export function CatalogPage() {
   return <>
     <PageHeader title="Inventory" description="What you stock, how much, and where.">{canEdit && <>{addButton}<button type="button" className="button secondary" aria-pressed={selection.selecting} onClick={selection.toggleMode}><Icon name="label" />{selection.selecting ? 'Cancel' : 'Print labels'}</button></>}</PageHeader>
     {selection.selecting && <SelectionBar count={selection.selected.length} noun="item" href={root + '/labels?items=' + selection.selected.join(',')} />}
-    <div className="toolbar">
-      <form className="search-form" role="search" onSubmit={event => { event.preventDefault(); setQ(String(new FormData(event.currentTarget).get('search')).trim()); setPage(0); }}>
-        <div className="search-input"><Icon name="search" /><input name="search" type="search" aria-label="Search inventory" placeholder="Search by name or SKU" defaultValue={q} key={q} /></div>
-        <button className="button secondary">Search</button>
-      </form>
-      <select className="toolbar-select" aria-label="Filter by location" value={at} onChange={event => setFilter('location', event.target.value)}>
-        <option value="">All locations</option>
-        {places.leaves?.map(choice => <option key={choice.id} value={choice.id}>{choice.label}</option>)}
-      </select>
-      <label className="checkbox"><input type="checkbox" checked={lowOnly} onChange={event => setLowOnly(event.target.checked)} /> Low stock only</label>
-      <label className="checkbox"><input type="checkbox" checked={archived} onChange={event => { setArchived(event.target.checked); setPage(0); }} /> Include archived</label>
-    </div>
-    <ErrorMessage error={items.error} retry={items.reload} />
-    {!items.data && !items.error && <div className="panel table-panel"><Loading variant="list" label="Loading items" /></div>}
-    {items.data && (items.data.items.length ? <div className="panel table-panel">
-      <table className="data-table">
-        <thead><tr><th scope="col">Item</th><th scope="col">SKU</th><th scope="col" className="cell-number">On hand</th><th scope="col"><span className="sr-only">Open</span></th></tr></thead>
-        <tbody>{items.data.items.map(item => <tr key={item.id} className={selection.selecting ? 'selectable' : 'linked'}>
-          <td><span className="name-line">{selection.selecting
-            ? <label className="select-line"><input type="checkbox" checked={selection.selected.includes(item.id)} disabled={item.archived} onChange={() => selection.toggle(item.id)} /><span className="record-link">{item.name}</span></label>
-            : <Link className="record-link" to={root + '/items/' + item.id}>{item.name}</Link>}{item.archived && <Badge>Archived</Badge>}{item.low && !item.archived && <Badge tone="warning">Low</Badge>}</span>
-            <span className="cell-secondary mobile-only">{item.sku ? <span className="mono">{item.sku}</span> : 'No SKU'} · <span className="numeric">{formatQuantity(item.onHand, item.unit)}</span> on hand</span></td>
-          <td className="desktop-only mono">{item.sku ?? <><span aria-hidden="true">—</span><span className="sr-only">No SKU</span></>}</td>
-          <td className="desktop-only cell-number numeric">{formatQuantity(item.onHand, item.unit)}</td>
-          <td className="cell-chevron"><Icon name="chevronRight" /></td>
-        </tr>)}</tbody>
-      </table>
-      <Pager data={items.data} onPage={setPage} />
-    </div> : at && !q && !lowOnly
-      ? <Empty icon="location" title={'Nothing is kept at ' + places.label(at)} action={<button type="button" className="button secondary" onClick={() => setFilter('location', '')}>Show all locations</button>}>Items appear here once they have stock or an expected place at this location.</Empty>
-      : lowOnly && !q
-      ? <Empty icon="catalog" title="Nothing is low" action={<button type="button" className="button secondary" onClick={() => setLowOnly(false)}>Show all items</button>}>Items show here when a location drops below its minimum. Set minimums from an item's stock rows.</Empty>
-      : q
-      ? <Empty icon="search" title={'No items match “' + q + '”'} action={<button type="button" className="button secondary" onClick={() => { setQ(''); setPage(0); }}>Clear search</button>}>Check the spelling, or search by SKU instead.</Empty>
-      : <Empty icon="catalog" title="No items yet" action={canEdit ? undefined : <Link className="button secondary" to={root + '/locations'}>View locations</Link>}>{canEdit ? 'Use Add item to create your first one and choose the unit you count it in.' : 'Items your team adds will appear here.'}</Empty>)}
+    <section className="inventory-browser" aria-label="Inventory results">
+      <div className="inventory-tools">
+        <form className="search-form" role="search" onSubmit={event => { event.preventDefault(); setFilter('q', String(new FormData(event.currentTarget).get('search')).trim()); }}>
+          <div className="search-input"><Icon name="search" /><input name="search" type="search" aria-label="Search inventory" placeholder="Search by name or SKU" defaultValue={q} key={q} /></div>
+          <button className="button secondary">Search</button>
+        </form>
+        <div className="inventory-filters">
+          <select className="toolbar-select" aria-label="Filter by location" value={at} onChange={event => setFilter('location', event.target.value)}>
+            <option value="">All locations</option>
+            {places.leaves?.map(choice => <option key={choice.id} value={choice.id}>{choice.label}</option>)}
+          </select>
+          <label className="checkbox"><input type="checkbox" checked={lowOnly} onChange={event => setLowOnly(event.target.checked)} /> Low stock only</label>
+          <label className="checkbox"><input type="checkbox" checked={archived} onChange={event => { setFilter('archived', event.target.checked ? '1' : ''); }} /> Include archived</label>
+        </div>
+      </div>
+      <ErrorMessage error={items.error} retry={items.reload} />
+      {!items.data && !items.error && <div className="panel table-panel"><Loading variant="list" label="Loading items" /></div>}
+      {items.data && (items.data.items.length ? <div className="panel table-panel">
+        <div className="inventory-count">{items.data.totalElements} {items.data.totalElements === 1 ? 'item' : 'items'}</div>
+        <table className="data-table inventory-table">
+          <thead><tr><th scope="col">Item</th><th scope="col">SKU</th><th scope="col" className="cell-number">On hand</th><th scope="col"><span className="sr-only">Open</span></th></tr></thead>
+          <tbody>{items.data.items.map(item => <tr key={item.id} className={selection.selecting ? 'selectable' : 'linked'}>
+            <td><span className="name-line">{selection.selecting
+              ? <label className="select-line"><input type="checkbox" checked={selection.selected.includes(item.id)} disabled={item.archived} onChange={() => selection.toggle(item.id)} /><span className="record-link">{item.name}</span></label>
+              : <RecordLink from="Inventory" className="record-link" to={root + '/items/' + item.id}>{item.name}</RecordLink>}{item.archived && <Badge>Archived</Badge>}{item.low && !item.archived && <Badge tone="warning">Low</Badge>}</span>
+              <span className="cell-secondary mobile-only">{item.sku ? <span className="mono">{item.sku}</span> : 'No SKU'}</span></td>
+            <td className="desktop-only mono">{item.sku ?? <><span aria-hidden="true">—</span><span className="sr-only">No SKU</span></>}</td>
+            <td className="cell-number numeric inventory-quantity">{formatQuantity(item.onHand, item.unit)}<span className="cell-secondary mobile-only"> on hand</span></td>
+            <td className="cell-chevron"><Icon name="chevronRight" /></td>
+          </tr>)}</tbody>
+        </table>
+        <Pager data={items.data} onPage={number => setFilter('page', number ? String(number) : '')} />
+      </div> : at && !q && !lowOnly
+        ? <Empty icon="location" title={'Nothing is kept at ' + places.label(at)} action={<button type="button" className="button secondary" onClick={() => setFilter('location', '')}>Show all locations</button>}>Items appear here once they have stock or an expected place at this location.</Empty>
+        : lowOnly && !q
+        ? <Empty icon="catalog" title="Nothing is low" action={<button type="button" className="button secondary" onClick={() => setLowOnly(false)}>Show all items</button>}>Items show here when a location drops below its minimum. Set minimums from an item's stock rows.</Empty>
+        : q
+        ? <Empty icon="search" title={'No items match “' + q + '”'} action={<button type="button" className="button secondary" onClick={() => { setFilter('q', ''); }}>Clear search</button>}>Check the spelling, or search by SKU instead.</Empty>
+        : <Empty icon="catalog" title="No items yet" action={canEdit ? undefined : <Link className="button secondary" to={root + '/locations'}>View locations</Link>}>{canEdit ? 'Use Add item to create your first one and choose the unit you count it in.' : 'Items your team adds will appear here.'}</Empty>)}
+    </section>
     {creating && <Dialog title="Add item" close={() => setCreating(false)}><ItemForm cancel={() => setCreating(false)} saved={item => navigate(root + '/items/' + item.id)} /></Dialog>}
   </>;
 }
 
 export function ItemDetail() {
+  const nav = useRecordNavigation();
   const { itemId } = useParams();
   const { base, canEdit, organization } = useWorkspace();
   const navigate = useNavigate();
@@ -129,7 +138,7 @@ export function ItemDetail() {
     if (!requested || !item.data || !balances.data) return;
     if ((requested === 'usage' || requested === 'receive' || requested === 'waste') && !item.data.archived) setAction({ kind: requested });
     if (requested === 'request' && !item.data.archived) setRequesting({});
-    setSearchParams({}, { replace: true });
+    setSearchParams({}, { replace: true, state: nav.current.state });
   }, [requested, item.data, balances.data, setSearchParams]);
   const finished = (message: string) => { setAction(undefined); setReversing(undefined); setMinimum(undefined); setStatus(message); refresh(); };
   async function mutate(path: string, method: string, data?: unknown, message = '') {
@@ -152,13 +161,13 @@ export function ItemDetail() {
   const unitLocked = slots.some(slot => slot.hasHistory) || (history.data?.totalElements ?? 0) > 0;
   const unplaced = locations.leaves?.filter(choice => !slots.some(slot => slot.locationId === choice.id)) ?? [];
   return <>
-    <PageHeader back={{ to: root + '/items', label: 'Inventory' }} title={value.name}>
-      {!value.archived && <button type="button" className="button primary" onClick={() => setAction({ kind: 'receive' })}><Icon name="receive" />Receive stock</button>}
+    <PageHeader back={nav.back({ to: root + '/items', label: 'Inventory' })} title={value.name}>
+      {!value.archived && hasStock && <button type="button" className="button primary" onClick={() => setAction({ kind: 'usage' })}><Icon name="use" />Record usage</button>}
+      {!value.archived && <button type="button" className={'button ' + (hasStock ? 'secondary' : 'primary')} onClick={() => setAction({ kind: 'receive' })}><Icon name="receive" />Receive stock</button>}
       {!value.archived && <button type="button" className="button secondary" onClick={() => setRequesting({})}><Icon name="plus" />Request more</button>}
       {editable && hasStock && <button type="button" className="button secondary" onClick={() => setAction({ kind: 'transfer' })}><Icon name="transfer" />Transfer</button>}
-      {editable && <><button type="button" className="button secondary" onClick={() => setEditing(true)}>Edit item</button><button type="button" className="button secondary" onClick={() => setArchiving(true)}>Archive item</button></>}
     </PageHeader>
-    <dl className="detail-grid">
+    <dl className="detail-grid stock-summary">
       <div><dt>On hand</dt><dd className="numeric detail-total">{formatQuantity(value.onHand, value.unit)}</dd></div>
       <div><dt>SKU</dt><dd className="mono">{value.sku ?? 'Not set'}</dd></div>
       <div><dt>Base unit</dt><dd>{unitNames[value.unit]}</dd></div>
@@ -174,11 +183,12 @@ export function ItemDetail() {
       {!!slots.length && <table className="data-table">
         <thead><tr><th scope="col">Location</th><th scope="col" className="cell-number">On hand</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
         <tbody>{slots.map(slot => <tr key={slot.locationId}>
-          <td><span className="location-path">{slot.parentName && <span className="location-parent">{slot.parentName}<span aria-hidden="true"> ›</span></span>}<Link className="record-link" to={root + '/locations/' + slot.locationId}>{slot.locationName}</Link></span>
+          <td><span className="location-path">{slot.parentName && <span className="location-parent">{slot.parentName}<span aria-hidden="true"> ›</span></span>}<RecordLink from={value.name} className="record-link" to={root + '/locations/' + slot.locationId}>{slot.locationName}</RecordLink></span>
             <span className="cell-secondary mobile-only numeric">{formatQuantity(slot.quantity, value.unit)} on hand</span>
             <MinimumNote slot={slot} unit={value.unit} /></td>
           <td className="desktop-only cell-number numeric">{formatQuantity(slot.quantity, value.unit)}</td>
-          <td className="cell-actions">{!value.archived && <button type="button" className="button secondary compact" onClick={() => setSheet(slot)}>Update<span className="sr-only"> {locationPath(slot)}</span></button>}</td>
+          <td className="cell-actions stock-actions-cell">{!value.archived && <StockRowActions quantity={slot.quantity} subject={locationPath(slot)}
+            open={kind => kind ? setAction({ kind, locationId: slot.locationId }) : setSheet(slot)} /> }</td>
         </tr>)}</tbody>
       </table>}
       {editable && <div className="panel-footer">
@@ -193,13 +203,18 @@ export function ItemDetail() {
     {!value.archived && <ItemRequestsPanel itemId={value.id} />}
     <CodesPanel type="ITEM" targetId={value.id} archived={value.archived} />
     <section className="panel table-panel" aria-labelledby="history-heading">
-      <div className="panel-header"><div><h2 id="history-heading">History</h2><p>Every change to this item's stock, newest first.</p></div></div>
+      <div className="panel-header"><div><h2 id="history-heading" tabIndex={-1}>History</h2><p>Every change to this item's stock, newest first.</p></div></div>
       <ErrorMessage error={history.error} retry={history.reload} />
       {!history.data && !history.error && <Loading variant="list" label="Loading history" />}
       {history.data?.items.length === 0 && <p className="panel-body muted">No stock has been recorded yet.</p>}
       {history.data && <MovementList movements={history.data.items} unit={value.unit} canReverse={editable} reverse={setReversing} />}
       {history.data && <Pager data={history.data} onPage={setHistoryPage} />}
     </section>
+    {editable && <section className="item-management" aria-labelledby="manage-heading">
+      <h2 id="manage-heading">Manage item</h2>
+      <button type="button" className="button secondary" onClick={() => setEditing(true)}>Edit item</button>
+      <button type="button" className="button ghost" onClick={() => setArchiving(true)}>Archive item</button>
+    </section>}
     {requesting && <NewRequestDialog item={{ id: value.id, name: value.name, unit: value.unit }} locationId={requesting.locationId} quantity={requesting.quantity} close={() => setRequesting(undefined)}
       done={request => navigate(root + '/requests/' + request.id)} />}
     {sheet && <SlotSheet slot={sheet} item={value} canManage={editable} close={() => setSheet(undefined)} request={() => { const slot = sheet; setSheet(undefined); setRequesting({ locationId: slot.locationId, quantity: shortfall(slot) ?? undefined }); }}

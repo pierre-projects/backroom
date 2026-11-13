@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router';
+import { clearWorkspaceNavigation } from './navigation';
 import { ApiError, api, refreshCsrf, send } from './api';
 import { Brand, ErrorMessage, Field, Loading, PageHeader, useResource, Pager } from './components';
 import { Icon } from './icons';
@@ -35,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => controller.abort();
   }, [revision]);
   useEffect(() => {
-    const expired = () => { setUser(null); setError(undefined); };
+    const expired = () => { clearWorkspaceNavigation(); setUser(null); setError(undefined); };
     window.addEventListener('backroom:session-expired', expired);
     return () => window.removeEventListener('backroom:session-expired', expired);
   }, []);
@@ -47,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
   async function logout() {
     await send('/auth/logout', 'POST');
+    clearWorkspaceNavigation();
     setUser(null);
     await refreshCsrf();
   }
@@ -194,6 +196,7 @@ export function ResetPasswordPage() {
     </section>}</div>;
 }
 export function OrganizationChooser() {
+  useEffect(clearWorkspaceNavigation, []);
   const auth = useAuth();
   const navigate = useNavigate();
   const [page, setPage] = useState(0);
@@ -217,7 +220,7 @@ export function OrganizationChooser() {
       <ErrorMessage error={organizations.error ?? error} retry={organizations.error ? organizations.reload : undefined} />
       {(showCreate || none) && <form className="panel organization-form" onSubmit={create}><h2 className="section-heading">Create an organization</h2><p className="section-intro">You will be its Owner. You can rename it later in Settings.</p><Field label="Business name"><input name="name" maxLength={120} required /></Field><button className="button primary" disabled={pending}>{pending ? 'Creating…' : 'Create organization'}</button></form>}
       {!organizations.data && !organizations.error && <div className="panel table-panel"><Loading variant="list" label="Loading businesses" /></div>}
-      {!!organizations.data?.items.length && <ul className="organization-list">{organizations.data.items.map(org => <li key={org.id}><Link className="organization-row" to={'/app/organizations/' + org.id + '/items'}><span className="business-avatar" aria-hidden="true">{org.name.trim()[0]?.toUpperCase()}</span><div><h2>{org.name}</h2><span className="muted">{roleNames[org.role]}</span></div><Icon name="chevronRight" /></Link></li>)}</ul>}
+      {!!organizations.data?.items.length && <ul className="organization-list">{organizations.data.items.map(org => <li key={org.id}><Link className="organization-row" to={'/app/organizations/' + org.id + '/home'}><span className="business-avatar" aria-hidden="true">{org.name.trim()[0]?.toUpperCase()}</span><div><h2>{org.name}</h2><span className="muted">{roleNames[org.role]}</span></div><Icon name="chevronRight" /></Link></li>)}</ul>}
       {organizations.data && <Pager data={organizations.data} onPage={setPage} />}
     </main></div>;
 }

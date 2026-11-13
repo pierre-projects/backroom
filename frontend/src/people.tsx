@@ -101,7 +101,7 @@ export function PeoplePage() {
     </> : <form onSubmit={invite}>
       <p>Create a one-time link to join {organization.name}. You can make someone an Owner after they join.</p>
       <ErrorMessage error={error} />
-      <Field label="Role"><select name="role"><option value="EMPLOYEE">Employee — can view catalog and locations</option><option value="MANAGER">Manager — can edit catalog and locations</option></select></Field>
+      <Field label="Role"><select name="role"><option value="EMPLOYEE">Employee — find items, record stock changes and request supplies</option><option value="MANAGER">Manager — manage inventory and locations, review requests and oversee stock</option></select></Field>
       <div className="form-actions"><button type="button" className="button secondary" onClick={() => setShowInvite(false)}>Cancel</button><button className="button primary" disabled={pending}>{pending ? 'Creating…' : 'Create invitation'}</button></div>
     </form>}</Dialog>}
 

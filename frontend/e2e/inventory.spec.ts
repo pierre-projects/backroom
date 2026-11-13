@@ -55,7 +55,7 @@ test('receive, transfer, count and reverse stock; an employee records usage on a
   await transfer.getByRole('button', { name: 'Transfer stock', exact: true }).click();
   await expect(page.getByText('Moved 4 L from Stockroom › Shelf A to Stockroom › Shelf B')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Update Stockroom › Shelf A' }).click();
+  await page.getByRole('button', { name: 'More actions Stockroom › Shelf A' }).click();
   await page.getByRole('dialog', { name: 'Stockroom › Shelf A' }).getByRole('button', { name: /^Count/ }).click();
   const count = page.getByRole('dialog', { name: 'Count stock' });
   await count.getByLabel('Counted quantity (L)', { exact: true }).fill('5.5');
@@ -79,17 +79,24 @@ test('receive, transfer, count and reverse stock; an employee records usage on a
   await expect(employeePage.getByText('9.5 L on hand')).toBeVisible();
   await employeePage.getByRole('link', { name: 'Oat milk', exact: true }).click();
   await expect(employeePage.getByRole('button', { name: 'Transfer', exact: true })).toHaveCount(0);
-  await employeePage.getByRole('button', { name: 'Update Stockroom › Shelf A' }).click();
+  // Managers' actions stay out of the employee's More actions sheet.
+  await employeePage.getByRole('button', { name: 'More actions Stockroom › Shelf A' }).click();
   const sheet = employeePage.getByRole('dialog', { name: 'Stockroom › Shelf A' });
   await expect(sheet.getByRole('button', { name: /^Count/ })).toHaveCount(0);
-  await sheet.getByRole('button', { name: 'Record usage', exact: true }).click();
+  await expect(sheet.getByRole('button', { name: 'Record usage', exact: true })).toBeVisible();
+  await employeePage.keyboard.press('Escape');
+  await expect(sheet).toHaveCount(0);
+
+  // Record usage straight from the stocked row: the shelf is known, so the quantity is focused.
+  await employeePage.getByRole('button', { name: 'Record usage Stockroom › Shelf A' }).click();
   const usage = employeePage.getByRole('dialog', { name: 'Record usage' });
+  await expect(usage.getByText('Stockroom › Shelf A', { exact: true })).toBeVisible();
+  await expect(usage.getByLabel('Quantity (L)', { exact: true })).toBeFocused();
   await usage.getByLabel('Quantity (L)', { exact: true }).fill('2');
   await usage.getByRole('button', { name: 'Record usage', exact: true }).click();
-  await expect(employeePage.getByText('Used 2 L from Stockroom › Shelf A')).toBeVisible();
+  await expect(employeePage.getByText('Used 2 L from Stockroom › Shelf A. 7.5 L on hand there.')).toBeVisible();
 
-  await employeePage.getByRole('button', { name: 'Update Stockroom › Shelf A' }).click();
-  await employeePage.getByRole('dialog', { name: 'Stockroom › Shelf A' }).getByRole('button', { name: 'Record usage', exact: true }).click();
+  await employeePage.getByRole('button', { name: 'Record usage Stockroom › Shelf A' }).click();
   const tooMuch = employeePage.getByRole('dialog', { name: 'Record usage' });
   await tooMuch.getByLabel('Quantity (L)', { exact: true }).fill('100');
   await tooMuch.getByRole('button', { name: 'Record usage', exact: true }).click();
