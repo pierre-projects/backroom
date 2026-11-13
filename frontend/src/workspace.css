@@ -65,7 +65,7 @@
 
 /* ---------- Workspace shell ---------- */
 .workspace { min-height: 100dvh; display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
-/* Desktop: the top bar is a slim white search header beside the crimson rail. */
+/* Desktop: the top bar is a slim white search header beside the coral rail. */
 .topbar { grid-column: 2; grid-row: 1; position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: var(--space-3); height: var(--topbar-height); padding: 0 var(--space-8); background: var(--surface); border-bottom: 1px solid var(--border); }
 .topbar > .brand, .topbar-business, .topbar .account { display: none; }
 .topbar-search { flex: 1; max-width: 70rem; margin: 0 auto; }

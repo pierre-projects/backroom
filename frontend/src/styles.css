@@ -17,16 +17,16 @@
   --border: #e5e7eb;
   --border-strong: #80868f; /* control edges, â‰¥3:1 on surface */
 
-  /* Single accent (Sortly crimson): actions, links, current place, focus. White on accent is 5.6:1. */
-  --accent: #c92a2e;
-  --accent-hover: #b02226;
-  --accent-pressed: #941b1e;
-  --accent-soft: #fcebec;
+  /* Single accent (coral): actions, links, current place, focus. White on accent is 5.6:1. */
+  --accent: #c2331f;
+  --accent-hover: #a82b1a;
+  --accent-pressed: #8e2415;
+  --accent-soft: #fdece8;
   --on-accent: #ffffff;
-  --focus: #c92a2e;
+  --focus: #c2331f;
 
-  /* Crimson sidebar rail */
-  --sidebar-bg: #d13639;
+  /* Coral sidebar rail. White text on it is 4.6:1. */
+  --sidebar-bg: #d63f2a;
   --sidebar-surface-active: rgb(0 0 0 / 0.18);
   --sidebar-surface-hover: rgb(0 0 0 / 0.1);
   --sidebar-border: rgb(255 255 255 / 0.16);
@@ -35,14 +35,14 @@
 
   /* Brand mark only */
   --brand-mark: #ffffff;
-  --brand-ink: #c92a2e;
+  --brand-ink: #c2331f;
 
   /* Feedback â€” always paired with words */
   --success: #1f6b3a;
   --success-soft: #e7f3eb;
   --warning: #8a4b0f;
   --warning-soft: #fcf0e0;
-  --danger: #8f1d3f; /* plum-crimson so destructive actions stay distinct from the primary red */
+  --danger: #8f1d3f; /* plum so destructive actions stay distinct from the coral accent */
   --danger-hover: #75162f;
   --danger-soft: #fbe9ef;
 
@@ -132,7 +132,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   transition: background-color var(--duration-control) ease, border-color var(--duration-control) ease, color var(--duration-control) ease;
 }
 .button .icon { width: 1.125rem; height: 1.125rem; margin-left: calc(var(--space-1) * -1); }
-.button.primary { background: var(--accent); color: var(--on-accent); font-weight: 700; letter-spacing: .01em; box-shadow: 0 1px 2px rgb(201 42 46 / 0.24); }
+.button.primary { background: var(--accent); color: var(--on-accent); font-weight: 700; letter-spacing: .01em; box-shadow: 0 1px 2px rgb(194 51 31 / 0.24); }
 .button.primary:hover { background: var(--accent-hover); color: var(--on-accent); }
 .button.primary:active { background: var(--accent-pressed); }
 .button.secondary { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
