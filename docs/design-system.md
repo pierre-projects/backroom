@@ -1,8 +1,8 @@
 # Backroom design system
 
-Version 2.0 · Neutral with one accent · November 2026
+Version 3.0 · Sortly crimson · November 2026
 
-Backroom is a work tool for small teams who need to find an item, see where it's kept and update it, often on a phone in a stockroom. The interface stays quiet so the records stand out: neutral surfaces, one teal accent for actions and the current place, and plain sentence-case copy.
+Backroom is a work tool for small teams who need to find an item, see where it's kept and update it, often on a phone in a stockroom. Version 3 takes its look from [Sortly](sortly-inspiration.md): a crimson navigation rail, crisp white cards on a cool gray canvas, photo-first item cards, folder-style storage and big circular actions on the item page. Records still carry the weight, crimson still means "act here" or "you are here", and copy stays plain and sentence case.
 
 [Component reference](design-walkthrough.html) · [Printable specimen](../output/pdf/backroom-design-specimen.pdf) · [Frontend codebook](frontend-codebook.md) · [Phase 1 product behavior](phase-1.md)
 
@@ -11,7 +11,7 @@ Backroom is a work tool for small teams who need to find an item, see where it's
 ## Principles
 
 1. **Records first.** Item names, SKUs and locations carry the visual weight. Chrome (navigation, panels, labels) stays gray and light.
-2. **One accent, one meaning.** Teal means "you can act here" or "you are here". It is never used for decoration.
+2. **One accent, one meaning.** Crimson means "you can act here" or "you are here". The sidebar rail is the one large crimson surface; inside the workspace crimson appears only on actions, the current place and folder glyphs.
 3. **Thumb-reachable on phones.** Navigation sits in a bottom tab bar; primary actions are full width under the page title; dialogs open as bottom sheets.
 4. **Say what happens.** Buttons name the action (**Add placement**, **Archive**), messages say what changed and what to do next. No slogans, no marketing voice inside the app.
 5. **Accessible by default.** WCAG 2.2 AA contrast, visible focus, 44 px touch targets, labels on every control, color always paired with words.
@@ -22,25 +22,28 @@ All values live as CSS custom properties in [`styles.css`](../frontend/src/style
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `--bg` | `#F6F6F4` | Page canvas behind panels |
-| `--surface` | `#FFFFFF` | Panels, tables, sidebar, dialogs, inputs |
-| `--surface-sunken` | `#EFEFEC` | Neutral badges, hover on ghost controls, read-only fields |
-| `--text` | `#1C1D1F` | Headings, record names, body |
-| `--text-muted` | `#5E6166` | Descriptions, SKUs and units on phones, table headers, metadata |
-| `--text-subtle` | `#8A8C90` | Placeholders, disabled text, chevrons only — never for information |
-| `--border` | `#E3E3DF` | Panel edges and row dividers |
-| `--border-strong` | `#84868B` | Input and secondary-button edges |
-| `--accent` | `#0E6B73` | Primary buttons, links, active navigation, focus ring |
-| `--accent-hover` / `--accent-pressed` | `#0B5A61` / `#094A50` | Primary button states |
-| `--accent-soft` | `#E6F1F2` | Active sidebar item, business avatar |
-| `--brand-mark` | `#E7AF48` | Logo mark only |
-| `--success` / `--success-soft` | `#1F6B3A` / `#E7F3EB` | Confirmations, Active badges |
-| `--warning` / `--warning-soft` | `#8A4B0F` / `#FCF0E0` | Archived record status, pending invitations |
-| `--danger` / `--danger-soft` | `#B42318` / `#FDECEA` | Errors, destructive buttons and row actions |
+| `--bg` | `#F4F5F7` | Cool gray canvas behind cards |
+| `--surface` | `#FFFFFF` | Cards, tables, header bar, dialogs, inputs |
+| `--surface-sunken` | `#EEF0F3` | Neutral badges, photo placeholders, hover on ghost controls, read-only fields |
+| `--text` | `#111827` | Headings, record names, body |
+| `--text-muted` | `#6B7280` | Descriptions, SKUs, table headers, metadata |
+| `--text-subtle` | `#9CA3AF` | Placeholders, disabled text, chevrons only — never for information |
+| `--border` | `#E5E7EB` | Card edges and row dividers |
+| `--border-strong` | `#80868F` | Input and secondary-button edges |
+| `--accent` | `#C92A2E` | Primary buttons, links, active tab on phones, focus ring, folder glyphs |
+| `--accent-hover` / `--accent-pressed` | `#B02226` / `#941B1E` | Primary button states |
+| `--accent-soft` | `#FCEBEC` | Folder tiles, outline-button hover, alerting metric icons |
+| `--sidebar-bg` | `#D13639` | Desktop navigation rail and the phone top bar |
+| `--sidebar-surface-active` / `--sidebar-surface-hover` | `rgb(0 0 0 / .18)` / `rgb(0 0 0 / .10)` | Darker crimson pill for the current and hovered destination |
+| `--sidebar-text` / `--sidebar-text-muted` | `#FFFFFF` / `rgb(255 255 255 / .9)` | Labels and icons on the rail |
+| `--brand-mark` / `--brand-ink` | `#FFFFFF` / `#C92A2E` | Logo mark only |
+| `--success` / `--success-soft` | `#1F6B3A` / `#E7F3EB` | Confirmations, In stock and Active badges |
+| `--warning` / `--warning-soft` | `#8A4B0F` / `#FCF0E0` | Low and Archived status, pending invitations |
+| `--danger` / `--danger-soft` | `#8F1D3F` / `#FBE9EF` | Errors, destructive buttons. Plum-crimson so a destructive confirm never looks like the primary red |
 
-**Measured contrast** (sRGB relative luminance): text on surface 16.9∶1, muted on canvas 5.8∶1, white on accent 6.2∶1, accent on accent-soft 5.4∶1, control edge on canvas 3.4∶1, each feedback color on its tint ≥ 5.7∶1, white on danger 6.6∶1.
+**Measured contrast** (sRGB relative luminance): text on surface 17.7∶1, muted on surface 4.8∶1, white on accent 5.4∶1, white on the sidebar 4.9∶1, white on danger 8.7∶1, control edge on canvas 3.4∶1, each feedback color on its tint ≥ 5.7∶1.
 
-Rule of thumb: about 90% of any screen is `--bg`, `--surface` and text grays. The accent appears on at most one filled button per view.
+Rule of thumb: apart from the rail, about 90% of any screen is `--bg`, `--surface` and text grays. The accent fills at most one button per group of actions; companions use the crimson **outline** or white **secondary** style.
 
 ## Type
 
@@ -56,13 +59,13 @@ System UI fonts (San Francisco, Segoe UI, Roboto) load instantly and look native
 | Supporting text, hints, table headers | 13 / 20 px | 400; headers 600 |
 | Badges, tab labels | 12 / 16 px | 600 / 500 |
 
-Nothing in the product is smaller than 12 px. No uppercase tracked "eyebrow" labels.
+Record names on cards and rows are 16 px bold, item titles 28 px bold. Nothing in the product is smaller than 12 px, except the 10 px **New** corner pill. Uppercase tracked labels are limited to the item fact labels (SKU, Updated) and the **Administration** rail heading.
 
 ## Space, shape and depth
 
 - **Spacing:** 4 px scale — 4, 8, 12, 16, 20, 24, 32, 48. Page gutters 16 px phone, 24 px tablet, 32 px desktop.
-- **Radius:** 6 px controls, 8 px panels and dialogs, 12 px top corners on phone sheets, fully rounded badges.
-- **Depth:** panels use a 1 px border and no shadow. Only overlays (dialogs, menus) get `--shadow-overlay`.
+- **Radius:** 8 px controls, 10 px cards, panels and dialogs, 14 px on the item photo stage and phone sheets, fully rounded badges, switches, view toggle and circular actions.
+- **Depth:** cards use a 1 px border plus `--shadow-card` (a 1 px soft lift) so white cards read on the gray canvas. Only overlays (dialogs, menus) get `--shadow-overlay`.
 - **Targets:** controls are 36 px tall with a mouse, 44 px on touch screens and anything narrower than 1024 px. Table rows are at least 52 px, phone rows 56 px.
 - **Motion:** 120 ms color transitions on controls, 160 ms fade/slide for dialogs and sheets. Everything is off under `prefers-reduced-motion`.
 
@@ -74,8 +77,8 @@ Inline SVG set in [`icons.tsx`](../frontend/src/icons.tsx): 20 px box, 1.75 px r
 
 | Width | Navigation | Content |
 | --- | --- | --- |
-| 1024 px and wider | 240 px white sidebar: logo, business card (name, role, **Switch business**), destinations with icon and label, account block with **Sign out** at the bottom. Active item: teal tint, teal text, 3 px leading bar. | Max 1120 px, 32 px gutters. Title row (title, description, actions on the right), then toolbar, then records. |
-| Under 1024 px | 56 px sticky top bar: logo, business name (opens the business list), account button (name, email, **Switch business**, **Sign out**). 64 px fixed **bottom tab bar** with icon over label. | 16 px gutters on phones, 24 px on tablets. Bottom padding clears the tab bar and the home indicator. |
+| 1024 px and wider | 232 px **crimson rail**: white logo, translucent business card (name, role, **Switch business**), destinations with thin 1.6 px white icons, account block with **Sign out** at the bottom. The current destination is a darker crimson pill in bold white; no leading bar. A 56 px white header bar beside the rail holds the global search. | Max 1120 px, 32 px gutters. Breadcrumbs, then the title row (title, description, actions on the right), then search, summary strip and controls, then records. |
+| Under 1024 px | 56 px sticky **crimson** top bar: white logo, business name (opens the business list), account button (name, email, **Switch business**, **Sign out**). 64 px fixed white **bottom tab bar** with icon over label; the current tab is crimson with a 3 px top bar. | 16 px gutters on phones, 24 px on tablets. Bottom padding clears the tab bar and the home indicator. |
 
 Tabs are filtered by role, so the bar never needs a "More" item:
 
@@ -90,7 +93,7 @@ Every role gets the same five tabs, with the most frequent first. Less frequent 
 - **Activity** and **Export data**: Owners and Managers.
 - **People** and **Business settings**: Owners only.
 
-On desktop a compact search field sits above the main navigation; on phones the search field is at the top of Home. The Requests tab carries a count badge: requests waiting for review (managers) or approved requests waiting for delivery (employees).
+On desktop the global search sits in the white header bar, outside the page content; on phones the search field is on Home. The Requests tab carries a count badge: requests waiting for review (managers) or approved requests waiting for delivery (employees).
 
 Detail pages show a back link above the title. It returns to where the person came from (**‹ Back to House espresso**, **‹ Back to search results**, **‹ Back to scan result**), restoring that list's filters, page, scroll position and the row they opened. Opened directly, it falls back to **‹ Inventory**, **‹ Requests** or **‹ All locations**. A location's parent is a separate link beside its type badge ("In Stockroom"), so physical hierarchy and the way back never compete. Inventory keeps its search, filters and page in the address. A "Skip to content" link is the first focusable element.
 
@@ -98,10 +101,10 @@ Detail pages show a back link above the title. It returns to where the person ca
 
 | Component | Variants and rules |
 | --- | --- |
-| **Button** | `primary` (teal, one per view), `secondary` (white, strong border), `ghost` (no border, for low-priority header actions), `danger` (only to confirm a destructive action). Label is a verb + noun. A leading plus icon replaces "+ " in text. Pending state renames the label (**Saving…**, **Adding…**) and disables it. |
+| **Button** | `primary` (crimson, bold, one per action group), `outline` (crimson text and edge on white, for a second creation action such as **Import items** or **Add child location**), `secondary` (white, strong border), `ghost` (no border, for low-priority header actions), `danger` (only to confirm a destructive action). Label is a verb + noun. A leading plus icon replaces "+ " in text. Pending state renames the label (**Saving…**, **Adding…**) and disables it. |
 | **Text button** | Inline row actions (**Remove**, **Revoke**, **Remove access**). Danger tone for removals. |
 | **Field** | Label above control, optional hint below, inline error below that with `aria-invalid`. Labels are nouns ("Business name"), hints are one sentence. |
-| **Search** | Search icon inside the field, **Search** button beside it, **Include archived** checkbox at the end of the toolbar. Full width on phones. |
+| **Search** | Search icon inside the field, **Search** button beside it, **Include archived** checkbox at the end of the toolbar. Full width on phones. Browse pages add the inline scan button (see Folder explorer patterns). |
 | **Data table** | White panel, header row in muted 13 px, 52 px rows, whole row clickable through the name link, chevron at the end. Under 640 px each row restacks: name (+ Archived badge) on line one, `SKU · Unit` muted on line two. Absent SKU reads "No SKU". |
 | **Record list** | Simple divided rows inside a panel for short lists (expected locations). Shows the parent name before the location: "Stockroom › **Shelf A**". |
 | **Badge** | Neutral (roles, types, Archived in lists), success (Active member), warning (Archived on a detail page, pending invitation), danger. Ordinary active items get no badge. |
@@ -149,9 +152,9 @@ Detail pages show a back link above the title. It returns to where the person ca
 
 | Pattern | Rules |
 | --- | --- |
-| **Home** | Opening a business lands here. Owners and Managers: **Needs review** and **Low stock** count tiles first, then search with **Scan**, then **Requests** beside **Low stock** on desktop (one column on phones), **Request stock**, setup and **Recent activity**. Employees: search with **Scan** (primary) first, a **To receive** tile, then **My requests** and **Low stock**. Cards are table panels: a header with a title, a one-line description and a text link (**See all low items**, **Open requests**, **All activity**). |
+| **Home** | Opening a business lands here. Owners and Managers: the metric cards first, then search with **Scan**, the **Spaces** folder cards, then **Requests** beside **Low stock** on desktop (one column on phones), **Request stock**, setup and **Recent activity**. Employees: search with **Scan** (primary) first, the metric cards, **Spaces**, then **My requests** and **Low stock**. Low-stock rows lead with a small item tile. Cards are table panels: a header with a title, a one-line description and a text link (**See all low items**, **Open requests**, **All activity**). |
 | **Setup checklist** | Numbered steps, each with a round mark: empty, accent ring for the next step, or filled success with a check when done. Done steps turn muted. Only the next step has a primary button; the rest are secondary. A new business sees it expanded at the top. Once there is stock or a request to review it collapses to "Continue setup · 2 remaining" below the work, with **Expand**/**Collapse**. **Download a label** is ticked only after a label PDF downloads. |
-| **Count tiles** | A row of boxed tiles, each a large tabular number beside its label ("3 Needs review"), linking to the list that shows exactly those records. **Low stock** counts items, like the Inventory "Low stock only" list it opens. A count that failed to load shows "–" with the error above, never 0. |
+| **Metric cards** | Sortly dashboard cards, four across on desktop and 2×2 on phones: a round icon, a large bold number and its label ("3 Needs review"). Owners and Managers see **Needs review**, **Low stock**, **Total items** and **Spaces**; employees **To receive**, **Total items** and **Spaces**. The icon turns crimson-tinted when the count needs attention. Each card links to the list that shows exactly those records. **Low stock** counts items, like the Inventory "Low stock only" list it opens. A count that failed to load shows "–" with the error above, never 0. |
 | **Minimum note** | Under the location name on a stock row: a **Low** warning badge (only when low), then "Min 5 L" in muted small text. The slot sheet subject adds "· min 5 L". |
 | **Low row** | Item name (link), location path, then "**3 L** of 5 L · short 2 L" with the current quantity in warning color. On the right: **Request** (secondary, prefilled with the shortfall) or "R-12 open" linking to the request that already covers it. |
 | **Search results** | A **Code match** first, as an accent-tinted card with the target's icon. Then **Items** and **Locations** panels, each saying how many matched, or "First 8 matches" when capped. |
@@ -162,15 +165,30 @@ Detail pages show a back link above the title. It returns to where the person ca
 
 | Pattern | Rules |
 | --- | --- |
-| **View toggle** | A labelled group of two `aria-pressed` buttons, **Grid** and **List**, each with an icon. It sits at the end of the filters band. The pressed state uses the accent tint. Phones start in Grid and wider screens in List; the person's choice is remembered per browser and surface. Filters, search, paging and selection never reset on a switch. |
-| **Visual tile** | The photo when there is one, filling the tile with `object-fit: cover`. Otherwise a `--surface-sunken` tile with up to two initials and a small kind icon in the corner (unit for items: box, weight, drop; type for locations: room, shelf, cabinet, bin). Never accent-colored, and always decorative, because the name beside it carries meaning. Sizes: `sm` 40 px in list rows, `md` 16:10 in cards, `lg` 96 px in the item hero. |
-| **Browse card** | Tile, then the record name as the link, then facts ("12 kg on hand", SKU in mono, or "Shelf · 2 locations · 12 items"), then badges, then any stock actions. The card is not itself a link, so its buttons stay separate targets. Grid columns use `auto-fill, minmax(12rem, 1fr)` on desktop, two on phones, one under 352 px. Selected cards get an accent outline; archived cards dim their tile. |
+| **View toggle** | A labelled group of two `aria-pressed` buttons, **Grid** and **List**, each with an icon. It sits at the end of the filters band. It is a rounded pill; the pressed half is filled crimson with white text. Phones start in Grid and wider screens in List; the person's choice is remembered per browser and surface. Filters, search, paging and selection never reset on a switch. |
+| **Visual tile** | The photo when there is one, filling the tile with `object-fit: cover`. Otherwise a `--surface-sunken` tile with up to two initials and a small kind icon in the corner (unit for items: box, weight, drop; type for locations: room, shelf, cabinet, bin). Never accent-colored, and always decorative, because the name beside it carries meaning. Sizes: `sm` 40 px in compact lists, `row` 56 px in item rows, `md` 4:3 in cards, `lg` 96 px, `hero` on the item photo stage. Items created in the last day carry a black **New** corner pill. |
+| **Browse card** | Tile, then the SKU kicker in muted mono ("No SKU" when absent), then the record name as a 16 px bold link, then facts ("**12 kg** on hand" or "2 locations · 12 items"), then badges, then any stock actions. The card is not itself a link, so its buttons stay separate targets. Grid columns use `auto-fill, minmax(12rem, 1fr)` on desktop, two on phones, one under 352 px. Selected cards get an accent outline; archived cards dim their tile. |
 | **Breadcrumbs** | On location pages, above the title: **All locations › Stockroom › Shelf A**. Earlier steps are links; the last is `aria-current="page"`. Separators are drawn in CSS, not read out. The contextual back link, when present, sits above the trail: "where you came from" above "where this is". |
 | **Leaf location** | When a location has nothing stored inside it, one quiet line ("No storage inside Shelf A.") replaces the child search and empty state. **Add item here** becomes its primary action, and **Add child location** turns secondary. |
 | **Short add** | Creating asks for name and unit. SKU sits under an **Optional details** disclosure in the accent link color. Editing shows every field. |
-| **Item hero** | The `lg` tile or photo leads the title row. Owners and Managers get **Add photo / Change photo** (camera icon) and **Remove photo** under it; on phones these sit beside the tile. Low status appears with the totals. |
-| **Spaces strip** | On Home, up to six top-level rooms as compact bordered links (small tile, name, contents) with **All locations** at the right of its heading. It never shows counts that aren't real and is hidden until a location exists. |
+| **Item hero** | Sortly's detail layout. A white photo stage (square on desktop, 4:3 on phones) on the left, with a round **Labels and barcodes** pill in its corner that scrolls to that panel; **Add photo / Change photo** and **Remove photo** sit under it for Owners and Managers. On the right: a folder kicker with the item's shelf ("Stockroom › Shelf A", a link when there is exactly one, otherwise "2 locations" or "Not placed yet"), the 28 px bold title, then **SKU** and **Updated** (latest movement, or when it was added) as two small fact columns. Under 1024 px everything stacks, photo first. |
+| **Circular actions** | A row of 48 px round buttons with the label underneath: **Record usage** (filled crimson when there is stock), **Receive stock** (filled when there is none), **Transfer** (managers, when stocked), **Request more** and **History** (scrolls to and focuses the History heading). The visible label is the accessible name. |
+| **Metric grid** | A hairlined 2×2 card under the actions, still a `<dl>`: **On hand** (28 px bold, with a −/+ pill that opens Record usage or Receive stock), **Min level** (bell icon; the minimum, "N shelves", or "Not set"), **Base unit**, and **Status** (In stock, Low, No stock or Archived). Stock by location, requests, labels and history follow as cards. |
+| **Spaces strip** | On Home, up to six top-level rooms as folder cards (folder tile, bold name, contents) with **All locations** at the right of its heading. It never shows counts that aren't real and is hidden until a location exists. |
 | **Sold** | **Record sale** sits in **More actions** after waste, with the hint "Sold to a customer; no prices are kept". Its history title is **Sold** with a tag icon. The confirmation follows the removal pattern. |
+
+## Folder explorer patterns
+
+Inventory and Locations share Sortly's explorer layout. Storage locations read as folders; items read as photo cards.
+
+| Pattern | Rules |
+| --- | --- |
+| **Explorer header** | Breadcrumbs above the title: **All items** (Inventory, with the filtered location after it) or **All locations › Stockroom › Shelf A**. Actions sit on the right: one filled crimson creation action (**Add item**, **Add location**, or **Add item here** on a leaf), a crimson **outline** companion (**Import items**, **Add child location**), then secondary actions. |
+| **Explorer search** | Full width with a leading search icon and a crimson **Scan a label** icon button inside the field's right edge, linking to Scan. The **Search** button stays beside it. |
+| **Summary strip** | A thin `<dl>` under the search with hairline separators: Inventory shows **Folders**, **Items** and **Low stock**; a location shows **Folders**, **Items here** and **Type**; the Locations root shows **Folders**. Counts come from real queries; a count still loading shows "–". |
+| **Controls row** | On Inventory, divided from the summary by a hairline: the **Show folders** pill switch (`role="switch"`, remembered per browser), the location filter, **Low stock only**, **Include archived**, then at the end the **Sort items** select (Name A–Z, Name Z–A, Newest first; `?sort=` in the address and the API) and the Grid/List toggle. |
+| **Folder card** | A horizontal white card: a 56 px crimson-tinted folder tile with the location's kind icon in its corner, the bold name, and contents ("2 locations · 12 items" or "Empty"). The whole card is the link's hit area. Inventory shows top-level folders in a **Folders** band above the items when Show folders is on and nothing is filtered; locations show their children as folder cards in Grid. Phones fit two per row. |
+| **Item row** | List view keeps a real table. Each row: 56 px thumbnail (with **New** pill), SKU kicker, 16 px bold name with badges, the unit, then the bold on-hand quantity with "on hand" on the right. |
 
 ## Import patterns
 

@@ -672,7 +672,13 @@ input.sr-only:focus-visible + .file-button { outline: 2px solid var(--focus); ou
   .toolbar-end { margin-left: 0; width: 100%; justify-content: space-between; }
   .sort-select { flex: 1; }
   .inventory-filters .view-toggle { margin-left: 0; }
-  .folder-grid { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
+  .toolbar-end .sort-select { flex: 1 1 auto; min-width: 0; }
+  .folder-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+  .folder-card { gap: var(--space-2); padding: var(--space-2); }
+  .folder-card .folder-tile.row { width: 2.75rem; height: 2.75rem; }
+  .folder-card .folder-tile.row > .icon:first-child { width: 1.5rem; height: 1.5rem; }
+  .folder-card .browse-card-title { font-size: var(--text-md); }
+  .folder-card .browse-card-meta { font-size: var(--text-xs); }
   .item-rows td { height: auto; }
   .item-rows .record-link { font-size: var(--text-md); }
   .item-rows .inventory-quantity { font-size: var(--text-md); }
@@ -733,7 +739,7 @@ input.sr-only:focus-visible + .file-button { outline: 2px solid var(--focus); ou
 .quick-action:focus-visible .quick-action-circle { outline: 2px solid var(--focus); outline-offset: 2px; }
 .quick-action-label { max-width: 5.5rem; text-align: center; line-height: 1rem; }
 
-.metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: var(--space-2) 0 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-panel); box-shadow: var(--shadow-card); overflow: hidden; }
+.metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; margin: var(--space-2) 0 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-panel); box-shadow: var(--shadow-card); overflow: hidden; }
 .metric-grid > div { position: relative; display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; min-height: 5.5rem; padding: var(--space-4) var(--space-5); }
 .metric-grid > div:nth-child(odd) { border-right: 1px solid var(--border); }
 .metric-grid > div:nth-child(n+3) { border-top: 1px solid var(--border); }
@@ -755,6 +761,8 @@ input.sr-only:focus-visible + .file-button { outline: 2px solid var(--focus); ou
 }
 @media (max-width: 39.99rem) {
   .item-hero-body h1 { font-size: var(--text-2xl); line-height: 2rem; }
+  .item-hero-media { max-width: none; }
+  .visual-tile.hero { aspect-ratio: 4 / 3; }
   .quick-actions { justify-content: space-between; gap: var(--space-2); }
   .quick-action { min-width: 0; flex: 1 1 0; }
   .metric-grid > div { padding: var(--space-3) var(--space-4); min-height: 5rem; }
