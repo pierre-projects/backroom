@@ -20,6 +20,7 @@ quantities, inventory actions, scanning, and replenishment come in later phases.
 - [Phase 5 Home, low stock, search, exports and password resets](docs/phase-5.md)
 - [Operations: deploying, backups, restore drill, logs and incidents](docs/operations.md)
 - [Phase 6 browse, photos and sales](docs/phase-6.md)
+- [Phase 7 CSV import](docs/phase-7.md)
 - [Design system and visual specimen](docs/design-system.md)
 - [Sortly inspiration: design system and UX rules](docs/sortly-inspiration.md)
 - [Frontend codebook](docs/frontend-codebook.md)

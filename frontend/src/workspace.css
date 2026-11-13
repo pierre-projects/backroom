@@ -538,3 +538,24 @@
   .page-heading-media { display: flex; align-items: flex-start; gap: var(--space-3); }
   .photo-control { margin-top: 0; }
 }
+
+/* CSV import (Phase 7) */
+.form-actions.start { justify-content: flex-start; flex-wrap: wrap; }
+.file-button { cursor: pointer; }
+input.sr-only:focus-visible + .file-button { outline: 2px solid var(--focus); outline-offset: 2px; }
+.import-columns { margin: var(--space-2) 0 var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-panel); }
+.import-columns td, .import-columns th { padding-left: var(--space-4); padding-right: var(--space-4); }
+.import-counts { list-style: none; margin: 0 0 var(--space-4); padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.import-counts .badge { font-size: var(--text-sm); padding: var(--space-1) var(--space-3); }
+.import-locations { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
+.import-locations li { display: flex; align-items: center; gap: var(--space-2); color: var(--text-muted); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.import-table td { vertical-align: top; height: auto; padding-top: var(--space-3); padding-bottom: var(--space-3); }
+.import-message { display: block; margin-top: var(--space-1); font-size: var(--text-sm); color: var(--text-muted); max-width: 32rem; }
+.import-row.error .import-message { color: var(--danger); }
+.import-include { margin-top: var(--space-2); }
+.import-row.duplicate td:not(:last-child) { color: var(--text-muted); }
+.import-facts { list-style: none; margin: var(--space-3) 0 var(--space-4); padding: 0; display: grid; gap: var(--space-1); }
+.import-facts strong { font-size: var(--text-lg); margin-right: var(--space-1); }
+.import-line-label { display: none; }
+@media (max-width: 39.99rem) { .import-line-label { display: inline; } .import-table td.import-line { padding-bottom: 0; } }
+@media (max-width: 39.99rem) { .form-actions.start { flex-direction: column; align-items: stretch; } .form-actions.start .button { width: 100%; justify-content: center; } }

@@ -13,6 +13,7 @@ interface LocationRepository extends JpaRepository<StorageLocation, UUID> {
     Optional<StorageLocation> lockForUpdate(UUID orgId, UUID id);
     Optional<StorageLocation> findByOrganizationIdAndId(UUID orgId, UUID id);
     List<StorageLocation> findByOrganizationIdAndIdIn(UUID orgId, Collection<UUID> ids);
+    List<StorageLocation> findByOrganizationId(UUID orgId);
     boolean existsByOrganizationIdAndParentIdAndArchivedFalse(UUID orgId, UUID parentId);
     @Query("""
             select l from StorageLocation l

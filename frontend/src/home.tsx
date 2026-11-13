@@ -33,7 +33,7 @@ function Onboarding({ root, base, owner, hasWork, hasMovements }: {
   if (!locations.data || !items.data || (owner && (!members.data || !invitations.data))) return null;
   const steps = [
     { done: locations.data.totalElements > 0, title: 'Add your storage locations', detail: 'Rooms first, then the shelves and bins inside them.', href: root + '/locations', action: 'Add a location' },
-    { done: items.data.totalElements > 0, title: 'Add the items you stock', detail: 'Choose the unit you count each one in.', href: root + '/items', action: 'Add an item' },
+    { done: items.data.totalElements > 0, title: 'Add the items you stock', detail: 'One at a time, or import a spreadsheet with places and starting quantities.', href: root + '/items', action: 'Add an item' },
     { done: hasMovements, title: 'Record what is on the shelves', detail: 'Open an item and set its starting quantity at each location.', href: root + '/items', action: 'Open inventory' },
     { done: printed, title: 'Download a label', detail: 'Choose a storage location and download its printable QR label.', href: root + (locations.data.totalElements ? '/locations?select=labels' : '/locations'), action: locations.data.totalElements ? 'Choose locations' : 'Open locations' },
     ...(owner ? [{ done: members.data!.totalElements > 1 || invitations.data!.totalElements > 0, title: 'Invite your team', detail: 'Send a one-time link to each manager and employee.', href: root + '/people', action: 'Invite staff' }] : []),

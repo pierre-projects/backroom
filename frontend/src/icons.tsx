@@ -4,6 +4,7 @@
  */
 const paths = {
   home: <><path d="M3.5 9 10 3.5 16.5 9" /><path d="M5 8v8.5h10V8M8.5 16.5v-4.5h3v4.5" /></>,
+  upload: <><path d="M10 13V4.5M6 8.5l4-4 4 4" /><path d="M3.5 13.5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2" /></>,
   grid: <><rect x="3.5" y="3.5" width="5.5" height="5.5" rx="1" /><rect x="11" y="3.5" width="5.5" height="5.5" rx="1" /><rect x="3.5" y="11" width="5.5" height="5.5" rx="1" /><rect x="11" y="11" width="5.5" height="5.5" rx="1" /></>,
   list: <><path d="M7.5 5.5h9M7.5 10h9M7.5 14.5h9" /><path d="M3.5 5.5h.01M3.5 10h.01M3.5 14.5h.01" /></>,
   shelf: <><path d="M3.5 3.5v13M16.5 3.5v13M3.5 7h13M3.5 12h13" /><path d="M6 12V9.5h3V12M11 7V5h2.5v2" /></>,

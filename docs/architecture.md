@@ -15,6 +15,7 @@ Vite's proxy; deployment needs one Java process and one database.
 | labels | Code resolution, generation, printable PDFs |
 | search | One search across items, locations and codes, through other modules' query services |
 | exports | Read-only CSV reports (the one module allowed to read other modules' tables with SQL) |
+| imports | CSV import of items, places and starting quantities; writes only through other modules' services |
 | audit | Durable business activity |
 | assets | Equipment, when that capability ships |
 | shared | Small technical configuration and primitives |
@@ -25,7 +26,8 @@ movement history to inventory. Phase 3 adds the labels module (codes, scan
 resolution, label PDFs). Phase 4 adds restocking (requests, approval,
 deliveries). Phase 5 adds low-stock minimums to inventory, the search and
 exports modules, and owner-issued password reset links to access. Phase 6
-adds location trails and counts, a Sold removal and item photos. Assets remain
+adds location trails and counts, a Sold removal and item photos. Phase 7 adds
+the imports module. Assets remain
 a future module. See [Phase 1](phase-1.md), [Phase 2](phase-2.md),
 [Phase 3](phase-3.md), [Phase 4](phase-4.md), [Phase 5](phase-5.md) and
 [Phase 6](phase-6.md) for the
@@ -150,6 +152,20 @@ one another through repositories. JPA entities are not API responses.
   $0–5 host. The browser resizes before upload; the server checks the JPEG
   header dimensions before decoding. Lists read only photo versions, never
   bytes. Image URLs carry the version, so they can be cached privately.
+
+## CSV import (Phase 7)
+
+- **Writes only through services.** `imports` writes through `LocationService`,
+  `CatalogService` and `StockService`, never through their repositories, so
+  manual entry and import share every validation, lock and audit event. It
+  reads through `ItemQueries`, `LocationQueries.tree` and
+  `LocationContentsCounter`.
+- **One planner for preview and apply.** `ImportPlanner` is pure: preview and
+  apply run the same plan, and apply re-plans against current data in its own
+  transaction after locking the organization.
+- **Idempotent.** `import_batches` (`V11`) makes a retried import replay its
+  first result. Starting-quantity operation keys are derived from the import
+  key and the line, so the stock ledger is idempotent too.
 
 ### Deferred: equipment and assets
 
