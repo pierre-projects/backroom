@@ -12,17 +12,17 @@ import java.util.UUID;
 @Table(name = "items")
 class Item extends TenantRecord {
     @Column(nullable = false, length = 160)
-    String name;
+    private String name;
 
     @Column(length = 80)
-    String sku;
+    private String sku;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    Unit unit;
+    private Unit unit;
 
     @Column(nullable = false)
-    boolean archived;
+    private boolean archived;
 
     protected Item() {}
 
@@ -31,5 +31,31 @@ class Item extends TenantRecord {
         this.name = name;
         this.sku = sku;
         this.unit = unit;
+    }
+
+    void edit(String newName, String newSku, Unit newUnit) {
+        name = newName;
+        sku = newSku;
+        unit = newUnit;
+    }
+
+    void archive() {
+        archived = true;
+    }
+
+    String getName() {
+        return name;
+    }
+
+    String getSku() {
+        return sku;
+    }
+
+    Unit getUnit() {
+        return unit;
+    }
+
+    boolean isArchived() {
+        return archived;
     }
 }

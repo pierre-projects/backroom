@@ -11,22 +11,22 @@ import java.util.UUID;
 @Table(name = "password_resets")
 class PasswordReset extends RecordEntity {
     @Column(nullable = false, updatable = false)
-    UUID userId;
+    private UUID userId;
 
     @Column(nullable = false, updatable = false)
-    UUID organizationId;
+    private UUID organizationId;
 
     @Column(nullable = false, updatable = false)
-    UUID issuedBy;
+    private UUID issuedBy;
 
     @Column(nullable = false, updatable = false, length = 64)
-    String tokenHash;
+    private String tokenHash;
 
     @Column(nullable = false, updatable = false)
-    Instant expiresAt;
+    private Instant expiresAt;
 
-    Instant usedAt;
-    Instant revokedAt;
+    private Instant usedAt;
+    private Instant revokedAt;
 
     protected PasswordReset() {}
 
@@ -42,5 +42,25 @@ class PasswordReset extends RecordEntity {
 
     boolean open(Instant now) {
         return usedAt == null && revokedAt == null && expiresAt.isAfter(now);
+    }
+
+    void revoke(Instant at) {
+        revokedAt = at;
+    }
+
+    void markUsed(Instant at) {
+        usedAt = at;
+    }
+
+    UUID getUserId() {
+        return userId;
+    }
+
+    UUID getOrganizationId() {
+        return organizationId;
+    }
+
+    Instant getExpiresAt() {
+        return expiresAt;
     }
 }

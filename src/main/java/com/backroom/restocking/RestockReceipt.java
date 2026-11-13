@@ -13,19 +13,19 @@ import org.hibernate.annotations.Immutable;
 @Table(name = "restock_receipts")
 class RestockReceipt extends TenantRecord {
     @Column(nullable = false)
-    UUID requestId;
+    private UUID requestId;
 
     @Column(nullable = false)
-    UUID stockOperationId;
+    private UUID stockOperationId;
 
     @Column(nullable = false, precision = 15, scale = 3)
-    BigDecimal quantity;
+    private BigDecimal quantity;
 
     @Column(nullable = false)
-    UUID receiverId;
+    private UUID receiverId;
 
     @Column(nullable = false, length = 100)
-    String receiverName;
+    private String receiverName;
 
     protected RestockReceipt() {}
 
@@ -42,5 +42,25 @@ class RestockReceipt extends TenantRecord {
         this.quantity = quantity;
         this.receiverId = receiverId;
         this.receiverName = receiverName;
+    }
+
+    UUID getRequestId() {
+        return requestId;
+    }
+
+    UUID getStockOperationId() {
+        return stockOperationId;
+    }
+
+    BigDecimal getQuantity() {
+        return quantity;
+    }
+
+    UUID getReceiverId() {
+        return receiverId;
+    }
+
+    String getReceiverName() {
+        return receiverName;
     }
 }

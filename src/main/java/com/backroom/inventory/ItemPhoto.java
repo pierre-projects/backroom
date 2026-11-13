@@ -12,25 +12,25 @@ import java.util.UUID;
 @Table(name = "item_photos")
 class ItemPhoto extends TenantRecord {
     @Column(nullable = false, updatable = false)
-    UUID itemId;
+    private UUID itemId;
 
     @Column(nullable = false, length = 40)
-    String contentType;
+    private String contentType;
 
     @Column(nullable = false)
-    byte[] bytes;
+    private byte[] bytes;
 
     @Column(nullable = false)
-    int width;
+    private int width;
 
     @Column(nullable = false)
-    int height;
+    private int height;
 
     @Column(nullable = false)
-    UUID updatedBy;
+    private UUID updatedBy;
 
     @Column(nullable = false)
-    Instant updatedAt;
+    private Instant updatedAt;
 
     protected ItemPhoto() {}
 
@@ -41,5 +41,23 @@ class ItemPhoto extends TenantRecord {
     /** Changes whenever the photo changes, including after remove and re-add; used to version image URLs. */
     long photoVersion() {
         return updatedAt.toEpochMilli();
+    }
+
+    /** Replaces the image. {@code updatedAt} strictly increases, so a replaced photo always gets a new URL. */
+    void replace(String newContentType, byte[] newBytes, int newWidth, int newHeight, UUID by, Instant now) {
+        contentType = newContentType;
+        bytes = newBytes;
+        width = newWidth;
+        height = newHeight;
+        updatedBy = by;
+        updatedAt = updatedAt != null && !now.isAfter(updatedAt) ? updatedAt.plusMillis(1) : now;
+    }
+
+    String getContentType() {
+        return contentType;
+    }
+
+    byte[] getBytes() {
+        return bytes;
     }
 }

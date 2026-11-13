@@ -1,6 +1,6 @@
 # ADR-0001: Backend package structure and team conventions
 
-**Status:** Proposed
+**Status:** Accepted (all action items done on `refactor/backend-conventions`)
 **Date:** 2026-11-13
 **Deciders:** Backend maintainers
 
@@ -113,8 +113,11 @@ Conventions:
    `@IntegrationTest` and extend `support.ApiTestSupport`; a class that adds
    beans, spies or imports gets its own Spring context, so add them only when
    the test needs them.
-6. Entities keep fields `private`, expose getters, and change state through
-   intention-revealing methods (`item.archive()`, `balance.apply(change)`).
+6. Entities keep fields `private`, expose package-private getters only for
+   what other classes read, and change state through intention-revealing
+   methods (`item.archive()`, `request.approve(...)`). Guards that need
+   repositories or produce API error codes stay in services.
+   `ArchitectureTests` fails the build on a non-private `@Entity` field.
 7. Services throw `shared.error` exceptions (`NotFoundException`,
    `ConflictException(code, message)`, `InvalidRequestException`,
    `ForbiddenException`, ...); `ApiExceptionHandler` alone maps them to HTTP.
@@ -217,6 +220,11 @@ available for a module that outgrows a flat package.
        status, error code and message of every response are unchanged.
        `ArchitectureTests` (ArchUnit) keeps HTTP types in the web layer, and
        `ApiExceptionHandlerTests` pins each exception's status and code.
-7. [ ] Make entity fields private with getters and behaviour methods, module by
-       module (F6).
-8. [ ] Update `docs/architecture.md` to link this ADR and state the conventions.
+7. [x] Make entity fields private with getters and behaviour methods (F6).
+       All 18 entities: ~45 field writes became behaviour methods (for example
+       `RestockRequest.approve/reject/cancel/closeShort/recordDelivery`,
+       `Membership.activate/changeRole/deactivate`, `ItemPhoto.replace`),
+       `ImportBatch` is built complete through a `Counts` record, and 305
+       reads became 89 getters. `ArchitectureTests.entityFieldsArePrivate`
+       keeps it that way.
+8. [x] Update `docs/architecture.md` to link this ADR and state the conventions.

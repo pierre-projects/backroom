@@ -60,10 +60,10 @@ public class LocationService {
         var items = ids.isEmpty() ? Map.<UUID, Long>of() : contents.itemCounts(orgId, ids);
         return PageResponse.from(result.map(location -> new LocationDtos.View(
                 location.getId(),
-                location.name,
-                location.type,
-                location.parentId,
-                location.archived,
+                location.getName(),
+                location.getType(),
+                location.getParentId(),
+                location.isArchived(),
                 location.getVersion(),
                 List.of(),
                 children.getOrDefault(location.getId(), 0L),
@@ -80,10 +80,10 @@ public class LocationService {
                 .toList();
         return new LocationDtos.View(
                 location.getId(),
-                location.name,
-                location.type,
-                location.parentId,
-                location.archived,
+                location.getName(),
+                location.getType(),
+                location.getParentId(),
+                location.isArchived(),
                 location.getVersion(),
                 trail,
                 null,
@@ -105,9 +105,7 @@ public class LocationService {
         editable(location);
         location.checkVersion(input.expectedVersion());
         validateParent(orgId, id, input.parentId());
-        location.name = input.name().strip();
-        location.type = input.type();
-        location.parentId = input.parentId();
+        location.edit(input.name().strip(), input.type(), input.parentId());
         locations.flush();
         record(location, "LOCATION_UPDATED");
         return view(location);
@@ -118,12 +116,12 @@ public class LocationService {
         // Exclusive row lock: waits for in-flight stock commands that share-lock this location.
         var location = locations.lockForUpdate(orgId, id).orElseThrow(NotFoundException::new);
         location.checkVersion(version);
-        if (location.archived) return;
+        if (location.isArchived()) return;
         if (locations.existsByOrganizationIdAndParentIdAndArchivedFalse(orgId, id)) {
             throw new ConflictException("LOCATION_HAS_CHILDREN", "Archive or move active child locations first.");
         }
         storagePolicy.assertNoActivePlacements(orgId, id);
-        location.archived = true;
+        location.archive();
         locations.flush();
         record(location, "LOCATION_ARCHIVED");
     }
@@ -139,13 +137,13 @@ public class LocationService {
             }
             var parent = find(orgId, cursor);
             editable(parent);
-            cursor = parent.parentId;
+            cursor = parent.getParentId();
         }
         if (parentId != null) storagePolicy.assertNoActivePlacements(orgId, parentId);
     }
 
     private void editable(StorageLocation location) {
-        if (location.archived)
+        if (location.isArchived())
             throw new ConflictException("ARCHIVED", "Archived locations cannot be changed or used as parents.");
     }
 
@@ -156,10 +154,10 @@ public class LocationService {
     private LocationDtos.View view(StorageLocation location) {
         return new LocationDtos.View(
                 location.getId(),
-                location.name,
-                location.type,
-                location.parentId,
-                location.archived,
+                location.getName(),
+                location.getType(),
+                location.getParentId(),
+                location.isArchived(),
                 location.getVersion(),
                 List.of(),
                 null,
@@ -177,10 +175,10 @@ public class LocationService {
                 location.getId(),
                 Map.of(
                         "name",
-                        location.name,
+                        location.getName(),
                         "type",
-                        location.type.name(),
+                        location.getType().name(),
                         "parentId",
-                        Objects.toString(location.parentId, "")));
+                        Objects.toString(location.getParentId(), "")));
     }
 }

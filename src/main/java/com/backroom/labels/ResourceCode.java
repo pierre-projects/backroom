@@ -25,26 +25,26 @@ class ResourceCode extends TenantRecord {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, updatable = false, length = 20)
-    Kind kind;
+    private Kind kind;
 
     @Column(nullable = false, updatable = false, length = 20)
-    String value;
+    private String value;
 
     @Column(updatable = false)
-    UUID itemId;
+    private UUID itemId;
 
     @Column(updatable = false)
-    UUID locationId;
+    private UUID locationId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    Status status = Status.ACTIVE;
+    private Status status = Status.ACTIVE;
 
     @Column(nullable = false, updatable = false)
-    UUID createdBy;
+    private UUID createdBy;
 
-    Instant revokedAt;
-    UUID revokedBy;
+    private Instant revokedAt;
+    private UUID revokedBy;
 
     protected ResourceCode() {}
 
@@ -59,5 +59,31 @@ class ResourceCode extends TenantRecord {
 
     boolean active() {
         return status == Status.ACTIVE;
+    }
+
+    void revoke(UUID by) {
+        status = Status.REVOKED;
+        revokedAt = Instant.now();
+        revokedBy = by;
+    }
+
+    Kind getKind() {
+        return kind;
+    }
+
+    String getValue() {
+        return value;
+    }
+
+    UUID getItemId() {
+        return itemId;
+    }
+
+    UUID getLocationId() {
+        return locationId;
+    }
+
+    Status getStatus() {
+        return status;
     }
 }

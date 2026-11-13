@@ -11,45 +11,104 @@ import java.util.UUID;
 @Table(name = "import_batches")
 class ImportBatch extends TenantRecord {
     @Column(nullable = false, updatable = false)
-    UUID importKey;
+    private UUID importKey;
 
     @Column(nullable = false, length = 64)
-    String fileSha256;
+    private String fileSha256;
 
     @Column(length = 200)
-    String fileName;
+    private String fileName;
 
     @Column(nullable = false)
-    UUID createdBy;
+    private UUID createdBy;
 
     @Column(name = "row_count", nullable = false)
-    int rows;
+    private int rows;
 
     @Column(nullable = false)
-    int itemsCreated;
+    private int itemsCreated;
 
     @Column(nullable = false)
-    int locationsCreated;
+    private int locationsCreated;
 
     @Column(nullable = false)
-    int placements;
+    private int placements;
 
     @Column(nullable = false)
-    int quantities;
+    private int quantities;
 
     @Column(nullable = false)
-    int minimums;
+    private int minimums;
 
     @Column(nullable = false)
-    int skipped;
+    private int skipped;
 
     @Column(nullable = false)
-    int errors;
+    private int errors;
 
     protected ImportBatch() {}
 
-    ImportBatch(UUID organizationId, UUID importKey) {
+    ImportBatch(
+            UUID organizationId, UUID importKey, String fileSha256, String fileName, UUID createdBy, Counts counts) {
         this.organizationId = organizationId;
         this.importKey = importKey;
+        this.fileSha256 = fileSha256;
+        this.fileName = fileName;
+        this.createdBy = createdBy;
+        this.rows = counts.rows();
+        this.itemsCreated = counts.itemsCreated();
+        this.locationsCreated = counts.locationsCreated();
+        this.placements = counts.placements();
+        this.quantities = counts.quantities();
+        this.minimums = counts.minimums();
+        this.errors = counts.errors();
+        this.skipped = counts.skipped();
+    }
+
+    /** What an applied import did, row by row. */
+    record Counts(
+            int rows,
+            int itemsCreated,
+            int locationsCreated,
+            int placements,
+            int quantities,
+            int minimums,
+            int errors,
+            int skipped) {}
+
+    String getFileSha256() {
+        return fileSha256;
+    }
+
+    int getRows() {
+        return rows;
+    }
+
+    int getItemsCreated() {
+        return itemsCreated;
+    }
+
+    int getLocationsCreated() {
+        return locationsCreated;
+    }
+
+    int getPlacements() {
+        return placements;
+    }
+
+    int getQuantities() {
+        return quantities;
+    }
+
+    int getMinimums() {
+        return minimums;
+    }
+
+    int getSkipped() {
+        return skipped;
+    }
+
+    int getErrors() {
+        return errors;
     }
 }

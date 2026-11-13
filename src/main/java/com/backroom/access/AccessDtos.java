@@ -30,9 +30,9 @@ public final class AccessDtos {
 
     public record RoleInput(@NotNull Role role) {}
 
-    public record IssuedReset(UUID userId, String displayName, String resetPath, java.time.Instant expiresAt) {}
+    public record IssuedReset(UUID userId, String displayName, String resetPath, Instant expiresAt) {}
 
-    public record ResetPreview(String displayName, String email, java.time.Instant expiresAt) {}
+    public record ResetPreview(String displayName, String email, Instant expiresAt) {}
 
     public record ResetInput(
             @NotBlank @Pattern(regexp = "[A-Za-z0-9_-]{43}") String token,

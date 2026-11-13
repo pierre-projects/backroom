@@ -53,12 +53,12 @@ public class AuditService {
                 orgId, PageResponse.request(page, size, Sort.by(Sort.Direction.DESC, "createdAt", "id")));
         return PageResponse.from(result.map(event -> new EventView(
                 event.getId(),
-                event.actorId,
-                event.actorName,
-                event.action,
-                event.resourceType,
-                event.resourceId,
+                event.getActorId(),
+                event.getActorName(),
+                event.getAction(),
+                event.getResourceType(),
+                event.getResourceId(),
                 event.getCreatedAt(),
-                event.metadata)));
+                event.getMetadata())));
     }
 }

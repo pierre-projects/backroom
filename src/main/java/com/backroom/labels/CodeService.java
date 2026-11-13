@@ -10,7 +10,6 @@ import com.backroom.locations.LocationQueries;
 import com.backroom.shared.error.ConflictException;
 import com.backroom.shared.error.InvalidRequestException;
 import com.backroom.shared.error.NotFoundException;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -95,8 +94,8 @@ public class CodeService {
         var active = codes.findByOrganizationIdAndKindAndValueInAndStatus(
                 orgId, ResourceCode.Kind.MANUFACTURER, candidates, ResourceCode.Status.ACTIVE);
         for (var code : active) {
-            if (itemId.equals(code.itemId)) return view(code);
-            var holder = items.require(orgId, code.itemId);
+            if (itemId.equals(code.getItemId())) return view(code);
+            var holder = items.require(orgId, code.getItemId());
             throw new ConflictException(
                     "BARCODE_IN_USE",
                     "This barcode is already registered to " + holder.name() + ". Remove it there first.");
@@ -117,9 +116,7 @@ public class CodeService {
         var code = codes.findByOrganizationIdAndId(orgId, codeId).orElseThrow(NotFoundException::new);
         code.checkVersion(expectedVersion);
         if (!code.active()) return;
-        code.status = ResourceCode.Status.REVOKED;
-        code.revokedAt = Instant.now();
-        code.revokedBy = access.actor().userId();
+        code.revoke(access.actor().userId());
         codes.flush();
         record(orgId, "CODE_REVOKED", code);
     }
@@ -132,15 +129,15 @@ public class CodeService {
     }
 
     LabelDtos.CodeView view(ResourceCode code) {
-        var generated = code.kind == ResourceCode.Kind.GENERATED;
+        var generated = code.getKind() == ResourceCode.Kind.GENERATED;
         return new LabelDtos.CodeView(
                 code.getId(),
-                code.kind,
-                generated ? Tokens.format(code.value) : Gtin.display(code.value),
-                generated ? publicUrl.link(code.value) : null,
-                code.itemId != null ? LabelDtos.TargetType.ITEM : LabelDtos.TargetType.LOCATION,
-                code.itemId != null ? code.itemId : code.locationId,
-                code.status,
+                code.getKind(),
+                generated ? Tokens.format(code.getValue()) : Gtin.display(code.getValue()),
+                generated ? publicUrl.link(code.getValue()) : null,
+                code.getItemId() != null ? LabelDtos.TargetType.ITEM : LabelDtos.TargetType.LOCATION,
+                code.getItemId() != null ? code.getItemId() : code.getLocationId(),
+                code.getStatus(),
                 code.getCreatedAt(),
                 code.getVersion());
     }
@@ -155,6 +152,6 @@ public class CodeService {
                 action,
                 view.targetType().name(),
                 view.targetId(),
-                Map.of("code", view.display(), "kind", code.kind.name()));
+                Map.of("code", view.display(), "kind", code.getKind().name()));
     }
 }

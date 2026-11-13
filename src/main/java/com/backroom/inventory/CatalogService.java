@@ -92,7 +92,7 @@ public class CatalogService {
         if (!result.isEmpty())
             balances.findByOrganizationIdAndLocationIdAndItemIdIn(
                             orgId, locationId, result.stream().map(Item::getId).toList())
-                    .forEach(balance -> here.put(balance.itemId, balance.quantity));
+                    .forEach(balance -> here.put(balance.getItemId(), balance.getQuantity()));
         var pictures = photos.versions(orgId, result.stream().map(Item::getId).toList());
         return PageResponse.from(result.map(item ->
                 view(item, here.getOrDefault(item.getId(), BigDecimal.ZERO), false, pictures.get(item.getId()))));
@@ -114,13 +114,11 @@ public class CatalogService {
         item.checkVersion(input.expectedVersion());
         var sku = normalizeSku(input.sku());
         checkSku(orgId, sku, id);
-        if (input.unit() != item.unit && movements.existsByOrganizationIdAndItemId(orgId, id)) {
+        if (input.unit() != item.getUnit() && movements.existsByOrganizationIdAndItemId(orgId, id)) {
             throw new ConflictException(
                     "UNIT_LOCKED", "The unit can't change after stock has been recorded. Create a new item instead.");
         }
-        item.name = input.name().strip();
-        item.sku = sku;
-        item.unit = input.unit();
+        item.edit(input.name().strip(), sku, input.unit());
         items.flush();
         record(orgId, "ITEM_UPDATED", "ITEM", id, metadata(item));
         return view(item);
@@ -131,16 +129,13 @@ public class CatalogService {
         // Exclusive row lock: waits for in-flight stock commands, which share-lock the item.
         var item = items.lockForUpdate(orgId, id).orElseThrow(NotFoundException::new);
         item.checkVersion(version);
-        if (item.archived) return;
+        if (item.isArchived()) return;
         if (balances.existsByOrganizationIdAndItemIdAndQuantityGreaterThan(orgId, id, BigDecimal.ZERO)) {
             throw new ConflictException(
                     "ITEM_HAS_STOCK", "Use, move or count this item's remaining stock to zero before archiving it.");
         }
-        item.archived = true;
-        placements.findByOrganizationIdAndItemIdAndActiveTrue(orgId, id).forEach(placement -> {
-            placement.active = false;
-            placement.minimumQuantity = null;
-        });
+        item.archive();
+        placements.findByOrganizationIdAndItemIdAndActiveTrue(orgId, id).forEach(ItemPlacement::deactivate);
         items.flush();
         record(orgId, "ITEM_ARCHIVED", "ITEM", id, metadata(item));
     }
@@ -152,8 +147,10 @@ public class CatalogService {
         var result = placements.findByOrganizationIdAndItemIdAndActiveTrue(
                 orgId, itemId, PageResponse.request(page, size, Sort.by("createdAt", "id")));
         var names = locations.names(
-                orgId, result.stream().map(placement -> placement.locationId).toList());
-        return PageResponse.from(result.map(placement -> placementView(placement, names.get(placement.locationId))));
+                orgId,
+                result.stream().map(placement -> placement.getLocationId()).toList());
+        return PageResponse.from(
+                result.map(placement -> placementView(placement, names.get(placement.getLocationId()))));
     }
 
     public CatalogDtos.PlacementView place(UUID orgId, UUID itemId, UUID locationId) {
@@ -164,10 +161,10 @@ public class CatalogService {
                 .findByOrganizationIdAndItemIdAndLocationId(orgId, itemId, locationId)
                 .orElse(null);
         if (placement == null) placement = new ItemPlacement(orgId, itemId, locationId);
-        else if (placement.active)
+        else if (placement.isActive())
             return placementView(
                     placement, locations.names(orgId, List.of(locationId)).get(locationId));
-        placement.active = true;
+        placement.activate();
         placements.saveAndFlush(placement);
         balances.insertIfMissing(orgId, itemId, locationId);
         record(orgId, "PLACEMENT_ADDED", "ITEM", itemId, Map.of("locationId", locationId.toString()));
@@ -180,15 +177,14 @@ public class CatalogService {
         find(orgId, itemId);
         // Lock order matches stock commands: placement, then balance.
         var placement = placements.lockSlot(orgId, itemId, locationId).orElseThrow(NotFoundException::new);
-        if (!placement.active) return;
+        if (!placement.isActive()) return;
         var balance = balances.lockSlot(orgId, itemId, locationId);
-        if (balance.isPresent() && balance.get().quantity.signum() > 0) {
+        if (balance.isPresent() && balance.get().getQuantity().signum() > 0) {
             throw new ConflictException(
                     "PLACEMENT_HAS_STOCK",
                     "This location still holds stock of the item. Use, move or count it to zero first.");
         }
-        placement.active = false;
-        placement.minimumQuantity = null;
+        placement.deactivate();
         placements.flush();
         record(orgId, "PLACEMENT_REMOVED", "ITEM", itemId, Map.of("locationId", locationId.toString()));
     }
@@ -207,7 +203,7 @@ public class CatalogService {
     }
 
     private void editable(Item item) {
-        if (item.archived) throw new ConflictException("ARCHIVED", "Archived items cannot be changed.");
+        if (item.isArchived()) throw new ConflictException("ARCHIVED", "Archived items cannot be changed.");
     }
 
     private String normalizeSku(String value) {
@@ -236,10 +232,10 @@ public class CatalogService {
     private CatalogDtos.View view(Item item, BigDecimal onHand, boolean low, Long photoVersion) {
         return new CatalogDtos.View(
                 item.getId(),
-                item.name,
-                item.sku,
-                item.unit,
-                item.archived,
+                item.getName(),
+                item.getSku(),
+                item.getUnit(),
+                item.isArchived(),
                 item.getVersion(),
                 Quantities.text(onHand == null ? BigDecimal.ZERO : onHand),
                 low,
@@ -254,17 +250,18 @@ public class CatalogService {
         editable(item);
         var placement = placements
                 .findByOrganizationIdAndItemIdAndLocationId(orgId, itemId, locationId)
-                .filter(found -> found.active)
+                .filter(found -> found.isActive())
                 .orElseThrow(() ->
                         new ConflictException("NOT_PLACED", "Add this location to the item before setting a minimum."));
-        placement.minimumQuantity = value == null ? null : Quantities.positive(item.unit, value);
+        placement.changeMinimum(value == null ? null : Quantities.positive(item.getUnit(), value));
         placements.flush();
         var name = locations.names(orgId, List.of(locationId)).get(locationId);
         var metadata = new LinkedHashMap<String, String>();
-        metadata.put("name", item.name);
+        metadata.put("name", item.getName());
         metadata.put("location", Objects.toString(name, ""));
-        metadata.put("unit", item.unit.name());
-        if (placement.minimumQuantity != null) metadata.put("minimum", Quantities.text(placement.minimumQuantity));
+        metadata.put("unit", item.getUnit().name());
+        if (placement.getMinimumQuantity() != null)
+            metadata.put("minimum", Quantities.text(placement.getMinimumQuantity()));
         record(orgId, "MINIMUM_SET", "ITEM", itemId, metadata);
     }
 
@@ -276,11 +273,17 @@ public class CatalogService {
     }
 
     private CatalogDtos.PlacementView placementView(ItemPlacement placement, String name) {
-        return new CatalogDtos.PlacementView(placement.getId(), placement.itemId, placement.locationId, name);
+        return new CatalogDtos.PlacementView(placement.getId(), placement.getItemId(), placement.getLocationId(), name);
     }
 
     private Map<String, String> metadata(Item item) {
-        return Map.of("name", item.name, "sku", Objects.toString(item.sku, ""), "unit", item.unit.name());
+        return Map.of(
+                "name",
+                item.getName(),
+                "sku",
+                Objects.toString(item.getSku(), ""),
+                "unit",
+                item.getUnit().name());
     }
 
     private void record(UUID orgId, String action, String type, UUID id, Map<String, String> metadata) {

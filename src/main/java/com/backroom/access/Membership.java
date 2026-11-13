@@ -12,14 +12,14 @@ import java.util.UUID;
 @Table(name = "memberships")
 class Membership extends TenantRecord {
     @Column(nullable = false)
-    UUID userId;
+    private UUID userId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    Role role;
+    private Role role;
 
     @Column(nullable = false)
-    boolean active = true;
+    private boolean active = true;
 
     protected Membership() {}
 
@@ -27,5 +27,31 @@ class Membership extends TenantRecord {
         this.organizationId = organizationId;
         this.userId = userId;
         this.role = role;
+    }
+
+    /** Joins, or rejoins after being deactivated, with the given role. */
+    void activate(Role newRole) {
+        active = true;
+        role = newRole;
+    }
+
+    void changeRole(Role newRole) {
+        role = newRole;
+    }
+
+    void deactivate() {
+        active = false;
+    }
+
+    UUID getUserId() {
+        return userId;
+    }
+
+    Role getRole() {
+        return role;
+    }
+
+    boolean isActive() {
+        return active;
     }
 }

@@ -13,19 +13,19 @@ import org.hibernate.annotations.Immutable;
 @Table(name = "stock_movements")
 class StockMovement extends TenantRecord {
     @Column(nullable = false)
-    UUID operationId;
+    private UUID operationId;
 
     @Column(nullable = false)
-    UUID itemId;
+    private UUID itemId;
 
     @Column(nullable = false)
-    UUID locationId;
+    private UUID locationId;
 
     @Column(nullable = false, precision = 15, scale = 3)
-    BigDecimal quantityChange;
+    private BigDecimal quantityChange;
 
     @Column(nullable = false, precision = 15, scale = 3)
-    BigDecimal balanceAfter;
+    private BigDecimal balanceAfter;
 
     protected StockMovement() {}
 
@@ -42,5 +42,25 @@ class StockMovement extends TenantRecord {
         this.locationId = locationId;
         this.quantityChange = quantityChange;
         this.balanceAfter = balanceAfter;
+    }
+
+    UUID getOperationId() {
+        return operationId;
+    }
+
+    UUID getItemId() {
+        return itemId;
+    }
+
+    UUID getLocationId() {
+        return locationId;
+    }
+
+    BigDecimal getQuantityChange() {
+        return quantityChange;
+    }
+
+    BigDecimal getBalanceAfter() {
+        return balanceAfter;
     }
 }

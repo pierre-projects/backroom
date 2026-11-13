@@ -144,7 +144,7 @@ public class ImportService {
         var hash = sha256(csv + "\n#include " + include);
         var previous = batches.findByOrganizationIdAndImportKey(orgId, input.importKey());
         if (previous.isPresent()) {
-            if (!previous.get().fileSha256.equals(hash)) {
+            if (!previous.get().getFileSha256().equals(hash)) {
                 throw new ConflictException(
                         "IMPORT_KEY_REUSED",
                         "This import was already applied with a different file. Start a new import.");
@@ -195,28 +195,26 @@ public class ImportService {
             }
         }
 
-        var batch = new ImportBatch(orgId, input.importKey());
         var actor = access.actor();
-        batch.fileSha256 = hash;
-        batch.fileName = fileName;
-        batch.createdBy = actor.userId();
-        batch.rows = plan.rows().size();
-        batch.itemsCreated = plan.items().size();
-        batch.locationsCreated = plan.locations().size();
-        batch.placements = plan.slots().size();
-        batch.quantities = quantities;
-        batch.minimums = minimums;
-        batch.errors = (int) plan.count(ImportPlanner.Status.ERROR);
-        batch.skipped = (int)
-                (plan.count(ImportPlanner.Status.DUPLICATE) + plan.count(ImportPlanner.Status.POSSIBLE_DUPLICATE));
+        var counts = new ImportBatch.Counts(
+                plan.rows().size(),
+                plan.items().size(),
+                plan.locations().size(),
+                plan.slots().size(),
+                quantities,
+                minimums,
+                (int) plan.count(ImportPlanner.Status.ERROR),
+                (int) (plan.count(ImportPlanner.Status.DUPLICATE)
+                        + plan.count(ImportPlanner.Status.POSSIBLE_DUPLICATE)));
+        var batch = new ImportBatch(orgId, input.importKey(), hash, fileName, actor.userId(), counts);
         batches.saveAndFlush(batch);
         var metadata = new LinkedHashMap<String, String>();
         if (fileName != null) metadata.put("file", fileName);
-        metadata.put("rows", String.valueOf(batch.rows));
-        metadata.put("itemsCreated", String.valueOf(batch.itemsCreated));
-        metadata.put("locationsCreated", String.valueOf(batch.locationsCreated));
-        metadata.put("skipped", String.valueOf(batch.skipped));
-        metadata.put("errors", String.valueOf(batch.errors));
+        metadata.put("rows", String.valueOf(batch.getRows()));
+        metadata.put("itemsCreated", String.valueOf(batch.getItemsCreated()));
+        metadata.put("locationsCreated", String.valueOf(batch.getLocationsCreated()));
+        metadata.put("skipped", String.valueOf(batch.getSkipped()));
+        metadata.put("errors", String.valueOf(batch.getErrors()));
         audit.record(
                 orgId, actor.userId(), actor.displayName(), "ITEM_IMPORT_COMPLETED", "ORGANIZATION", orgId, metadata);
         return result(batch, false);
@@ -266,14 +264,14 @@ public class ImportService {
     private static Result result(ImportBatch batch, boolean replayed) {
         return new Result(
                 replayed,
-                batch.rows,
-                batch.itemsCreated,
-                batch.locationsCreated,
-                batch.placements,
-                batch.quantities,
-                batch.minimums,
-                batch.skipped,
-                batch.errors);
+                batch.getRows(),
+                batch.getItemsCreated(),
+                batch.getLocationsCreated(),
+                batch.getPlacements(),
+                batch.getQuantities(),
+                batch.getMinimums(),
+                batch.getSkipped(),
+                batch.getErrors());
     }
 
     static PayloadTooLargeException tooLarge() {

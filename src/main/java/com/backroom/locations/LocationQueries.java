@@ -48,17 +48,17 @@ public class LocationQueries {
         var parents = names(
                 orgId,
                 found.stream()
-                        .map(location -> location.parentId)
+                        .map(location -> location.getParentId())
                         .filter(Objects::nonNull)
                         .toList());
         found.forEach(location -> result.put(
                 location.getId(),
                 new Summary(
                         location.getId(),
-                        location.name,
-                        location.parentId == null ? null : parents.get(location.parentId),
-                        location.type.name(),
-                        location.archived)));
+                        location.getName(),
+                        location.getParentId() == null ? null : parents.get(location.getParentId()),
+                        location.getType().name(),
+                        location.isArchived())));
         return result;
     }
     /** Unarchived locations whose name contains the text, by name, with their parent's name. */
@@ -69,16 +69,16 @@ public class LocationQueries {
         var parents = names(
                 orgId,
                 found.stream()
-                        .map(location -> location.parentId)
+                        .map(location -> location.getParentId())
                         .filter(Objects::nonNull)
                         .toList());
         return found.stream()
                 .map(location -> new Summary(
                         location.getId(),
-                        location.name,
-                        location.parentId == null ? null : parents.get(location.parentId),
-                        location.type.name(),
-                        location.archived))
+                        location.getName(),
+                        location.getParentId() == null ? null : parents.get(location.getParentId()),
+                        location.getType().name(),
+                        location.isArchived()))
                 .toList();
     }
     /** One location in the whole tree, for planning imports. */
@@ -88,15 +88,15 @@ public class LocationQueries {
         var all = locations.findByOrganizationId(orgId);
         var parents = new HashSet<UUID>();
         all.stream()
-                .filter(location -> !location.archived && location.parentId != null)
-                .forEach(location -> parents.add(location.parentId));
+                .filter(location -> !location.isArchived() && location.getParentId() != null)
+                .forEach(location -> parents.add(location.getParentId()));
         return all.stream()
                 .map(location -> new Node(
                         location.getId(),
-                        location.name,
-                        location.parentId,
-                        location.type.name(),
-                        location.archived,
+                        location.getName(),
+                        location.getParentId(),
+                        location.getType().name(),
+                        location.isArchived(),
                         parents.contains(location.getId())))
                 .toList();
     }
@@ -107,7 +107,7 @@ public class LocationQueries {
 
     public void requireActiveLeaf(UUID orgId, UUID id) {
         var location = locations.findByOrganizationIdAndId(orgId, id).orElseThrow(NotFoundException::new);
-        if (location.archived || locations.existsByOrganizationIdAndParentIdAndArchivedFalse(orgId, id)) {
+        if (location.isArchived() || locations.existsByOrganizationIdAndParentIdAndArchivedFalse(orgId, id)) {
             throw notLeaf();
         }
     }
@@ -119,7 +119,7 @@ public class LocationQueries {
     @Transactional
     public void lockActiveLeafForShare(UUID orgId, UUID id) {
         var location = locations.lockForShare(orgId, id).orElseThrow(NotFoundException::new);
-        if (location.archived || locations.existsByOrganizationIdAndParentIdAndArchivedFalse(orgId, id)) {
+        if (location.isArchived() || locations.existsByOrganizationIdAndParentIdAndArchivedFalse(orgId, id)) {
             throw notLeaf();
         }
     }
@@ -129,7 +129,7 @@ public class LocationQueries {
         if (!ids.isEmpty())
             locations
                     .findByOrganizationIdAndIdIn(orgId, ids)
-                    .forEach(location -> names.put(location.getId(), location.name));
+                    .forEach(location -> names.put(location.getId(), location.getName()));
         return names;
     }
 
@@ -138,13 +138,15 @@ public class LocationQueries {
         if (ids.isEmpty()) return labels;
         var found = locations.findByOrganizationIdAndIdIn(orgId, ids);
         var parentIds = found.stream()
-                .map(location -> location.parentId)
+                .map(location -> location.getParentId())
                 .filter(Objects::nonNull)
                 .toList();
         var parents = names(orgId, parentIds);
         found.forEach(location -> labels.put(
                 location.getId(),
-                new Label(location.name, location.parentId == null ? null : parents.get(location.parentId))));
+                new Label(
+                        location.getName(),
+                        location.getParentId() == null ? null : parents.get(location.getParentId()))));
         return labels;
     }
 

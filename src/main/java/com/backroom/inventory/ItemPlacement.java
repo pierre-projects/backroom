@@ -4,22 +4,23 @@ import com.backroom.shared.persistence.TenantRecord;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
 @Table(name = "item_placements")
 class ItemPlacement extends TenantRecord {
     @Column(nullable = false)
-    UUID itemId;
+    private UUID itemId;
 
     @Column(nullable = false)
-    UUID locationId;
+    private UUID locationId;
 
     @Column(nullable = false)
-    boolean active = true;
+    private boolean active = true;
     /** Optional: stock below this at this location counts as low. */
     @Column(precision = 15, scale = 3)
-    java.math.BigDecimal minimumQuantity;
+    private BigDecimal minimumQuantity;
 
     protected ItemPlacement() {}
 
@@ -27,5 +28,35 @@ class ItemPlacement extends TenantRecord {
         this.organizationId = orgId;
         this.itemId = itemId;
         this.locationId = locationId;
+    }
+
+    void activate() {
+        active = true;
+    }
+
+    /** Stops stocking the item here; a removed placement keeps no minimum. */
+    void deactivate() {
+        active = false;
+        minimumQuantity = null;
+    }
+
+    void changeMinimum(BigDecimal minimum) {
+        minimumQuantity = minimum;
+    }
+
+    UUID getItemId() {
+        return itemId;
+    }
+
+    UUID getLocationId() {
+        return locationId;
+    }
+
+    boolean isActive() {
+        return active;
+    }
+
+    BigDecimal getMinimumQuantity() {
+        return minimumQuantity;
     }
 }

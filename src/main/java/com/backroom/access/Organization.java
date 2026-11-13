@@ -9,11 +9,19 @@ import jakarta.persistence.Table;
 @Table(name = "organizations")
 class Organization extends RecordEntity {
     @Column(nullable = false, length = 120)
-    String name;
+    private String name;
 
     protected Organization() {}
 
     Organization(String name) {
         this.name = name;
+    }
+
+    void rename(String newName) {
+        name = newName;
+    }
+
+    String getName() {
+        return name;
     }
 }

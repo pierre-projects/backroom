@@ -14,17 +14,17 @@ import java.util.UUID;
 class Invitation extends TenantRecord {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    Role role;
+    private Role role;
 
     @Column(nullable = false, length = 64)
-    String tokenHash;
+    private String tokenHash;
 
     @Column(nullable = false)
-    Instant expiresAt;
+    private Instant expiresAt;
 
-    Instant revokedAt;
-    Instant acceptedAt;
-    UUID acceptedBy;
+    private Instant revokedAt;
+    private Instant acceptedAt;
+    private UUID acceptedBy;
 
     protected Invitation() {}
 
@@ -33,5 +33,30 @@ class Invitation extends TenantRecord {
         this.role = role;
         this.tokenHash = hash;
         this.expiresAt = expiresAt;
+    }
+
+    void revoke(Instant at) {
+        revokedAt = at;
+    }
+
+    void accept(UUID userId, Instant at) {
+        acceptedAt = at;
+        acceptedBy = userId;
+    }
+
+    Role getRole() {
+        return role;
+    }
+
+    Instant getExpiresAt() {
+        return expiresAt;
+    }
+
+    Instant getRevokedAt() {
+        return revokedAt;
+    }
+
+    Instant getAcceptedAt() {
+        return acceptedAt;
     }
 }

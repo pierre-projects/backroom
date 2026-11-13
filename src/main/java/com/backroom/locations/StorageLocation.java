@@ -12,16 +12,16 @@ import java.util.UUID;
 @Table(name = "locations")
 class StorageLocation extends TenantRecord {
     @Column(nullable = false, length = 120)
-    String name;
+    private String name;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    LocationType type;
+    private LocationType type;
 
-    UUID parentId;
+    private UUID parentId;
 
     @Column(nullable = false)
-    boolean archived;
+    private boolean archived;
 
     protected StorageLocation() {}
 
@@ -30,5 +30,31 @@ class StorageLocation extends TenantRecord {
         this.name = name;
         this.type = type;
         this.parentId = parentId;
+    }
+
+    void edit(String newName, LocationType newType, UUID newParentId) {
+        name = newName;
+        type = newType;
+        parentId = newParentId;
+    }
+
+    void archive() {
+        archived = true;
+    }
+
+    String getName() {
+        return name;
+    }
+
+    LocationType getType() {
+        return type;
+    }
+
+    UUID getParentId() {
+        return parentId;
+    }
+
+    boolean isArchived() {
+        return archived;
     }
 }

@@ -43,7 +43,8 @@ enforces the boundaries with Spring Modulith: each top-level package is a
 module, there are no cycles between modules, and sub-packages are internal
 unless declared as a `@NamedInterface`. `ArchitectureTests` keeps HTTP types
 (`org.springframework.http`, `.web`, `jakarta.servlet`) in controllers and the
-web layer; services throw `shared.error` exceptions. The same test writes module diagrams to
+web layer; services throw `shared.error` exceptions. It also requires every `@Entity` field to be
+private: entities change state through their own methods, not field assignments. The same test writes module diagrams to
 `target/spring-modulith-docs`.
 
 ## Decisions

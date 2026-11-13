@@ -14,58 +14,58 @@ import java.util.UUID;
 @Table(name = "restock_requests")
 class RestockRequest extends TenantRecord {
     @Column(nullable = false, updatable = false)
-    int number;
+    private int number;
 
     @Column(nullable = false, updatable = false)
-    UUID itemId;
+    private UUID itemId;
 
     @Column(nullable = false, updatable = false)
-    UUID locationId;
+    private UUID locationId;
 
     @Column(nullable = false, updatable = false, precision = 15, scale = 3)
-    BigDecimal requestedQuantity;
+    private BigDecimal requestedQuantity;
 
     @Column(precision = 15, scale = 3)
-    BigDecimal approvedQuantity;
+    private BigDecimal approvedQuantity;
 
     @Column(nullable = false, precision = 15, scale = 3)
-    BigDecimal receivedQuantity = BigDecimal.ZERO.setScale(3);
+    private BigDecimal receivedQuantity = BigDecimal.ZERO.setScale(3);
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    RequestStatus status = RequestStatus.SUBMITTED;
+    private RequestStatus status = RequestStatus.SUBMITTED;
 
     @Column(nullable = false, updatable = false)
-    UUID requesterId;
+    private UUID requesterId;
 
     @Column(nullable = false, updatable = false, length = 100)
-    String requesterName;
+    private String requesterName;
 
     @Column(updatable = false, length = 500)
-    String note;
+    private String note;
 
-    UUID decidedBy;
-
-    @Column(length = 100)
-    String decidedByName;
-
-    Instant decidedAt;
-
-    @Column(length = 500)
-    String decisionNote;
-
-    UUID closedBy;
+    private UUID decidedBy;
 
     @Column(length = 100)
-    String closedByName;
+    private String decidedByName;
 
-    Instant closedAt;
+    private Instant decidedAt;
 
     @Column(length = 500)
-    String closeReason;
+    private String decisionNote;
+
+    private UUID closedBy;
+
+    @Column(length = 100)
+    private String closedByName;
+
+    private Instant closedAt;
+
+    @Column(length = 500)
+    private String closeReason;
 
     @Column(nullable = false)
-    Instant updatedAt = Instant.now();
+    private Instant updatedAt = Instant.now();
 
     protected RestockRequest() {}
 
@@ -92,12 +92,127 @@ class RestockRequest extends TenantRecord {
         return approvedQuantity == null ? BigDecimal.ZERO : approvedQuantity.subtract(receivedQuantity);
     }
     /** Status after the received quantity changed, for requests that are still open for deliveries. */
-    void settle() {
+    private void settle() {
         if (status == RequestStatus.CLOSED_SHORT) return;
         status = receivedQuantity.signum() == 0
                 ? RequestStatus.APPROVED
                 : receivedQuantity.compareTo(approvedQuantity) >= 0
                         ? RequestStatus.FULFILLED
                         : RequestStatus.PARTIALLY_RECEIVED;
+    }
+
+    void approve(BigDecimal quantity, UUID actorId, String actorName, String note) {
+        approvedQuantity = quantity;
+        status = RequestStatus.APPROVED;
+        decidedBy = actorId;
+        decidedByName = actorName;
+        decidedAt = Instant.now();
+        decisionNote = note;
+    }
+
+    void reject(UUID actorId, String actorName, String reason) {
+        status = RequestStatus.REJECTED;
+        decidedBy = actorId;
+        decidedByName = actorName;
+        decidedAt = Instant.now();
+        decisionNote = reason;
+    }
+
+    void cancel(UUID actorId, String actorName) {
+        status = RequestStatus.CANCELLED;
+        closedBy = actorId;
+        closedByName = actorName;
+        closedAt = Instant.now();
+    }
+
+    void closeShort(UUID actorId, String actorName, String reason) {
+        status = RequestStatus.CLOSED_SHORT;
+        closedBy = actorId;
+        closedByName = actorName;
+        closedAt = Instant.now();
+        closeReason = reason;
+    }
+
+    void recordDelivery(BigDecimal quantity) {
+        receivedQuantity = receivedQuantity.add(quantity);
+        settle();
+    }
+
+    /** A delivery's stock receipt was reversed: the quantity no longer counts and the request may reopen. */
+    void reverseDelivery(BigDecimal quantity) {
+        receivedQuantity = receivedQuantity.subtract(quantity);
+        settle();
+    }
+
+    void markUpdated() {
+        updatedAt = Instant.now();
+    }
+
+    int getNumber() {
+        return number;
+    }
+
+    UUID getItemId() {
+        return itemId;
+    }
+
+    UUID getLocationId() {
+        return locationId;
+    }
+
+    BigDecimal getRequestedQuantity() {
+        return requestedQuantity;
+    }
+
+    BigDecimal getApprovedQuantity() {
+        return approvedQuantity;
+    }
+
+    BigDecimal getReceivedQuantity() {
+        return receivedQuantity;
+    }
+
+    RequestStatus getStatus() {
+        return status;
+    }
+
+    UUID getRequesterId() {
+        return requesterId;
+    }
+
+    String getRequesterName() {
+        return requesterName;
+    }
+
+    String getNote() {
+        return note;
+    }
+
+    String getDecidedByName() {
+        return decidedByName;
+    }
+
+    Instant getDecidedAt() {
+        return decidedAt;
+    }
+
+    String getDecisionNote() {
+        return decisionNote;
+    }
+
+    String getClosedByName() {
+        return closedByName;
+    }
+
+    Instant getClosedAt() {
+        return closedAt;
+    }
+
+    String getCloseReason() {
+        return closeReason;
+    }
+
+    Instant getUpdatedAt() {
+        return updatedAt;
     }
 }

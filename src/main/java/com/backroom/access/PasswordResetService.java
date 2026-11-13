@@ -68,12 +68,12 @@ public class PasswordResetService {
         var issuer = access.actor();
         memberships
                 .findByOrganizationIdAndUserId(orgId, userId)
-                .filter(member -> member.active)
+                .filter(member -> member.isActive())
                 .orElseThrow(NotFoundException::new);
         for (var membership : memberships.findByUserIdAndActiveTrue(userId)) {
             var owner = memberships
                     .findByOrganizationIdAndUserId(membership.getOrganizationId(), issuer.userId())
-                    .filter(member -> member.active && member.role == OWNER)
+                    .filter(member -> member.isActive() && member.getRole() == OWNER)
                     .isPresent();
             if (!owner) {
                 throw new ConflictException(
@@ -83,7 +83,7 @@ public class PasswordResetService {
         }
         var account = accounts.findById(userId).orElseThrow(NotFoundException::new);
         var now = clock.instant();
-        resets.findByUserIdAndUsedAtIsNullAndRevokedAtIsNull(userId).forEach(open -> open.revokedAt = now);
+        resets.findByUserIdAndUsedAtIsNullAndRevokedAtIsNull(userId).forEach(open -> open.revoke(now));
         var bytes = new byte[32];
         random.nextBytes(bytes);
         var token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
@@ -96,8 +96,9 @@ public class PasswordResetService {
                 "PASSWORD_RESET_ISSUED",
                 "USER",
                 userId,
-                Map.of("name", account.displayName));
-        return new AccessDtos.IssuedReset(userId, account.displayName, "/reset#token=" + token, reset.expiresAt);
+                Map.of("name", account.getDisplayName()));
+        return new AccessDtos.IssuedReset(
+                userId, account.getDisplayName(), "/reset#token=" + token, reset.getExpiresAt());
     }
 
     @Transactional(readOnly = true)
@@ -105,8 +106,8 @@ public class PasswordResetService {
         var reset = resets.findByTokenHash(digest(token))
                 .filter(found -> found.open(clock.instant()))
                 .orElseThrow(PasswordResetService::unavailable);
-        var account = accounts.findById(reset.userId).orElseThrow(PasswordResetService::unavailable);
-        return new AccessDtos.ResetPreview(account.displayName, account.email, reset.expiresAt);
+        var account = accounts.findById(reset.getUserId()).orElseThrow(PasswordResetService::unavailable);
+        return new AccessDtos.ResetPreview(account.getDisplayName(), account.getEmail(), reset.getExpiresAt());
     }
 
     /** Sets the new password, uses up the link, and ends every existing session for the account. Returns the email to sign in with. */
@@ -116,13 +117,12 @@ public class PasswordResetService {
         var reset = resets.lockByTokenHash(digest(token))
                 .filter(found -> found.open(now))
                 .orElseThrow(PasswordResetService::unavailable);
-        var account = accounts.findById(reset.userId).orElseThrow(PasswordResetService::unavailable);
-        account.passwordHash = encoder.encode(newPassword);
-        account.credentialsVersion++;
-        reset.usedAt = now;
-        resets.findByUserIdAndUsedAtIsNullAndRevokedAtIsNull(reset.userId).stream()
+        var account = accounts.findById(reset.getUserId()).orElseThrow(PasswordResetService::unavailable);
+        account.changePassword(encoder.encode(newPassword));
+        reset.markUsed(now);
+        resets.findByUserIdAndUsedAtIsNullAndRevokedAtIsNull(reset.getUserId()).stream()
                 .filter(other -> !other.getId().equals(reset.getId()))
-                .forEach(other -> other.revokedAt = now);
+                .forEach(other -> other.revoke(now));
         accounts.flush();
         // Forget the cached version now and again after commit, so no request can keep the old one alive.
         versions.remove(account.getId());
@@ -135,14 +135,14 @@ public class PasswordResetService {
                     }
                 });
         audit.record(
-                reset.organizationId,
+                reset.getOrganizationId(),
                 account.getId(),
-                account.displayName,
+                account.getDisplayName(),
                 "PASSWORD_RESET_COMPLETED",
                 "USER",
                 account.getId(),
-                Map.of("name", account.displayName));
-        return account.email;
+                Map.of("name", account.getDisplayName()));
+        return account.getEmail();
     }
 
     /** False when the password changed after this session signed in. Cached briefly so most requests don't touch the database. */
@@ -152,7 +152,7 @@ public class PasswordResetService {
         var cached = versions.get(principal.userId());
         if (cached == null || cached.at().plus(CHECK_INTERVAL).isBefore(now)) {
             var version = accounts.findById(principal.userId())
-                    .map(account -> account.credentialsVersion)
+                    .map(account -> account.getCredentialsVersion())
                     .orElse(-1);
             cached = new Checked(version, now);
             versions.put(principal.userId(), cached);

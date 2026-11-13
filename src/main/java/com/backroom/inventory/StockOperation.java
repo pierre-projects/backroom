@@ -15,30 +15,30 @@ import org.hibernate.annotations.Immutable;
 class StockOperation extends TenantRecord {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    StockOperationType type;
+    private StockOperationType type;
 
     @Column(nullable = false)
-    UUID itemId;
+    private UUID itemId;
 
     @Column(nullable = false)
-    UUID actorId;
+    private UUID actorId;
 
     @Column(nullable = false, length = 100)
-    String actorName;
+    private String actorName;
 
     @Column(nullable = false)
-    UUID operationKey;
+    private UUID operationKey;
 
     @Column(nullable = false, length = 64)
-    String payloadHash;
+    private String payloadHash;
 
     @Column(length = 120)
-    String reference;
+    private String reference;
 
     @Column(length = 500)
-    String note;
+    private String note;
 
-    UUID reversesOperationId;
+    private UUID reversesOperationId;
 
     protected StockOperation() {}
 
@@ -63,5 +63,41 @@ class StockOperation extends TenantRecord {
         this.reference = reference;
         this.note = note;
         this.reversesOperationId = reversesOperationId;
+    }
+
+    StockOperationType getType() {
+        return type;
+    }
+
+    UUID getItemId() {
+        return itemId;
+    }
+
+    UUID getActorId() {
+        return actorId;
+    }
+
+    String getActorName() {
+        return actorName;
+    }
+
+    UUID getOperationKey() {
+        return operationKey;
+    }
+
+    String getPayloadHash() {
+        return payloadHash;
+    }
+
+    String getReference() {
+        return reference;
+    }
+
+    String getNote() {
+        return note;
+    }
+
+    UUID getReversesOperationId() {
+        return reversesOperationId;
     }
 }

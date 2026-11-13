@@ -1,10 +1,12 @@
 package com.backroom;
 
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.fields;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
+import jakarta.persistence.Entity;
 import org.junit.jupiter.api.Test;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,6 +37,23 @@ class ArchitectureTests {
                 .dependOnClassesThat()
                 .resideInAnyPackage("org.springframework.http..", "org.springframework.web..", "jakarta.servlet..")
                 .because("HTTP is the web layer's concern; services throw shared.error exceptions instead")
+                .check(CLASSES);
+    }
+
+    /**
+     * Entities change state only through their own methods ({@code request.approve(...)}, {@code item.archive()}),
+     * never by another class assigning a field. Private fields also keep Hibernate lazy proxies safe.
+     */
+    @Test
+    void entityFieldsArePrivate() {
+        fields().that()
+                .areDeclaredInClassesThat()
+                .areAnnotatedWith(Entity.class)
+                .and()
+                .areNotStatic()
+                .should()
+                .bePrivate()
+                .because("other classes read entities through getters and change them through behaviour methods")
                 .check(CLASSES);
     }
 }

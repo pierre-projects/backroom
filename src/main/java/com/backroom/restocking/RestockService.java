@@ -3,12 +3,8 @@ package com.backroom.restocking;
 import static com.backroom.access.Role.EMPLOYEE;
 import static com.backroom.access.Role.MANAGER;
 import static com.backroom.access.Role.OWNER;
-import static com.backroom.restocking.RequestStatus.APPROVED;
-import static com.backroom.restocking.RequestStatus.CANCELLED;
-import static com.backroom.restocking.RequestStatus.CLOSED_SHORT;
 import static com.backroom.restocking.RequestStatus.OPEN;
 import static com.backroom.restocking.RequestStatus.RECEIVING;
-import static com.backroom.restocking.RequestStatus.REJECTED;
 import static com.backroom.restocking.RequestStatus.SUBMITTED;
 
 import com.backroom.access.AccessPolicy;
@@ -23,7 +19,6 @@ import com.backroom.shared.error.ConflictException;
 import com.backroom.shared.error.ForbiddenException;
 import com.backroom.shared.error.NotFoundException;
 import com.backroom.shared.web.PageResponse;
-import java.time.Instant;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -92,18 +87,13 @@ public class RestockService {
     public RestockDtos.RequestView approve(UUID orgId, UUID id, RestockDtos.Approve in) {
         access.require(orgId, OWNER, MANAGER);
         var request = lockForDecision(orgId, id, in.expectedVersion());
-        if (request.status != SUBMITTED) throw invalid("Only submitted requests can be approved.");
-        var item = items.require(orgId, request.itemId);
+        if (request.getStatus() != SUBMITTED) throw invalid("Only submitted requests can be approved.");
+        var item = items.require(orgId, request.getItemId());
         var approved = in.approvedQuantity() == null
-                ? request.requestedQuantity
+                ? request.getRequestedQuantity()
                 : Quantities.positive(item.unit(), in.approvedQuantity());
         var actor = access.actor();
-        request.approvedQuantity = approved;
-        request.status = APPROVED;
-        request.decidedBy = actor.userId();
-        request.decidedByName = actor.displayName();
-        request.decidedAt = Instant.now();
-        request.decisionNote = blankToNull(in.note());
+        request.approve(approved, actor.userId(), actor.displayName(), blankToNull(in.note()));
         touch(request);
         record(
                 orgId,
@@ -112,22 +102,18 @@ public class RestockService {
                 "quantity",
                 Quantities.text(approved),
                 "requested",
-                Quantities.text(request.requestedQuantity));
+                Quantities.text(request.getRequestedQuantity()));
         return detail(orgId, request, false);
     }
 
     public RestockDtos.RequestView reject(UUID orgId, UUID id, RestockDtos.Reason in) {
         access.require(orgId, OWNER, MANAGER);
         var request = lockForDecision(orgId, id, in.expectedVersion());
-        if (request.status != SUBMITTED) throw invalid("Only submitted requests can be rejected.");
+        if (request.getStatus() != SUBMITTED) throw invalid("Only submitted requests can be rejected.");
         var actor = access.actor();
-        request.status = REJECTED;
-        request.decidedBy = actor.userId();
-        request.decidedByName = actor.displayName();
-        request.decidedAt = Instant.now();
-        request.decisionNote = in.reason().strip();
+        request.reject(actor.userId(), actor.displayName(), in.reason().strip());
         touch(request);
-        record(orgId, "RESTOCK_REJECTED", request, "reason", request.decisionNote);
+        record(orgId, "RESTOCK_REJECTED", request, "reason", request.getDecisionNote());
         return detail(orgId, request, false);
     }
 
@@ -135,12 +121,10 @@ public class RestockService {
         var role = access.require(orgId);
         var request = lockForDecision(orgId, id, in.expectedVersion());
         var actor = access.actor();
-        if (role == EMPLOYEE && !request.requesterId.equals(actor.userId())) throw new ForbiddenException();
-        if (request.status != SUBMITTED) throw invalid("Only requests that haven't been reviewed can be cancelled.");
-        request.status = CANCELLED;
-        request.closedBy = actor.userId();
-        request.closedByName = actor.displayName();
-        request.closedAt = Instant.now();
+        if (role == EMPLOYEE && !request.getRequesterId().equals(actor.userId())) throw new ForbiddenException();
+        if (request.getStatus() != SUBMITTED)
+            throw invalid("Only requests that haven't been reviewed can be cancelled.");
+        request.cancel(actor.userId(), actor.displayName());
         touch(request);
         record(orgId, "RESTOCK_CANCELLED", request);
         return detail(orgId, request, false);
@@ -149,23 +133,19 @@ public class RestockService {
     public RestockDtos.RequestView closeShort(UUID orgId, UUID id, RestockDtos.Reason in) {
         access.require(orgId, OWNER, MANAGER);
         var request = lockForDecision(orgId, id, in.expectedVersion());
-        if (!RECEIVING.contains(request.status))
+        if (!RECEIVING.contains(request.getStatus()))
             throw invalid("Only approved requests that are still waiting for stock can be closed short.");
         var actor = access.actor();
-        request.status = CLOSED_SHORT;
-        request.closedBy = actor.userId();
-        request.closedByName = actor.displayName();
-        request.closedAt = Instant.now();
-        request.closeReason = in.reason().strip();
+        request.closeShort(actor.userId(), actor.displayName(), in.reason().strip());
         touch(request);
         record(
                 orgId,
                 "RESTOCK_CLOSED_SHORT",
                 request,
                 "received",
-                Quantities.text(request.receivedQuantity),
+                Quantities.text(request.getReceivedQuantity()),
                 "reason",
-                request.closeReason);
+                request.getCloseReason());
         return detail(orgId, request, false);
     }
 
@@ -176,7 +156,7 @@ public class RestockService {
     public RestockDtos.RequestView receive(UUID orgId, UUID id, RestockDtos.Receive in) {
         access.require(orgId);
         var request = requests.lockById(orgId, id).orElseThrow(NotFoundException::new);
-        var item = items.require(orgId, request.itemId);
+        var item = items.require(orgId, request.getItemId());
         var quantity = Quantities.positive(item.unit(), in.quantity());
         var actor = access.actor();
 
@@ -184,9 +164,9 @@ public class RestockService {
         if (earlier.isPresent()) {
             var receipt = receipts.findByOrganizationIdAndStockOperationId(orgId, earlier.get());
             if (receipt.isPresent()
-                    && receipt.get().requestId.equals(id)
-                    && receipt.get().receiverId.equals(actor.userId())
-                    && receipt.get().quantity.compareTo(quantity) == 0) {
+                    && receipt.get().getRequestId().equals(id)
+                    && receipt.get().getReceiverId().equals(actor.userId())
+                    && receipt.get().getQuantity().compareTo(quantity) == 0) {
                 log.info(
                         "Restock delivery replayed: type=RESTOCK_RECEIPT operationKey={} organizationId={}",
                         in.operationKey(),
@@ -196,9 +176,9 @@ public class RestockService {
             throw new ConflictException(
                     "IDEMPOTENCY_KEY_REUSED", "This operation key was already used for a different request.");
         }
-        if (request.status == SUBMITTED)
+        if (request.getStatus() == SUBMITTED)
             throw new ConflictException("NOT_APPROVED", "This request hasn't been approved yet.");
-        if (!RECEIVING.contains(request.status))
+        if (!RECEIVING.contains(request.getStatus()))
             throw invalid("This request is closed. Record extra stock as an ordinary receipt.");
         if (quantity.compareTo(request.remaining()) > 0) {
             throw new ConflictException(
@@ -211,15 +191,14 @@ public class RestockService {
                 orgId,
                 new StockDtos.Receipt(
                         in.operationKey(),
-                        request.itemId,
-                        request.locationId,
+                        request.getItemId(),
+                        request.getLocationId(),
                         quantity,
                         label(request),
                         blankToNull(in.note())));
         receipts.save(new RestockReceipt(
                 orgId, request.getId(), operation.id(), quantity, actor.userId(), actor.displayName()));
-        request.receivedQuantity = request.receivedQuantity.add(quantity);
-        request.settle();
+        request.recordDelivery(quantity);
         touch(request);
         log.info(
                 "Restock delivery recorded: type=RESTOCK_RECEIPT operationKey={} organizationId={}",
@@ -232,7 +211,7 @@ public class RestockService {
                 "quantity",
                 Quantities.text(quantity),
                 "received",
-                Quantities.text(request.receivedQuantity));
+                Quantities.text(request.getReceivedQuantity()));
         return detail(orgId, request, false);
     }
 
@@ -258,15 +237,15 @@ public class RestockService {
                 locationId,
                 PageResponse.request(page, size, Sort.by(Sort.Direction.DESC, "createdAt", "id")));
         var itemSummaries = items.summaries(
-                orgId, result.stream().map(request -> request.itemId).toList());
+                orgId, result.stream().map(request -> request.getItemId()).toList());
         var locationSummaries = locations.summaries(
-                orgId, result.stream().map(request -> request.locationId).toList());
+                orgId, result.stream().map(request -> request.getLocationId()).toList());
         return PageResponse.from(result.map(request -> view(
                 request,
                 List.of(),
                 false,
-                itemSummaries.get(request.itemId),
-                locationSummaries.get(request.locationId))));
+                itemSummaries.get(request.getItemId()),
+                locationSummaries.get(request.getLocationId()))));
     }
 
     @Transactional(readOnly = true)
@@ -296,26 +275,27 @@ public class RestockService {
     }
 
     private void touch(RestockRequest request) {
-        request.updatedAt = Instant.now();
+        request.markUpdated();
         requests.flush();
     }
 
     static String label(RestockRequest request) {
-        return "R-" + request.number;
+        return "R-" + request.getNumber();
     }
 
     private RestockDtos.RequestView detail(UUID orgId, RestockRequest request, boolean replayed) {
         var list = receipts.findByOrganizationIdAndRequestIdOrderByCreatedAtAscIdAsc(orgId, request.getId());
         var reversed = stock.reversedAmong(
-                orgId, list.stream().map(receipt -> receipt.stockOperationId).toList());
+                orgId,
+                list.stream().map(receipt -> receipt.getStockOperationId()).toList());
         var views = list.stream()
                 .map(receipt -> new RestockDtos.ReceiptView(
                         receipt.getId(),
-                        Quantities.text(receipt.quantity),
-                        receipt.receiverName,
+                        Quantities.text(receipt.getQuantity()),
+                        receipt.getReceiverName(),
                         receipt.getCreatedAt(),
-                        receipt.stockOperationId,
-                        reversed.contains(receipt.stockOperationId)))
+                        receipt.getStockOperationId(),
+                        reversed.contains(receipt.getStockOperationId())))
                 .toList();
         return view(request, views, replayed);
     }
@@ -327,8 +307,8 @@ public class RestockService {
                 request,
                 receiptViews,
                 replayed,
-                items.summaries(orgId, List.of(request.itemId)).get(request.itemId),
-                locations.summaries(orgId, List.of(request.locationId)).get(request.locationId));
+                items.summaries(orgId, List.of(request.getItemId())).get(request.getItemId()),
+                locations.summaries(orgId, List.of(request.getLocationId())).get(request.getLocationId()));
     }
 
     private static RestockDtos.RequestView view(
@@ -339,32 +319,32 @@ public class RestockService {
             LocationQueries.Summary location) {
         return new RestockDtos.RequestView(
                 request.getId(),
-                request.number,
+                request.getNumber(),
                 label(request),
-                request.status,
-                request.itemId,
+                request.getStatus(),
+                request.getItemId(),
                 item == null ? null : item.name(),
                 item == null ? null : item.sku(),
                 item == null ? null : item.unit().name(),
                 item != null && item.archived(),
-                request.locationId,
+                request.getLocationId(),
                 location == null ? null : location.name(),
                 location == null ? null : location.parentName(),
-                Quantities.text(request.requestedQuantity),
-                request.approvedQuantity == null ? null : Quantities.text(request.approvedQuantity),
-                Quantities.text(request.receivedQuantity),
+                Quantities.text(request.getRequestedQuantity()),
+                request.getApprovedQuantity() == null ? null : Quantities.text(request.getApprovedQuantity()),
+                Quantities.text(request.getReceivedQuantity()),
                 Quantities.text(request.remaining()),
-                request.requesterId,
-                request.requesterName,
-                request.note,
+                request.getRequesterId(),
+                request.getRequesterName(),
+                request.getNote(),
                 request.getCreatedAt(),
-                request.decidedByName,
-                request.decidedAt,
-                request.decisionNote,
-                request.closedByName,
-                request.closedAt,
-                request.closeReason,
-                request.updatedAt,
+                request.getDecidedByName(),
+                request.getDecidedAt(),
+                request.getDecisionNote(),
+                request.getClosedByName(),
+                request.getClosedAt(),
+                request.getCloseReason(),
+                request.getUpdatedAt(),
                 request.getVersion(),
                 receiptViews,
                 replayed);
@@ -372,7 +352,7 @@ public class RestockService {
 
     private void record(UUID orgId, String action, RestockRequest request, String... pairs) {
         var actor = access.actor();
-        var item = items.summaries(orgId, List.of(request.itemId)).get(request.itemId);
+        var item = items.summaries(orgId, List.of(request.getItemId())).get(request.getItemId());
         var metadata = new LinkedHashMap<String, String>();
         metadata.put("name", item == null ? "" : item.name());
         metadata.put("request", label(request));

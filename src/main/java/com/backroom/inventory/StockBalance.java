@@ -16,16 +16,34 @@ import java.util.UUID;
 @Table(name = "stock_balances")
 class StockBalance extends TenantRecord {
     @Column(nullable = false, updatable = false)
-    UUID itemId;
+    private UUID itemId;
 
     @Column(nullable = false, updatable = false)
-    UUID locationId;
+    private UUID locationId;
 
     @Column(nullable = false, precision = 15, scale = 3)
-    BigDecimal quantity = BigDecimal.ZERO;
+    private BigDecimal quantity = BigDecimal.ZERO;
 
     @Column(nullable = false)
-    Instant updatedAt = Instant.now();
+    private Instant updatedAt = Instant.now();
 
     protected StockBalance() {}
+
+    /** Only StockService calls this, after locking the row and checking the result is not negative. */
+    void changeQuantity(BigDecimal after) {
+        quantity = after;
+        updatedAt = Instant.now();
+    }
+
+    UUID getItemId() {
+        return itemId;
+    }
+
+    UUID getLocationId() {
+        return locationId;
+    }
+
+    BigDecimal getQuantity() {
+        return quantity;
+    }
 }

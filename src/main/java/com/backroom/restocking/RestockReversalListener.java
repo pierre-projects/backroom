@@ -1,7 +1,6 @@
 package com.backroom.restocking;
 
 import com.backroom.inventory.StockReversalListener;
-import java.time.Instant;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
 
@@ -23,10 +22,9 @@ class RestockReversalListener implements StockReversalListener {
     public void onReversal(UUID orgId, UUID reversedOperationId) {
         var receipt = receipts.findByOrganizationIdAndStockOperationId(orgId, reversedOperationId);
         if (receipt.isEmpty()) return;
-        var request = requests.lockById(orgId, receipt.get().requestId).orElseThrow();
-        request.receivedQuantity = request.receivedQuantity.subtract(receipt.get().quantity);
-        request.settle();
-        request.updatedAt = Instant.now();
+        var request = requests.lockById(orgId, receipt.get().getRequestId()).orElseThrow();
+        request.reverseDelivery(receipt.get().getQuantity());
+        request.markUpdated();
         requests.flush();
     }
 }

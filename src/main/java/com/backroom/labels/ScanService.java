@@ -86,12 +86,12 @@ public class ScanService {
         var code = codes.findByKindAndValue(ResourceCode.Kind.GENERATED, token).orElseThrow(NotFoundException::new);
         if (!access.isActiveMember(code.getOrganizationId())) throw new NotFoundException();
         if (!code.active()) return new LabelDtos.LinkView(REVOKED, code.getOrganizationId(), null, null);
-        var item = code.itemId != null;
+        var item = code.getItemId() != null;
         return new LabelDtos.LinkView(
                 item ? ITEM : LOCATION,
                 code.getOrganizationId(),
                 item ? LabelDtos.TargetType.ITEM : LabelDtos.TargetType.LOCATION,
-                item ? code.itemId : code.locationId);
+                item ? code.getItemId() : code.getLocationId());
     }
 
     private LabelDtos.ScanResult fromToken(UUID orgId, String token) {
@@ -119,8 +119,8 @@ public class ScanService {
             return new LabelDtos.ScanResult(
                     REVOKED, null, null, null, null, null, null, false, Tokens.format(token), null, null, false);
         }
-        if (code.itemId != null) return item(orgId, code);
-        var location = locations.require(orgId, code.locationId);
+        if (code.getItemId() != null) return item(orgId, code);
+        var location = locations.require(orgId, code.getLocationId());
         return new LabelDtos.ScanResult(
                 LOCATION,
                 LabelDtos.TargetType.LOCATION,
@@ -137,8 +137,10 @@ public class ScanService {
     }
 
     private LabelDtos.ScanResult item(UUID orgId, ResourceCode code) {
-        var item = items.require(orgId, code.itemId);
-        var display = code.kind == ResourceCode.Kind.GENERATED ? Tokens.format(code.value) : Gtin.display(code.value);
+        var item = items.require(orgId, code.getItemId());
+        var display = code.getKind() == ResourceCode.Kind.GENERATED
+                ? Tokens.format(code.getValue())
+                : Gtin.display(code.getValue());
         return new LabelDtos.ScanResult(
                 ITEM,
                 LabelDtos.TargetType.ITEM,

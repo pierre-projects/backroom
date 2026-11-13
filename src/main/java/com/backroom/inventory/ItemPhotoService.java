@@ -57,7 +57,7 @@ public class ItemPhotoService {
     public Saved set(UUID orgId, UUID itemId, String contentType, byte[] bytes) {
         access.lock(orgId, OWNER, MANAGER);
         var item = items.findByOrganizationIdAndId(orgId, itemId).orElseThrow(NotFoundException::new);
-        if (item.archived) throw new ConflictException("ARCHIVED", "Archived items cannot be changed.");
+        if (item.isArchived()) throw new ConflictException("ARCHIVED", "Archived items cannot be changed.");
         var type = contentType == null ? "" : contentType.split(";")[0].strip().toLowerCase(Locale.ROOT);
         if (!type.equals("image/jpeg"))
             throw new UnsupportedMediaTypeException("UNSUPPORTED_IMAGE", "Upload the photo as a JPEG.");
@@ -65,15 +65,7 @@ public class ItemPhotoService {
         var size = inspect(bytes);
         var photo = photos.findByOrganizationIdAndItemId(orgId, itemId).orElseGet(() -> new ItemPhoto(orgId, itemId));
         var actor = access.actor();
-        photo.contentType = type;
-        photo.bytes = bytes;
-        photo.width = size[0];
-        photo.height = size[1];
-        photo.updatedBy = actor.userId();
-        // Strictly increasing, so a replaced photo always gets a new URL.
-        var now = clock.instant();
-        photo.updatedAt =
-                photo.updatedAt != null && !now.isAfter(photo.updatedAt) ? photo.updatedAt.plusMillis(1) : now;
+        photo.replace(type, bytes, size[0], size[1], actor.userId(), clock.instant());
         photos.saveAndFlush(photo);
         audit.record(
                 orgId,
@@ -82,7 +74,7 @@ public class ItemPhotoService {
                 "ITEM_PHOTO_SET",
                 "ITEM",
                 itemId,
-                Map.of("name", item.name, "width", String.valueOf(size[0]), "height", String.valueOf(size[1])));
+                Map.of("name", item.getName(), "width", String.valueOf(size[0]), "height", String.valueOf(size[1])));
         return new Saved(photo.photoVersion(), size[0], size[1]);
     }
 
@@ -101,14 +93,14 @@ public class ItemPhotoService {
                 "ITEM_PHOTO_REMOVED",
                 "ITEM",
                 itemId,
-                Map.of("name", item.name));
+                Map.of("name", item.getName()));
     }
 
     @Transactional(readOnly = true)
     public Photo get(UUID orgId, UUID itemId) {
         access.require(orgId);
         var photo = photos.findByOrganizationIdAndItemId(orgId, itemId).orElseThrow(NotFoundException::new);
-        return new Photo(photo.bytes, photo.contentType, photo.photoVersion());
+        return new Photo(photo.getBytes(), photo.getContentType(), photo.photoVersion());
     }
 
     /** Photo versions for a page of items; items without a photo are absent. */

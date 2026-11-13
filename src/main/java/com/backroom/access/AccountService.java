@@ -31,7 +31,7 @@ public class AccountService implements UserDetailsService {
         }
         var account = accounts.saveAndFlush(
                 new Account(input.displayName().strip(), email, encoder.encode(input.password())));
-        return new AccessDtos.UserView(account.getId(), account.email, account.displayName);
+        return new AccessDtos.UserView(account.getId(), account.getEmail(), account.getDisplayName());
     }
 
     @Override

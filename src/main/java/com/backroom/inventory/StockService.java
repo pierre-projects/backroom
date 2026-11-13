@@ -22,7 +22,6 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -94,7 +93,7 @@ public class StockService {
         var replay = replayIfKnown(orgId, in.operationKey(), in.fingerprint());
         if (replay != null) return replay;
         var item = lockItem(orgId, in.itemId());
-        var quantity = Quantities.positive(item.unit, in.quantity());
+        var quantity = Quantities.positive(item.getUnit(), in.quantity());
         var operation =
                 claim(orgId, RECEIPT, item, in.operationKey(), in.fingerprint(), in.reference(), in.note(), null);
         prepareDestination(orgId, item.getId(), in.locationId());
@@ -115,7 +114,7 @@ public class StockService {
         var replay = replayIfKnown(orgId, in.operationKey(), in.fingerprint());
         if (replay != null) return replay;
         var item = lockItem(orgId, in.itemId());
-        var quantity = Quantities.positive(item.unit, in.quantity());
+        var quantity = Quantities.positive(item.getUnit(), in.quantity());
         var operation = claim(orgId, OPENING, item, in.operationKey(), in.fingerprint(), null, in.note(), null);
         prepareDestination(orgId, item.getId(), in.locationId());
         var locked = lockBalances(orgId, item.getId(), List.of(in.locationId()));
@@ -142,7 +141,7 @@ public class StockService {
         if (replay != null) return replay;
         var item = lockItem(orgId, in.itemId());
         locations.requireExists(orgId, in.locationId());
-        var quantity = Quantities.positive(item.unit, in.quantity());
+        var quantity = Quantities.positive(item.getUnit(), in.quantity());
         var operation = claim(orgId, type, item, in.operationKey(), in.fingerprint(), null, in.note(), null);
         var locked = lockBalances(orgId, item.getId(), List.of(in.locationId()));
         hooks.afterBalancesLocked(type, item.getId());
@@ -169,7 +168,7 @@ public class StockService {
         }
         var item = lockItem(orgId, in.itemId());
         locations.requireExists(orgId, in.fromLocationId());
-        var quantity = Quantities.positive(item.unit, in.quantity());
+        var quantity = Quantities.positive(item.getUnit(), in.quantity());
         var operation = claim(orgId, TRANSFER, item, in.operationKey(), in.fingerprint(), null, in.note(), null);
         prepareDestination(orgId, item.getId(), in.toLocationId());
         var locked = lockBalances(orgId, item.getId(), List.of(in.fromLocationId(), in.toLocationId()));
@@ -197,7 +196,7 @@ public class StockService {
         if (replay != null) return replay;
         var item = lockItem(orgId, in.itemId());
         locations.requireExists(orgId, in.locationId());
-        var counted = Quantities.nonNegative(item.unit, in.countedQuantity());
+        var counted = Quantities.nonNegative(item.getUnit(), in.countedQuantity());
         var operation = claim(orgId, COUNT, item, in.operationKey(), in.fingerprint(), null, in.note(), null);
         var balance =
                 lockBalances(orgId, item.getId(), List.of(in.locationId())).get(in.locationId());
@@ -209,7 +208,7 @@ public class StockService {
                     "STALE_COUNT",
                     "Stock here changed after you started counting. Check the latest quantity and count again.");
         }
-        var recorded = balance.quantity;
+        var recorded = balance.getQuantity();
         var difference = counted.subtract(recorded);
         var changed =
                 difference.signum() == 0 ? List.<StockMovement>of() : List.of(apply(operation, balance, difference));
@@ -238,14 +237,14 @@ public class StockService {
         var replay = replayIfKnown(orgId, in.operationKey(), fingerprint);
         if (replay != null) return replay;
         var original = operations.findByOrganizationIdAndId(orgId, operationId).orElseThrow(NotFoundException::new);
-        if (!original.type.reversible()) {
+        if (!original.getType().reversible()) {
             throw new ConflictException(
                     "NOT_REVERSIBLE",
-                    original.type == COUNT
+                    original.getType() == COUNT
                             ? "Counts can't be reversed. Count the location again instead."
                             : "A reversal can't be reversed.");
         }
-        var item = lockItem(orgId, original.itemId);
+        var item = lockItem(orgId, original.getItemId());
         if (operations.existsByOrganizationIdAndReversesOperationId(orgId, operationId)) {
             throw new ConflictException("ALREADY_REVERSED", "This operation has already been reversed.");
         }
@@ -256,19 +255,23 @@ public class StockService {
                 movements.findByOrganizationIdAndOperationIdOrderByQuantityChangeAsc(orgId, operationId);
         // Stock that was removed comes back: those locations must still be able to hold it.
         originalMovements.stream()
-                .filter(movement -> movement.quantityChange.signum() < 0)
-                .forEach(movement -> prepareDestination(orgId, item.getId(), movement.locationId));
-        var ids =
-                originalMovements.stream().map(movement -> movement.locationId).toList();
+                .filter(movement -> movement.getQuantityChange().signum() < 0)
+                .forEach(movement -> prepareDestination(orgId, item.getId(), movement.getLocationId()));
+        var ids = originalMovements.stream()
+                .map(movement -> movement.getLocationId())
+                .toList();
         var locked = lockBalances(orgId, item.getId(), ids);
         hooks.afterBalancesLocked(REVERSAL, item.getId());
         var applied = new ArrayList<StockMovement>();
         for (var movement : originalMovements) {
-            applied.add(apply(operation, locked.get(movement.locationId), movement.quantityChange.negate()));
+            applied.add(apply(
+                    operation,
+                    locked.get(movement.getLocationId()),
+                    movement.getQuantityChange().negate()));
         }
         var labels = locations.labels(orgId, ids);
         var total = originalMovements.stream()
-                .map(movement -> movement.quantityChange.abs())
+                .map(movement -> movement.getQuantityChange().abs())
                 .max(BigDecimal::compareTo)
                 .orElse(BigDecimal.ZERO);
         record(
@@ -279,7 +282,7 @@ public class StockService {
                         total,
                         item,
                         "reversedType",
-                        original.type.name(),
+                        original.getType().name(),
                         "reversedOperationId",
                         operationId.toString()));
         return view(operation, applied, null, false, labels);
@@ -303,29 +306,31 @@ public class StockService {
         items.findByOrganizationIdAndId(orgId, itemId).orElseThrow(NotFoundException::new);
         var active = placements.activeLocations(orgId, itemId);
         var rows = balances.findByOrganizationIdAndItemId(orgId, itemId).stream()
-                .filter(balance -> active.contains(balance.locationId) || balance.quantity.signum() > 0)
+                .filter(balance -> active.contains(balance.getLocationId())
+                        || balance.getQuantity().signum() > 0)
                 .toList();
         var history = movements.locationsWithHistory(orgId, itemId);
         var labels = locations.labels(
-                orgId, rows.stream().map(balance -> balance.locationId).toList());
+                orgId, rows.stream().map(balance -> balance.getLocationId()).toList());
         var minimums = new HashMap<UUID, BigDecimal>();
         placements.findByOrganizationIdAndItemIdAndActiveTrue(orgId, itemId).forEach(placement -> {
-            if (placement.minimumQuantity != null) minimums.put(placement.locationId, placement.minimumQuantity);
+            if (placement.getMinimumQuantity() != null)
+                minimums.put(placement.getLocationId(), placement.getMinimumQuantity());
         });
         return rows.stream()
                 .map(balance -> {
-                    var label = labels.get(balance.locationId);
-                    var minimum = minimums.get(balance.locationId);
+                    var label = labels.get(balance.getLocationId());
+                    var minimum = minimums.get(balance.getLocationId());
                     return new StockDtos.BalanceView(
                             itemId,
-                            balance.locationId,
+                            balance.getLocationId(),
                             label == null ? null : label.name(),
                             label == null ? null : label.parentName(),
-                            Quantities.text(balance.quantity),
+                            Quantities.text(balance.getQuantity()),
                             balance.getVersion(),
-                            history.contains(balance.locationId),
+                            history.contains(balance.getLocationId()),
                             minimum == null ? null : Quantities.text(minimum),
-                            minimum != null && balance.quantity.compareTo(minimum) < 0);
+                            minimum != null && balance.getQuantity().compareTo(minimum) < 0);
                 })
                 .sorted(Comparator.comparing((StockDtos.BalanceView view) -> Objects.toString(view.parentName(), ""))
                         .thenComparing(view -> Objects.toString(view.locationName(), ""))
@@ -340,28 +345,31 @@ public class StockService {
         if (locationId != null) locations.requireExists(orgId, locationId);
         var result = balances.lowStock(orgId, locationId, PageResponse.request(page, size, Sort.unsorted()));
         var rows = result.getContent();
-        var itemIds = rows.stream().map(row -> ((StockBalance) row[0]).itemId).toList();
+        var itemIds =
+                rows.stream().map(row -> ((StockBalance) row[0]).getItemId()).toList();
         var names = new HashMap<UUID, Item>();
         if (!itemIds.isEmpty()) items.findAllById(itemIds).forEach(item -> names.put(item.getId(), item));
         var labels = locations.labels(
                 orgId,
-                rows.stream().map(row -> ((StockBalance) row[0]).locationId).toList());
+                rows.stream()
+                        .map(row -> ((StockBalance) row[0]).getLocationId())
+                        .toList());
         return PageResponse.from(result.map(row -> {
             var balance = (StockBalance) row[0];
             var minimum = (BigDecimal) row[1];
-            var item = names.get(balance.itemId);
-            var label = labels.get(balance.locationId);
+            var item = names.get(balance.getItemId());
+            var label = labels.get(balance.getLocationId());
             return new StockDtos.LowStockView(
-                    balance.itemId,
-                    item.name,
-                    item.sku,
-                    item.unit,
-                    balance.locationId,
+                    balance.getItemId(),
+                    item.getName(),
+                    item.getSku(),
+                    item.getUnit(),
+                    balance.getLocationId(),
                     label == null ? null : label.name(),
                     label == null ? null : label.parentName(),
-                    Quantities.text(balance.quantity),
+                    Quantities.text(balance.getQuantity()),
                     Quantities.text(minimum),
-                    Quantities.text(minimum.subtract(balance.quantity)));
+                    Quantities.text(minimum.subtract(balance.getQuantity())));
         }));
     }
 
@@ -377,7 +385,7 @@ public class StockService {
                 locationId,
                 PageResponse.request(page, size, Sort.by(Sort.Direction.DESC, "createdAt", "id")));
         var operationIds =
-                result.stream().map(movement -> movement.operationId).collect(java.util.stream.Collectors.toSet());
+                result.stream().map(movement -> movement.getOperationId()).collect(java.util.stream.Collectors.toSet());
         var byId = new HashMap<UUID, StockOperation>();
         if (!operationIds.isEmpty())
             operations
@@ -385,9 +393,9 @@ public class StockService {
                     .forEach(operation -> byId.put(operation.getId(), operation));
         var reversed = operationIds.isEmpty() ? Set.<UUID>of() : operations.reversedAmong(orgId, operationIds);
         var labels = locations.labels(
-                orgId, result.stream().map(movement -> movement.locationId).toList());
+                orgId, result.stream().map(movement -> movement.getLocationId()).toList());
         return PageResponse.from(result.map(movement -> movementView(
-                movement, byId.get(movement.operationId), labels, reversed.contains(movement.operationId))));
+                movement, byId.get(movement.getOperationId()), labels, reversed.contains(movement.getOperationId()))));
     }
 
     @Transactional(readOnly = true)
@@ -422,14 +430,15 @@ public class StockService {
 
     private StockDtos.OperationView replay(UUID orgId, StockOperation existing, String fingerprint) {
         var actor = access.actor();
-        if (!existing.actorId.equals(actor.userId()) || !existing.payloadHash.equals(hash(fingerprint))) {
+        if (!existing.getActorId().equals(actor.userId())
+                || !existing.getPayloadHash().equals(hash(fingerprint))) {
             throw new ConflictException(
                     "IDEMPOTENCY_KEY_REUSED", "This operation key was already used for a different request.");
         }
         log.info(
                 "Stock operation replayed: type={} operationKey={} organizationId={}",
-                existing.type,
-                existing.operationKey,
+                existing.getType(),
+                existing.getOperationKey(),
                 orgId);
         return fullView(orgId, existing, true);
     }
@@ -437,7 +446,7 @@ public class StockService {
     /** Shared row lock: the item can't be archived or have its unit changed while stock is recorded against it. */
     private Item lockItem(UUID orgId, UUID itemId) {
         var item = items.lockForShare(orgId, itemId).orElseThrow(NotFoundException::new);
-        if (item.archived) throw new ConflictException("ARCHIVED", "Archived items can't change stock.");
+        if (item.isArchived()) throw new ConflictException("ARCHIVED", "Archived items can't change stock.");
         return item;
     }
 
@@ -473,8 +482,8 @@ public class StockService {
         locations.lockActiveLeafForShare(orgId, locationId);
         placements.insertIfMissing(orgId, itemId, locationId);
         var placement = placements.lockSlot(orgId, itemId, locationId).orElseThrow(NotFoundException::new);
-        if (!placement.active) {
-            placement.active = true;
+        if (!placement.isActive()) {
+            placement.activate();
             placements.flush();
         }
         balances.insertIfMissing(orgId, itemId, locationId);
@@ -490,12 +499,16 @@ public class StockService {
 
     private StockMovement apply(StockOperation operation, StockBalance balance, BigDecimal change) {
         if (balance == null) throw insufficient();
-        var after = balance.quantity.add(change);
+        var after = balance.getQuantity().add(change);
         if (after.signum() < 0) throw insufficient();
-        balance.quantity = after;
-        balance.updatedAt = Instant.now();
+        balance.changeQuantity(after);
         return movements.save(new StockMovement(
-                operation.getOrganizationId(), operation.getId(), operation.itemId, balance.locationId, change, after));
+                operation.getOrganizationId(),
+                operation.getId(),
+                operation.getItemId(),
+                balance.getLocationId(),
+                change,
+                after));
     }
 
     private static ConflictException insufficient() {
@@ -506,12 +519,12 @@ public class StockService {
 
     private StockDtos.OperationView fullView(UUID orgId, StockOperation operation, boolean replayed) {
         var applied = movements.findByOrganizationIdAndOperationIdOrderByQuantityChangeAsc(orgId, operation.getId());
-        var count = operation.type == COUNT
+        var count = operation.getType() == COUNT
                 ? counts.findByOrganizationIdAndOperationId(orgId, operation.getId())
                         .orElse(null)
                 : null;
         var ids = new ArrayList<UUID>(
-                applied.stream().map(movement -> movement.locationId).toList());
+                applied.stream().map(movement -> movement.getLocationId()).toList());
         return view(operation, applied, count, replayed, locations.labels(orgId, ids));
     }
 
@@ -526,16 +539,16 @@ public class StockService {
         var countView = count == null
                 ? null
                 : new StockDtos.CountResult(
-                        Quantities.text(count.countedQuantity),
-                        Quantities.text(count.recordedQuantity),
-                        Quantities.text(count.countedQuantity.subtract(count.recordedQuantity)));
+                        Quantities.text(count.getCountedQuantity()),
+                        Quantities.text(count.getRecordedQuantity()),
+                        Quantities.text(count.getCountedQuantity().subtract(count.getRecordedQuantity())));
         return new StockDtos.OperationView(
                 operation.getId(),
-                operation.type,
-                operation.itemId,
-                operation.actorName,
+                operation.getType(),
+                operation.getItemId(),
+                operation.getActorName(),
                 operation.getCreatedAt(),
-                operation.reversesOperationId,
+                operation.getReversesOperationId(),
                 applied.stream()
                         .map(movement -> movementView(movement, operation, labels, reversed))
                         .toList(),
@@ -548,22 +561,22 @@ public class StockService {
             StockOperation operation,
             Map<UUID, LocationQueries.Label> labels,
             boolean reversed) {
-        var label = labels.get(movement.locationId);
+        var label = labels.get(movement.getLocationId());
         return new StockDtos.MovementView(
                 movement.getId(),
-                movement.operationId,
-                operation == null ? null : operation.type,
-                movement.itemId,
-                movement.locationId,
+                movement.getOperationId(),
+                operation == null ? null : operation.getType(),
+                movement.getItemId(),
+                movement.getLocationId(),
                 label == null ? null : label.name(),
                 label == null ? null : label.parentName(),
-                Quantities.text(movement.quantityChange),
-                Quantities.text(movement.balanceAfter),
-                operation == null ? null : operation.actorName,
+                Quantities.text(movement.getQuantityChange()),
+                Quantities.text(movement.getBalanceAfter()),
+                operation == null ? null : operation.getActorName(),
                 movement.getCreatedAt(),
-                operation == null ? null : operation.reference,
-                operation == null ? null : operation.note,
-                operation == null ? null : operation.reversesOperationId,
+                operation == null ? null : operation.getReference(),
+                operation == null ? null : operation.getNote(),
+                operation == null ? null : operation.getReversesOperationId(),
                 reversed);
     }
 
@@ -574,9 +587,9 @@ public class StockService {
 
     private static Map<String, String> details(BigDecimal quantity, Item item, String... pairs) {
         var metadata = new LinkedHashMap<String, String>();
-        metadata.put("name", item.name);
+        metadata.put("name", item.getName());
         metadata.put("quantity", Quantities.text(quantity));
-        metadata.put("unit", item.unit.name());
+        metadata.put("unit", item.getUnit().name());
         for (int index = 0; index + 1 < pairs.length; index += 2) {
             if (pairs[index + 1] != null && !pairs[index + 1].isBlank()) metadata.put(pairs[index], pairs[index + 1]);
         }

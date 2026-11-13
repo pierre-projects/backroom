@@ -32,10 +32,10 @@ public class AccessPolicy {
     public Role require(UUID orgId, Role... allowed) {
         var membership = memberships
                 .findByOrganizationIdAndUserId(orgId, actor().userId())
-                .filter(member -> member.active)
+                .filter(member -> member.isActive())
                 .orElseThrow(NotFoundException::new);
         checkRole(membership, allowed);
-        return membership.role;
+        return membership.getRole();
     }
     /** True when the signed-in user is an active member; never throws for non-members. */
     public boolean isActiveMember(UUID orgId) {
@@ -51,7 +51,7 @@ public class AccessPolicy {
                 .findByOrganizationIdAndUserId(orgId, actor().userId())
                 .orElseThrow(NotFoundException::new);
         entityManager.refresh(membership);
-        if (!membership.active) throw new NotFoundException();
+        if (!membership.isActive()) throw new NotFoundException();
         checkRole(membership, allowed);
     }
 
@@ -60,7 +60,7 @@ public class AccessPolicy {
     }
 
     private void checkRole(Membership membership, Role[] allowed) {
-        if (allowed.length != 0 && Arrays.stream(allowed).noneMatch(role -> role == membership.role)) {
+        if (allowed.length != 0 && Arrays.stream(allowed).noneMatch(role -> role == membership.getRole())) {
             throw new ForbiddenException();
         }
     }

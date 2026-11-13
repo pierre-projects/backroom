@@ -41,7 +41,7 @@ public class OrganizationService {
         var roles = new HashMap<UUID, Role>();
         memberships
                 .findByUserIdAndActiveTrue(actor.userId())
-                .forEach(member -> roles.put(member.getOrganizationId(), member.role));
+                .forEach(member -> roles.put(member.getOrganizationId(), member.getRole()));
         return PageResponse.from(organizations
                 .listForUser(actor.userId(), PageResponse.named(page, size))
                 .map(org -> view(org, roles.get(org.getId()))));
@@ -57,7 +57,7 @@ public class OrganizationService {
         var actor = access.actor();
         var org = organizations.saveAndFlush(new Organization(input.name().strip()));
         memberships.saveAndFlush(new Membership(org.getId(), actor.userId(), OWNER));
-        record(org.getId(), "ORGANIZATION_CREATED", "ORGANIZATION", org.getId(), Map.of("name", org.name));
+        record(org.getId(), "ORGANIZATION_CREATED", "ORGANIZATION", org.getId(), Map.of("name", org.getName()));
         return view(org, OWNER);
     }
 
@@ -65,9 +65,9 @@ public class OrganizationService {
         access.lock(orgId, OWNER);
         var org = organizations.findById(orgId).orElseThrow(NotFoundException::new);
         org.checkVersion(input.expectedVersion());
-        org.name = input.name().strip();
+        org.rename(input.name().strip());
         organizations.flush();
-        record(orgId, "ORGANIZATION_UPDATED", "ORGANIZATION", orgId, Map.of("name", org.name));
+        record(orgId, "ORGANIZATION_UPDATED", "ORGANIZATION", orgId, Map.of("name", org.getName()));
         return view(org, OWNER);
     }
 
@@ -76,21 +76,21 @@ public class OrganizationService {
         access.require(orgId, OWNER);
         var result =
                 memberships.findByOrganizationId(orgId, PageResponse.request(page, size, Sort.by("createdAt", "id")));
-        var userIds = result.stream().map(member -> member.userId).toList();
+        var userIds = result.stream().map(member -> member.getUserId()).toList();
         var users = new HashMap<UUID, Account>();
         accounts.findAllById(userIds).forEach(account -> users.put(account.getId(), account));
-        return PageResponse.from(result.map(member -> memberView(member, users.get(member.userId))));
+        return PageResponse.from(result.map(member -> memberView(member, users.get(member.getUserId()))));
     }
 
     public AccessDtos.MemberView changeRole(UUID orgId, UUID userId, Role role) {
         access.lock(orgId, OWNER);
         var member = memberships
                 .findByOrganizationIdAndUserId(orgId, userId)
-                .filter(value -> value.active)
+                .filter(value -> value.isActive())
                 .orElseThrow(NotFoundException::new);
         protectOwner(orgId, member, role != OWNER);
-        if (member.role != role) {
-            member.role = role;
+        if (member.getRole() != role) {
+            member.changeRole(role);
             memberships.flush();
             record(orgId, "MEMBERSHIP_ROLE_CHANGED", "MEMBERSHIP", member.getId(), Map.of("role", role.name()));
         }
@@ -100,15 +100,15 @@ public class OrganizationService {
     public void deactivate(UUID orgId, UUID userId) {
         access.lock(orgId, OWNER);
         var member = memberships.findByOrganizationIdAndUserId(orgId, userId).orElseThrow(NotFoundException::new);
-        if (!member.active) return;
+        if (!member.isActive()) return;
         protectOwner(orgId, member, true);
-        member.active = false;
+        member.deactivate();
         memberships.flush();
         record(orgId, "MEMBERSHIP_DEACTIVATED", "MEMBERSHIP", member.getId(), Map.of("userId", userId.toString()));
     }
 
     private void protectOwner(UUID orgId, Membership member, boolean losesOwnership) {
-        if (member.role == OWNER
+        if (member.getRole() == OWNER
                 && losesOwnership
                 && memberships.countByOrganizationIdAndRoleAndActiveTrue(orgId, OWNER) <= 1) {
             throw new ConflictException("LAST_OWNER", "An organization must retain an active Owner.");
@@ -117,11 +117,16 @@ public class OrganizationService {
 
     private AccessDtos.MemberView memberView(Membership member, Account account) {
         return new AccessDtos.MemberView(
-                member.getId(), member.userId, account.displayName, account.email, member.role, member.active);
+                member.getId(),
+                member.getUserId(),
+                account.getDisplayName(),
+                account.getEmail(),
+                member.getRole(),
+                member.isActive());
     }
 
     private AccessDtos.OrganizationView view(Organization org, Role role) {
-        return new AccessDtos.OrganizationView(org.getId(), org.name, org.getVersion(), role);
+        return new AccessDtos.OrganizationView(org.getId(), org.getName(), org.getVersion(), role);
     }
 
     private void record(UUID orgId, String action, String type, UUID id, Map<String, String> metadata) {

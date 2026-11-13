@@ -9,16 +9,16 @@ import jakarta.persistence.Table;
 @Table(name = "users")
 class Account extends RecordEntity {
     @Column(nullable = false, length = 100)
-    String displayName;
+    private String displayName;
 
     @Column(nullable = false, length = 254)
-    String email;
+    private String email;
 
     @Column(nullable = false, length = 255)
-    String passwordHash;
+    private String passwordHash;
     /** Raised whenever the password changes; sessions signed in with an older value are rejected. */
     @Column(nullable = false)
-    int credentialsVersion;
+    private int credentialsVersion;
 
     protected Account() {}
 
@@ -30,5 +30,23 @@ class Account extends RecordEntity {
 
     AccountPrincipal principal() {
         return new AccountPrincipal(id, email, displayName, passwordHash, credentialsVersion);
+    }
+
+    /** Sets a new password and invalidates every session issued with the old credentials. */
+    void changePassword(String newPasswordHash) {
+        passwordHash = newPasswordHash;
+        credentialsVersion++;
+    }
+
+    String getDisplayName() {
+        return displayName;
+    }
+
+    String getEmail() {
+        return email;
+    }
+
+    int getCredentialsVersion() {
+        return credentialsVersion;
     }
 }

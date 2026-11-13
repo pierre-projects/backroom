@@ -51,6 +51,6 @@ public class ItemQueries {
     }
 
     private static ItemSummary summary(Item item) {
-        return new ItemSummary(item.getId(), item.name, item.sku, item.unit, item.archived);
+        return new ItemSummary(item.getId(), item.getName(), item.getSku(), item.getUnit(), item.isArchived());
     }
 }

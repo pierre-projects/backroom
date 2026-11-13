@@ -80,9 +80,9 @@ public class InvitationService {
         access.lock(orgId, OWNER);
         var invite = invitations.lockByOrganizationAndId(orgId, invitationId).orElseThrow(NotFoundException::new);
         entityManager.refresh(invite);
-        if (invite.revokedAt != null) return;
+        if (invite.getRevokedAt() != null) return;
         ensurePending(invite);
-        invite.revokedAt = clock.instant();
+        invite.revoke(clock.instant());
         invitations.flush();
         record(invite, "INVITATION_REVOKED", Map.of());
     }
@@ -93,7 +93,7 @@ public class InvitationService {
         var invite = invitations.findByTokenHash(digest(token)).orElseThrow(NotFoundException::new);
         ensurePending(invite);
         var org = organizations.findById(invite.getOrganizationId()).orElseThrow(NotFoundException::new);
-        return new AccessDtos.InvitationPreview(org.getId(), org.name, invite.role, invite.expiresAt);
+        return new AccessDtos.InvitationPreview(org.getId(), org.getName(), invite.getRole(), invite.getExpiresAt());
     }
 
     public AccessDtos.OrganizationView accept(String token) {
@@ -107,20 +107,18 @@ public class InvitationService {
         ensurePending(invite);
         var member =
                 memberships.findByOrganizationIdAndUserId(orgId, actor.userId()).orElse(null);
-        if (member != null && member.active) {
+        if (member != null && member.isActive()) {
             throw new ConflictException(
                     "ALREADY_MEMBER", "You already belong to this organization. Your role has not changed.");
         }
-        if (member == null) member = new Membership(orgId, actor.userId(), invite.role);
-        member.active = true;
-        member.role = invite.role;
+        if (member == null) member = new Membership(orgId, actor.userId(), invite.getRole());
+        member.activate(invite.getRole());
         memberships.saveAndFlush(member);
-        invite.acceptedAt = clock.instant();
-        invite.acceptedBy = actor.userId();
+        invite.accept(actor.userId(), clock.instant());
         invitations.flush();
-        record(invite, "INVITATION_ACCEPTED", Map.of("role", invite.role.name()));
+        record(invite, "INVITATION_ACCEPTED", Map.of("role", invite.getRole().name()));
         var org = organizations.findById(orgId).orElseThrow(NotFoundException::new);
-        return new AccessDtos.OrganizationView(orgId, org.name, org.getVersion(), member.role);
+        return new AccessDtos.OrganizationView(orgId, org.getName(), org.getVersion(), member.getRole());
     }
 
     private void ensurePending(Invitation invite) {
@@ -131,14 +129,14 @@ public class InvitationService {
     }
 
     private String status(Invitation invite) {
-        if (invite.acceptedAt != null) return "ACCEPTED";
-        if (invite.revokedAt != null) return "REVOKED";
-        return invite.expiresAt.isAfter(clock.instant()) ? "PENDING" : "EXPIRED";
+        if (invite.getAcceptedAt() != null) return "ACCEPTED";
+        if (invite.getRevokedAt() != null) return "REVOKED";
+        return invite.getExpiresAt().isAfter(clock.instant()) ? "PENDING" : "EXPIRED";
     }
 
     private AccessDtos.InvitationView view(Invitation invite) {
         return new AccessDtos.InvitationView(
-                invite.getId(), invite.role, invite.expiresAt, status(invite), invite.acceptedAt);
+                invite.getId(), invite.getRole(), invite.getExpiresAt(), status(invite), invite.getAcceptedAt());
     }
 
     private static String digest(String token) {
