@@ -5,6 +5,10 @@ import org.springframework.data.domain.*;
 import org.springframework.data.jpa.repository.*;
 
 interface ItemRepository extends JpaRepository<Item, UUID> {
+    @Query("select i.sku from Item i where i.organizationId = :orgId and i.sku in :skus")
+    List<String> existingSkus(UUID orgId, Collection<String> skus);
+    @Query("select lower(i.name) from Item i where i.organizationId = :orgId and i.archived = false and lower(i.name) in :names")
+    List<String> activeNamesAmong(UUID orgId, Collection<String> names);
     @Lock(LockModeType.PESSIMISTIC_READ)
     @Query("select i from Item i where i.organizationId = :orgId and i.id = :id")
     Optional<Item> lockForShare(UUID orgId, UUID id);

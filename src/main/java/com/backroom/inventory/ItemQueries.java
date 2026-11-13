@@ -26,5 +26,13 @@ public class ItemQueries {
     public List<ItemSummary> search(UUID orgId, String q, int limit) {
         return items.search(orgId, false, q, null, false, com.backroom.shared.PageResponse.named(0, limit)).stream().map(ItemQueries::summary).toList();
     }
+    /** Which of these (already normalized) SKUs are taken in the business, archived items included. */
+    public Set<String> existingSkus(UUID orgId, Collection<String> skus) {
+        return skus.isEmpty() ? Set.of() : new HashSet<>(items.existingSkus(orgId, skus));
+    }
+    /** Which of these lower-case names belong to unarchived items. */
+    public Set<String> activeNames(UUID orgId, Collection<String> lowerNames) {
+        return lowerNames.isEmpty() ? Set.of() : new HashSet<>(items.activeNamesAmong(orgId, lowerNames));
+    }
     private static ItemSummary summary(Item item) { return new ItemSummary(item.getId(), item.name, item.sku, item.unit, item.archived); }
 }
