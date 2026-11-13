@@ -88,7 +88,7 @@ public class StockService {
 
     public StockDtos.OperationView remove(UUID orgId, StockDtos.Removal in) {
         access.require(orgId);
-        var type = in.reason() == StockDtos.RemovalReason.WASTE ? WASTE : USAGE;
+        var type = switch (in.reason()) { case WASTE -> WASTE; case SALE -> SALE; case USAGE -> USAGE; };
         var replay = replayIfKnown(orgId, in.operationKey(), in.fingerprint());
         if (replay != null) return replay;
         var item = lockItem(orgId, in.itemId());
@@ -99,7 +99,8 @@ public class StockService {
         hooks.afterBalancesLocked(type, item.getId());
         var movement = apply(operation, locked.get(in.locationId()), quantity.negate());
         var labels = locations.labels(orgId, List.of(in.locationId()));
-        record(orgId, type == WASTE ? "STOCK_WASTED" : "STOCK_USED", item, details(quantity, item, "location", path(labels, in.locationId())));
+        record(orgId, switch (type) { case WASTE -> "STOCK_WASTED"; case SALE -> "STOCK_SOLD"; default -> "STOCK_USED"; }, item,
+                details(quantity, item, "location", path(labels, in.locationId())));
         return view(operation, List.of(movement), null, false, labels);
     }
 

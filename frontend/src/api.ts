@@ -37,7 +37,8 @@ async function request<T>(path: string, options: RequestInit, as: 'json' | 'blob
     if (method !== 'GET' && method !== 'HEAD') {
       await ensureCsrf();
       headers.set(csrf!.headerName, csrf!.token);
-      if (options.body && !(options.body instanceof URLSearchParams)) headers.set('Content-Type', 'application/json');
+      if (options.body instanceof Blob) headers.set('Content-Type', options.body.type || 'application/octet-stream');
+      else if (options.body && !(options.body instanceof URLSearchParams)) headers.set('Content-Type', 'application/json');
     }
     const response = await fetch('/api/v1' + path, { ...options, method, headers, credentials: 'same-origin', cache: 'no-store' });
     if (!response.ok) {

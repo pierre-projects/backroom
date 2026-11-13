@@ -41,6 +41,16 @@ public class LocationQueries {
         return found.stream().map(location -> new Summary(location.getId(), location.name,
                 location.parentId == null ? null : parents.get(location.parentId), location.type.name(), location.archived)).toList();
     }
+    /** One location in the whole tree, for planning imports. */
+    public record Node(UUID id, String name, UUID parentId, String type, boolean archived, boolean hasActiveChildren) {}
+    /** Every location in the business, archived ones included, with whether each has active children. */
+    public List<Node> tree(UUID orgId) {
+        var all = locations.findByOrganizationId(orgId);
+        var parents = new HashSet<UUID>();
+        all.stream().filter(location -> !location.archived && location.parentId != null).forEach(location -> parents.add(location.parentId));
+        return all.stream().map(location -> new Node(location.getId(), location.name, location.parentId, location.type.name(), location.archived,
+                parents.contains(location.getId()))).toList();
+    }
     public void requireExists(UUID orgId, UUID id) {
         locations.findByOrganizationIdAndId(orgId, id).orElseThrow(ApiException::notFound);
     }

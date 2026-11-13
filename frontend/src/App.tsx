@@ -14,6 +14,7 @@ import { RequestDetailPage, RequestsPage } from './requests';
 import { HomePage } from './home';
 import { SearchPage } from './search';
 import { ExportsPage } from './exports';
+import { ImportItemsPage } from './imports';
 
 function Landing() {
   const auth = useAuth();
@@ -66,6 +67,7 @@ export function App() {
       <Route path="search" element={<SearchPage />} />
       <Route path="exports" element={<ExportsPage />} />
       <Route path="items" element={<CatalogPage />} />
+      <Route path="items/import" element={<ImportItemsPage />} />
       <Route path="items/:itemId" element={<ItemRoute />} />
       <Route path="locations" element={<LocationRoute />} />
       <Route path="locations/:locationId" element={<LocationRoute />} />

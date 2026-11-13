@@ -15,19 +15,33 @@ public class LocationService {
     private final AccessPolicy access;
     private final LocationMutationPolicy storagePolicy;
     private final AuditService audit;
-    LocationService(LocationRepository locations, AccessPolicy access, LocationMutationPolicy storagePolicy, AuditService audit) {
-        this.locations=locations; this.access=access; this.storagePolicy=storagePolicy; this.audit=audit;
+    private final LocationContentsCounter contents;
+    LocationService(LocationRepository locations, AccessPolicy access, LocationMutationPolicy storagePolicy, AuditService audit,
+                    LocationContentsCounter contents) {
+        this.locations=locations; this.access=access; this.storagePolicy=storagePolicy; this.audit=audit; this.contents=contents;
     }
     @Transactional(readOnly=true)
     public PageResponse<LocationDtos.View> list(UUID orgId, UUID parentId, boolean rootsOnly, boolean leafOnly,
                                                boolean includeArchived, String q, int page, int size) {
         access.require(orgId);
         if (parentId != null) find(orgId, parentId);
-        return PageResponse.from(locations.search(orgId, parentId, rootsOnly, leafOnly, includeArchived, q.strip(),
-                PageResponse.named(page, size)).map(this::view));
+        var result = locations.search(orgId, parentId, rootsOnly, leafOnly, includeArchived, q.strip(), PageResponse.named(page, size));
+        var ids = result.stream().map(StorageLocation::getId).toList();
+        var children = new HashMap<UUID, Long>();
+        if (!ids.isEmpty()) locations.childCounts(orgId, ids).forEach(row -> children.put((UUID) row[0], (Long) row[1]));
+        var items = ids.isEmpty() ? Map.<UUID, Long>of() : contents.itemCounts(orgId, ids);
+        return PageResponse.from(result.map(location -> new LocationDtos.View(location.getId(), location.name, location.type, location.parentId,
+                location.archived, location.getVersion(), List.of(), children.getOrDefault(location.getId(), 0L), items.getOrDefault(location.getId(), 0L))));
     }
     @Transactional(readOnly=true)
-    public LocationDtos.View get(UUID orgId, UUID id) { access.require(orgId); return view(find(orgId, id)); }
+    public LocationDtos.View get(UUID orgId, UUID id) {
+        access.require(orgId);
+        var location = find(orgId, id);
+        var trail = locations.ancestors(orgId, id).stream()
+                .map(row -> new LocationDtos.Crumb(UUID.fromString((String) row[0]), (String) row[1], LocationType.valueOf((String) row[2]))).toList();
+        return new LocationDtos.View(location.getId(), location.name, location.type, location.parentId, location.archived, location.getVersion(),
+                trail, null, null);
+    }
 
     public LocationDtos.View create(UUID orgId, LocationDtos.Input input) {
         access.lock(orgId, OWNER, MANAGER);
@@ -83,7 +97,8 @@ public class LocationService {
         return locations.findByOrganizationIdAndId(orgId, id).orElseThrow(ApiException::notFound);
     }
     private LocationDtos.View view(StorageLocation location) {
-        return new LocationDtos.View(location.getId(), location.name, location.type, location.parentId, location.archived, location.getVersion());
+        return new LocationDtos.View(location.getId(), location.name, location.type, location.parentId, location.archived, location.getVersion(),
+                List.of(), null, null);
     }
     private void record(StorageLocation location, String action) {
         var actor=access.actor();

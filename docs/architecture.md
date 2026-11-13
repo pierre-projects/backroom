@@ -15,6 +15,7 @@ Vite's proxy; deployment needs one Java process and one database.
 | labels | Code resolution, generation, printable PDFs |
 | search | One search across items, locations and codes, through other modules' query services |
 | exports | Read-only CSV reports (the one module allowed to read other modules' tables with SQL) |
+| imports | CSV import of items, places and starting quantities; writes only through other modules' services |
 | audit | Durable business activity |
 | assets | Equipment, when that capability ships |
 | shared | Small technical configuration and primitives |
@@ -24,9 +25,12 @@ and shared technical configuration. Phase 2 adds balances, stock operations and
 movement history to inventory. Phase 3 adds the labels module (codes, scan
 resolution, label PDFs). Phase 4 adds restocking (requests, approval,
 deliveries). Phase 5 adds low-stock minimums to inventory, the search and
-exports modules, and owner-issued password reset links to access. Assets remain
+exports modules, and owner-issued password reset links to access. Phase 6
+adds location trails and counts, a Sold removal and item photos. Phase 7 adds
+the imports module. Assets remain
 a future module. See [Phase 1](phase-1.md), [Phase 2](phase-2.md),
-[Phase 3](phase-3.md), [Phase 4](phase-4.md) and [Phase 5](phase-5.md) for the
+[Phase 3](phase-3.md), [Phase 4](phase-4.md), [Phase 5](phase-5.md) and
+[Phase 6](phase-6.md) for the
 implemented contracts.
 
 Controllers will accept DTOs and call application services. Services will enforce
@@ -131,6 +135,52 @@ one another through repositories. JPA entities are not API responses.
     before authorization rejects a session whose version is stale
     (`401 SESSION_ENDED`). Versions are cached for 30 seconds per user, and
     the reset clears the cache before and after its commit.
+
+## Browse, photos and sales (Phase 6)
+
+- **Location trail:** `GET /locations/{id}` returns `ancestors` from one
+  recursive query that stays inside the organization at every step (depth
+  capped at 32).
+- **Counts:** `GET /locations` returns `childCount` and `itemCount`, using
+  grouped queries per page. Item counts come from inventory through
+  `LocationContentsCounter`, which `locations` defines and inventory
+  implements, so `locations` still never imports `inventory`.
+- **Sales:** `SALE` is a third removal type beside usage and waste. It uses
+  the same locks, idempotency and reversal path (`V9`).
+- **Item photos** live in PostgreSQL (`item_photos`, `V10`) rather than object
+  storage. This keeps one container and one database, which suits the
+  $0–5 host. The browser resizes before upload; the server checks the JPEG
+  header dimensions before decoding. Lists read only photo versions, never
+  bytes. Image URLs carry the version, so they can be cached privately.
+
+## CSV import (Phase 7)
+
+- **Writes only through services.** `imports` writes through `LocationService`,
+  `CatalogService` and `StockService`, never through their repositories, so
+  manual entry and import share every validation, lock and audit event. It
+  reads through `ItemQueries`, `LocationQueries.tree` and
+  `LocationContentsCounter`.
+- **One planner for preview and apply.** `ImportPlanner` is pure: preview and
+  apply run the same plan, and apply re-plans against current data in its own
+  transaction after locking the organization.
+- **Idempotent.** `import_batches` (`V11`) makes a retried import replay its
+  first result. Starting-quantity operation keys are derived from the import
+  key and the line, so the stock ledger is idempotent too.
+
+### Deferred: equipment and assets
+
+Individual objects (a particular espresso machine, a brew scale) are not
+interchangeable stock. A future `assets` package would own:
+
+- **`assets`:** identifier, name, condition, current location, notes, archived;
+- **`asset_events`:** moved, condition changed, issue reported, checked out or
+  returned, with actor and time, insert-only like the stock ledger;
+- **labels:** an `ASSET` target type in `resource_codes`, so QR labels and
+  Scan resolve assets the same way they resolve items and locations.
+
+Assets would never contribute to stock balances. Until the module exists the UI
+shows no checkout, custody or equipment states; equipment can be tracked as an
+Each item.
 
 POS automation and equipment remain later product capabilities.
 

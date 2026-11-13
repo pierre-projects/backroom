@@ -5,6 +5,7 @@ import { query } from './api';
 import { ErrorMessage, Loading, PageHeader, useResource } from './components';
 import { Icon } from './icons';
 import { labelDownloadKey } from './labels';
+import { VisualTile, spaceFacts, spaceIcons } from './browse';
 import { ActivityList } from './people';
 import { SearchForm } from './search';
 import { NewRequestDialog, RequestBadge, ago, progress } from './requests';
@@ -32,7 +33,7 @@ function Onboarding({ root, base, owner, hasWork, hasMovements }: {
   if (!locations.data || !items.data || (owner && (!members.data || !invitations.data))) return null;
   const steps = [
     { done: locations.data.totalElements > 0, title: 'Add your storage locations', detail: 'Rooms first, then the shelves and bins inside them.', href: root + '/locations', action: 'Add a location' },
-    { done: items.data.totalElements > 0, title: 'Add the items you stock', detail: 'Choose the unit you count each one in.', href: root + '/items', action: 'Add an item' },
+    { done: items.data.totalElements > 0, title: 'Add the items you stock', detail: 'One at a time, or import a spreadsheet with places and starting quantities.', href: root + '/items', action: 'Add an item' },
     { done: hasMovements, title: 'Record what is on the shelves', detail: 'Open an item and set its starting quantity at each location.', href: root + '/items', action: 'Open inventory' },
     { done: printed, title: 'Download a label', detail: 'Choose a storage location and download its printable QR label.', href: root + (locations.data.totalElements ? '/locations?select=labels' : '/locations'), action: locations.data.totalElements ? 'Choose locations' : 'Open locations' },
     ...(owner ? [{ done: members.data!.totalElements > 1 || invitations.data!.totalElements > 0, title: 'Invite your team', detail: 'Send a one-time link to each manager and employee.', href: root + '/people', action: 'Invite staff' }] : []),
@@ -102,6 +103,20 @@ function RequestsCard({ root, base, manager }: { root: string; base: string; man
   </section>;
 }
 
+/** A quiet way into the physical spaces: the first top-level rooms, then all locations. Hidden until there are any. */
+function SpacesStrip({ root, base }: { root: string; base: string }) {
+  const rooms = useResource<Page<StorageLocation>>(query(base + '/locations', { rootsOnly: true, size: 6 }));
+  if (!rooms.data?.items.length) return null;
+  return <section className="spaces-strip" aria-labelledby="spaces-heading">
+    <div className="spaces-strip-header"><h2 id="spaces-heading">Spaces</h2><Link className="text-button" to={root + '/locations'}>All locations</Link></div>
+    <ul>{rooms.data.items.map(room => <li key={room.id}>
+      <RecordLink from="Home" className="space-chip" to={root + '/locations/' + room.id}>
+        <VisualTile size="sm" name={room.name} icon={spaceIcons[room.type]} />
+        <span><strong>{room.name}</strong><span className="cell-secondary">{spaceFacts(room)}</span></span>
+      </RecordLink></li>)}</ul>
+  </section>;
+}
+
 function ActivityCard({ root, base }: { root: string; base: string }) {
   const events = useResource<Page<Activity>>(query(base + '/audit-events', { size: 5 }));
   return <section className="panel table-panel home-card" aria-labelledby="recent-heading">
@@ -138,12 +153,14 @@ export function HomePage() {
         <Link className="stat" to={root + '/items?low=1'}><strong>{lowItems.data?.totalElements ?? '–'}</strong> Low stock</Link>
       </> : <Link className="stat" to={root + '/requests?filter=TO_RECEIVE'}><strong>{summary.data?.toReceive ?? '–'}</strong> To receive</Link>}
     </div>
+    {!canEdit && <SpacesStrip root={root} base={base} />}
     <ErrorMessage error={summary.error ?? stock.error ?? lowItems.error} retry={() => { summary.reload(); stock.reload(); lowItems.reload(); }} />
     {canEdit && <div className="shift-search"><SearchForm root={root} /><Link className="button secondary" to={root + '/scan'}><Icon name="scan" />Scan</Link></div>}
     <div className="home-grid">
       <RequestsCard root={root} base={base} manager={canEdit} />
       <LowStockCard root={root} base={base} low={low} />
     </div>
+    {canEdit && <SpacesStrip root={root} base={base} />}
     <button type="button" className="button secondary home-request" onClick={() => setRequesting(true)}><Icon name="plus" />Request stock</button>
     {hasWork && setup}
     {canEdit && <ActivityCard root={root} base={base} />}

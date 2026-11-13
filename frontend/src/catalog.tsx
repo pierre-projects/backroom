@@ -1,8 +1,8 @@
 import { RecordLink, useRecordNavigation } from './navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { query, send } from './api';
+import { api, query, send } from './api';
 import { Badge, Dialog, Empty, ErrorMessage, Field, Loading, PageHeader, Pager, SuccessMessage, useResource } from './components';
 import { Icon } from './icons';
 import type { Item, Page, StockBalance, StockMovement } from './types';
@@ -13,8 +13,14 @@ import { CodesPanel } from './codes';
 import { ItemRequestsPanel, NewRequestDialog } from './requests';
 import { SelectionBar, useLabelSelection } from './labels';
 import { useWorkspace } from './workspace';
+import { BrowseCard, ViewToggle, VisualTile, resizePhoto, unitIcons, useBrowseView } from './browse';
 
-function ItemForm({ item, saved, cancel, unitLocked = false }: { item?: Item; saved: (item: Item) => void; cancel: () => void; unitLocked?: boolean }) {
+/** URL of an item's photo, versioned so a changed photo is fetched again; null until one is uploaded. */
+export function itemPhoto(base: string, item: { id: string; photoVersion?: number | null }) {
+  return item.photoVersion ? '/api/v1' + base + '/items/' + item.id + '/photo?v=' + item.photoVersion : null;
+}
+
+export function ItemForm({ item, saved, cancel, unitLocked = false }: { item?: Item; saved: (item: Item) => void; cancel: () => void; unitLocked?: boolean }) {
   const { base } = useWorkspace();
   const [error, setError] = useState<unknown>();
   const [pending, setPending] = useState(false);
@@ -28,14 +34,43 @@ function ItemForm({ item, saved, cancel, unitLocked = false }: { item?: Item; sa
       saved(result);
     } catch (value) { setError(value); } finally { setPending(false); }
   }
+  const skuField = <Field label="SKU (optional)"><input name="sku" defaultValue={item?.sku ?? ''} maxLength={80} autoCapitalize="characters" /><small>Saved in uppercase. Stays reserved after the item is archived.</small></Field>;
   return <form onSubmit={submit}>
     <ErrorMessage error={error} />
     <Field label="Item name"><input name="name" defaultValue={item?.name} maxLength={160} required /></Field>
-    <Field label="SKU (optional)"><input name="sku" defaultValue={item?.sku ?? ''} maxLength={80} autoCapitalize="characters" /><small>Saved in uppercase. Stays reserved after the item is archived.</small></Field>
     <Field label="Base unit"><select name="unit" defaultValue={item?.unit ?? 'EACH'} disabled={unitLocked}>{Object.entries(unitNames).map(([value, name]) => <option value={value} key={value}>{name}</option>)}</select><small>{unitLocked ? 'Locked because stock has been recorded in this unit.' : 'The unit you count this item in. Packs or cases can be separate items.'}</small></Field>
     {unitLocked && <input type="hidden" name="unit" value={item?.unit} />}
+    {/* Creating asks only for what Backroom needs to count; editing shows everything. */}
+    {item ? skuField : <details className="optional-details"><summary>Optional details</summary>{skuField}</details>}
     <div className="form-actions"><button className="button secondary" type="button" onClick={cancel}>Cancel</button><button className="button primary" disabled={pending}>{pending ? 'Saving…' : item ? 'Save item' : 'Create item'}</button></div>
   </form>;
+}
+
+/** Add, change or remove an item's photo (Owners and Managers). Phones can take one with the camera. */
+function PhotoControl({ base, item, changed }: { base: string; item: Item; changed: (message: string) => void }) {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<unknown>();
+  const input = useId();
+  async function choose(file: File | undefined) {
+    if (!file) return;
+    setPending(true); setError(undefined);
+    try {
+      await api(base + '/items/' + item.id + '/photo', { method: 'PUT', body: await resizePhoto(file) });
+      changed(item.photoVersion ? 'Photo changed' : 'Photo added');
+    } catch (value) { setError(value); } finally { setPending(false); }
+  }
+  async function remove() {
+    setPending(true); setError(undefined);
+    try { await send(base + '/items/' + item.id + '/photo', 'DELETE'); changed('Photo removed'); }
+    catch (value) { setError(value); } finally { setPending(false); }
+  }
+  return <div className="photo-control">
+    <input id={input} className="sr-only" type="file" accept="image/*" disabled={pending}
+      onChange={event => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; void choose(file); }} />
+    <label className="text-button photo-pick" htmlFor={input}><Icon name="camera" className="small" />{pending ? 'Saving…' : item.photoVersion ? 'Change photo' : 'Add photo'}</label>
+    {item.photoVersion && <button type="button" className="text-button" disabled={pending} onClick={() => void remove()}>Remove photo</button>}
+    <ErrorMessage error={error} />
+  </div>;
 }
 
 export function CatalogPage() {
@@ -61,8 +96,12 @@ export function CatalogPage() {
   const root = '/app/organizations/' + organization.id;
   const addButton = <button type="button" className="button primary" onClick={() => setCreating(true)}><Icon name="plus" />Add item</button>;
   const selection = useLabelSelection();
+  const [view, setView] = useBrowseView('items');
+  const itemChooser = (item: Item) => <label className="select-line"><input type="checkbox" checked={selection.selected.includes(item.id)} disabled={item.archived}
+    onChange={() => selection.toggle(item.id)} /><span className="record-link">{item.name}</span></label>;
+  const itemBadges = (item: Item) => <>{item.archived && <Badge>Archived</Badge>}{item.low && !item.archived && <Badge tone="warning">Low</Badge>}</>;
   return <>
-    <PageHeader title="Inventory" description="What you stock, how much, and where.">{canEdit && <>{addButton}<button type="button" className="button secondary" aria-pressed={selection.selecting} onClick={selection.toggleMode}><Icon name="label" />{selection.selecting ? 'Cancel' : 'Print labels'}</button></>}</PageHeader>
+    <PageHeader title="Inventory" description="What you stock, how much, and where.">{canEdit && <>{addButton}<Link className="button secondary" to={root + '/items/import'}><Icon name="upload" />Import items</Link><button type="button" className="button secondary" aria-pressed={selection.selecting} onClick={selection.toggleMode}><Icon name="label" />{selection.selecting ? 'Cancel' : 'Print labels'}</button></>}</PageHeader>
     {selection.selecting && <SelectionBar count={selection.selected.length} noun="item" href={root + '/labels?items=' + selection.selected.join(',')} />}
     <section className="inventory-browser" aria-label="Inventory results">
       <div className="inventory-tools">
@@ -77,24 +116,32 @@ export function CatalogPage() {
           </select>
           <label className="checkbox"><input type="checkbox" checked={lowOnly} onChange={event => setLowOnly(event.target.checked)} /> Low stock only</label>
           <label className="checkbox"><input type="checkbox" checked={archived} onChange={event => { setFilter('archived', event.target.checked ? '1' : ''); }} /> Include archived</label>
+          <ViewToggle view={view} onChange={setView} label="Inventory layout" />
         </div>
       </div>
       <ErrorMessage error={items.error} retry={items.reload} />
       {!items.data && !items.error && <div className="panel table-panel"><Loading variant="list" label="Loading items" /></div>}
       {items.data && (items.data.items.length ? <div className="panel table-panel">
         <div className="inventory-count">{items.data.totalElements} {items.data.totalElements === 1 ? 'item' : 'items'}</div>
-        <table className="data-table inventory-table">
+        {view === 'grid'
+          ? <ul className="browse-grid" aria-label="Items">{items.data.items.map(item => <BrowseCard key={item.id}
+            selected={selection.selecting && selection.selected.includes(item.id)} muted={item.archived}
+            visual={<VisualTile name={item.name} icon={unitIcons[item.unit]} photo={itemPhoto(base, item)} />}
+            title={selection.selecting ? itemChooser(item) : <RecordLink from="Inventory" className="record-link" to={root + '/items/' + item.id}>{item.name}</RecordLink>}
+            meta={<><span><span className="numeric quantity-strong">{formatQuantity(item.onHand, item.unit)}</span> on hand</span>{item.sku && <span className="mono">{item.sku}</span>}</>}
+            badges={itemBadges(item)} />)}</ul>
+          : <table className="data-table inventory-table">
           <thead><tr><th scope="col">Item</th><th scope="col">SKU</th><th scope="col" className="cell-number">On hand</th><th scope="col"><span className="sr-only">Open</span></th></tr></thead>
           <tbody>{items.data.items.map(item => <tr key={item.id} className={selection.selecting ? 'selectable' : 'linked'}>
-            <td><span className="name-line">{selection.selecting
-              ? <label className="select-line"><input type="checkbox" checked={selection.selected.includes(item.id)} disabled={item.archived} onChange={() => selection.toggle(item.id)} /><span className="record-link">{item.name}</span></label>
-              : <RecordLink from="Inventory" className="record-link" to={root + '/items/' + item.id}>{item.name}</RecordLink>}{item.archived && <Badge>Archived</Badge>}{item.low && !item.archived && <Badge tone="warning">Low</Badge>}</span>
-              <span className="cell-secondary mobile-only">{item.sku ? <span className="mono">{item.sku}</span> : 'No SKU'}</span></td>
+            <td><span className="tile-cell"><VisualTile size="sm" name={item.name} icon={unitIcons[item.unit]} photo={itemPhoto(base, item)} /><span>
+              <span className="name-line">{selection.selecting ? itemChooser(item)
+              : <RecordLink from="Inventory" className="record-link" to={root + '/items/' + item.id}>{item.name}</RecordLink>}{itemBadges(item)}</span>
+              <span className="cell-secondary mobile-only">{item.sku ? <span className="mono">{item.sku}</span> : 'No SKU'}</span></span></span></td>
             <td className="desktop-only mono">{item.sku ?? <><span aria-hidden="true">—</span><span className="sr-only">No SKU</span></>}</td>
             <td className="cell-number numeric inventory-quantity">{formatQuantity(item.onHand, item.unit)}<span className="cell-secondary mobile-only"> on hand</span></td>
             <td className="cell-chevron"><Icon name="chevronRight" /></td>
           </tr>)}</tbody>
-        </table>
+        </table>}
         <Pager data={items.data} onPage={number => setFilter('page', number ? String(number) : '')} />
       </div> : at && !q && !lowOnly
         ? <Empty icon="location" title={'Nothing is kept at ' + places.label(at)} action={<button type="button" className="button secondary" onClick={() => setFilter('location', '')}>Show all locations</button>}>Items appear here once they have stock or an expected place at this location.</Empty>
@@ -102,7 +149,7 @@ export function CatalogPage() {
         ? <Empty icon="catalog" title="Nothing is low" action={<button type="button" className="button secondary" onClick={() => setLowOnly(false)}>Show all items</button>}>Items show here when a location drops below its minimum. Set minimums from an item's stock rows.</Empty>
         : q
         ? <Empty icon="search" title={'No items match “' + q + '”'} action={<button type="button" className="button secondary" onClick={() => { setFilter('q', ''); }}>Clear search</button>}>Check the spelling, or search by SKU instead.</Empty>
-        : <Empty icon="catalog" title="No items yet" action={canEdit ? undefined : <Link className="button secondary" to={root + '/locations'}>View locations</Link>}>{canEdit ? 'Use Add item to create your first one and choose the unit you count it in.' : 'Items your team adds will appear here.'}</Empty>)}
+        : <Empty icon="catalog" title="No items yet" action={canEdit ? <Link className="button secondary" to={root + '/items/import'}><Icon name="upload" />Import a spreadsheet</Link> : <Link className="button secondary" to={root + '/locations'}>View locations</Link>}>{canEdit ? 'Use Add item to create your first one, or import a whole spreadsheet with places and starting quantities.' : 'Items your team adds will appear here.'}</Empty>)}
     </section>
     {creating && <Dialog title="Add item" close={() => setCreating(false)}><ItemForm cancel={() => setCreating(false)} saved={item => { setCreating(false); navigate(root + '/items/' + item.id); }} /></Dialog>}
   </>;
@@ -136,7 +183,8 @@ export function ItemDetail() {
   const requested = searchParams.get('action');
   useEffect(() => {
     if (!requested || !item.data || !balances.data) return;
-    if ((requested === 'usage' || requested === 'receive' || requested === 'waste') && !item.data.archived) setAction({ kind: requested });
+    // ?location= comes from "Add item here": receive straight into the shelf the item was created on.
+    if ((requested === 'usage' || requested === 'receive' || requested === 'waste') && !item.data.archived) setAction({ kind: requested, locationId: searchParams.get('location') ?? undefined });
     if (requested === 'request' && !item.data.archived) setRequesting({});
     setSearchParams({}, { replace: true, state: nav.current.state });
   }, [requested, item.data, balances.data, setSearchParams]);
@@ -161,7 +209,9 @@ export function ItemDetail() {
   const unitLocked = slots.some(slot => slot.hasHistory) || (history.data?.totalElements ?? 0) > 0;
   const unplaced = locations.leaves?.filter(choice => !slots.some(slot => slot.locationId === choice.id)) ?? [];
   return <>
-    <PageHeader back={nav.back({ to: root + '/items', label: 'Inventory' })} title={value.name}>
+    <PageHeader back={nav.back({ to: root + '/items', label: 'Inventory' })} title={value.name}
+      media={<><VisualTile size="lg" name={value.name} icon={unitIcons[value.unit]} photo={itemPhoto(base, value)} />
+        {editable && <PhotoControl base={base} item={value} changed={message => { setStatus(message); item.reload(); }} />}</>}>
       {!value.archived && hasStock && <button type="button" className="button primary" onClick={() => setAction({ kind: 'usage' })}><Icon name="use" />Record usage</button>}
       {!value.archived && <button type="button" className={'button ' + (hasStock ? 'secondary' : 'primary')} onClick={() => setAction({ kind: 'receive' })}><Icon name="receive" />Receive stock</button>}
       {!value.archived && <button type="button" className="button secondary" onClick={() => setRequesting({})}><Icon name="plus" />Request more</button>}
@@ -172,6 +222,7 @@ export function ItemDetail() {
       <div><dt>SKU</dt><dd className="mono">{value.sku ?? 'Not set'}</dd></div>
       <div><dt>Base unit</dt><dd>{unitNames[value.unit]}</dd></div>
       {value.archived && <div><dt>Status</dt><dd><Badge tone="warning">Archived</Badge></dd></div>}
+      {!value.archived && value.low && <div><dt>Status</dt><dd><Badge tone="warning">Low</Badge> <span className="muted">below a minimum</span></dd></div>}
     </dl>
     {status && <SuccessMessage>{status}</SuccessMessage>}
     <ErrorMessage error={error} />

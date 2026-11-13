@@ -158,6 +158,29 @@ Detail pages show a back link above the title. It returns to where the person ca
 | **Export cards** | Two per row on desktop, one on phones. Each card has a title, one sentence saying what the file contains, From/To date fields for history files, and a secondary **Download CSV** button. A note under the cards says times are UTC and states the 50,000-row limit. |
 | **Reset link dialog** | Mirrors the invitation dialog. A confirm step explains what happens. Then a read-only link field with "it won't be shown again" help and **Copy link** (primary). |
 
+## Browse patterns
+
+| Pattern | Rules |
+| --- | --- |
+| **View toggle** | A labelled group of two `aria-pressed` buttons, **Grid** and **List**, each with an icon. It sits at the end of the filters band. The pressed state uses the accent tint. Phones start in Grid and wider screens in List; the person's choice is remembered per browser and surface. Filters, search, paging and selection never reset on a switch. |
+| **Visual tile** | The photo when there is one, filling the tile with `object-fit: cover`. Otherwise a `--surface-sunken` tile with up to two initials and a small kind icon in the corner (unit for items: box, weight, drop; type for locations: room, shelf, cabinet, bin). Never accent-colored, and always decorative, because the name beside it carries meaning. Sizes: `sm` 40 px in list rows, `md` 16:10 in cards, `lg` 96 px in the item hero. |
+| **Browse card** | Tile, then the record name as the link, then facts ("12 kg on hand", SKU in mono, or "Shelf · 2 locations · 12 items"), then badges, then any stock actions. The card is not itself a link, so its buttons stay separate targets. Grid columns use `auto-fill, minmax(12rem, 1fr)` on desktop, two on phones, one under 352 px. Selected cards get an accent outline; archived cards dim their tile. |
+| **Breadcrumbs** | On location pages, above the title: **All locations › Stockroom › Shelf A**. Earlier steps are links; the last is `aria-current="page"`. Separators are drawn in CSS, not read out. The contextual back link, when present, sits above the trail: "where you came from" above "where this is". |
+| **Leaf location** | When a location has nothing stored inside it, one quiet line ("No storage inside Shelf A.") replaces the child search and empty state. **Add item here** becomes its primary action, and **Add child location** turns secondary. |
+| **Short add** | Creating asks for name and unit. SKU sits under an **Optional details** disclosure in the accent link color. Editing shows every field. |
+| **Item hero** | The `lg` tile or photo leads the title row. Owners and Managers get **Add photo / Change photo** (camera icon) and **Remove photo** under it; on phones these sit beside the tile. Low status appears with the totals. |
+| **Spaces strip** | On Home, up to six top-level rooms as compact bordered links (small tile, name, contents) with **All locations** at the right of its heading. It never shows counts that aren't real and is hidden until a location exists. |
+| **Sold** | **Record sale** sits in **More actions** after waste, with the hint "Sold to a customer; no prices are kept". Its history title is **Sold** with a tag icon. The confirmation follows the removal pattern. |
+
+## Import patterns
+
+| Pattern | Rules |
+| --- | --- |
+| **Choose a file** | A short sentence on what a row is, a small column table (Column · Needed? · Example), limits in help text, then **Choose a CSV file** (primary, upload icon) beside **Download template**. Nothing is saved at this step. |
+| **Review** | Titled "Review catalog.csv". A row of count badges: new (success), already exist (neutral), possible duplicates (warning), with problems (danger), new locations (accent). Then the locations to be created (open when five or fewer) and one line of help per kind of skip. The primary button states the result: **Import 3 rows** (disabled as **Nothing to import**). **Choose another file** restarts. |
+| **Rows table** | Line (the spreadsheet's own number), item with SKU and unit, place with "12 to start · min 4", status badge with its reason underneath (problem reasons in danger text). Possible duplicates get an **Include** checkbox; included rows switch to a success **Included** badge. On phones each row restacks with a "Line 4" label. |
+| **Result** | **Import finished**, a success notice, and a short list of non-zero counts ("3 items created", "2 rows skipped as duplicates"). Actions: **Open Inventory** (primary), **Open Locations**, **Import another file**. A replayed import says nothing was added twice. |
+
 ## Writing
 
 - Sentence case everywhere. Name things the way a café or shop would: items, locations, shelves, people.

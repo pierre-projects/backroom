@@ -69,7 +69,7 @@ export function useRecordNavigation() {
       else navigate(origin.url, { replace: true, state: { scope: token, origin: origin.previous, position: origin.position, scan: origin.scan } });
     } };
   }
-  return { visit, back, current, restoredScan: entry.scope === token ? entry.scan : undefined,
+  return { visit, back, current, hasOrigin: Boolean(origin), restoredScan: entry.scope === token ? entry.scan : undefined,
     rememberScan: (scan?: ScanView) => remember({ scan, scope: token }) };
 }
 
