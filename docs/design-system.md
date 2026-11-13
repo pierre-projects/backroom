@@ -8,6 +8,8 @@ Backroom is a work tool for small teams who need to find an item, see where it's
 
 ![Catalog on desktop and item detail on a phone](design-specimen.png)
 
+*The specimen image and the printable PDF predate version 3 and still show the teal design. The tokens and patterns on this page are current.*
+
 ## Principles
 
 1. **Records first.** Item names, SKUs and locations carry the visual weight. Chrome (navigation, panels, labels) stays gray and light.
@@ -41,7 +43,9 @@ All values live as CSS custom properties in [`styles.css`](../frontend/src/style
 | `--warning` / `--warning-soft` | `#8A4B0F` / `#FCF0E0` | Low and Archived status, pending invitations |
 | `--danger` / `--danger-soft` | `#8F1D3F` / `#FBE9EF` | Errors, destructive buttons. Plum so a destructive confirm never looks like the coral primary |
 
-**Measured contrast** (sRGB relative luminance): text on surface 17.7∶1, muted on surface 4.8∶1, white on accent 5.4∶1, white on the sidebar 4.9∶1, white on danger 8.7∶1, control edge on canvas 3.4∶1, each feedback color on its tint ≥ 5.7∶1.
+**Measured contrast** (WCAG 2 relative luminance, rechecked November 13, 2026): text on surface 17.7∶1, muted on surface 4.8∶1, white on accent 5.5∶1, white on the sidebar 4.6∶1, white on danger 8.7∶1, accent on its soft tint 4.8∶1, control edge on canvas 3.4∶1, each feedback color on its tint ≥ 5.7∶1.
+
+**Known gap:** muted text on the canvas (`--text-muted` on `--bg`) is 4.4∶1, just under the 4.5∶1 AA minimum for 14 px text. It appears where page descriptions (`.page-description`) sit directly on the canvas. Until the token is darkened, keep muted text on `--surface` cards; a darker muted value such as `#636975` would pass on both backgrounds.
 
 Rule of thumb: apart from the rail, about 90% of any screen is `--bg`, `--surface` and text grays. The accent fills at most one button per group of actions; companions use the coral **outline** or white **secondary** style.
 
@@ -230,6 +234,13 @@ Inventory and Locations share Sortly's explorer layout. Storage locations read a
 | Square for Retail | Archived items are hidden but found again through a status filter. | Keep **Include archived** in the catalog toolbar and label archived rows. [Square item archival](https://squareup.com/help/us/en/article/8060-archive-items-with-square-for-retail) |
 | MarketMan | Teams count stock by storage area on mobile. | Give Locations equal weight with Catalog in the tab bar. For future counts, keep shelf and unit visible while entering a quantity. [MarketMan inventory workflows](https://www.marketman.com/page/food-service-management-software) |
 
-## Future stock work
+## Version history
 
-When Inventory, Scan and Requests ship ([PRD](../backroom_prd_v1.md)), Owners would have more than five destinations. At that point move **Settings** into the account menu and keep the tab bar at five. Quantities use `tabular-nums` and always show their unit beside the number; operations are named (**Receive stock**, **Count shelf**), and a scan result names both item and location before offering an action.
+| Version | Change |
+| --- | --- |
+| 1 | Neutral canvas with one teal accent, border-first panels (Phases 1–5). |
+| 2 | Browse patterns: visual tiles, grid/list, breadcrumbs, short add, item photos, Sold, import ([Phase 6](phase-6.md), [Phase 7](phase-7.md)). |
+| 3.0 | Sortly-style folder explorer, dashboard Home and item hero, in a crimson accent and rail with a plum danger color. |
+| 3.1 | Crimson replaced by Backroom coral (`#C2331F` accent, `#D63F2A` rail); plum danger kept so destructive actions never look like the primary. |
+
+The five tabs are settled: Inventory, Scan and Requests shipped, and **Activity**, **Export data**, **People** and **Business settings** live under **Administration** (desktop) or the account menu (phones), so the bar never needs a sixth item.

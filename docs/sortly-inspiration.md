@@ -6,7 +6,9 @@ Primary UI/UX inspiration for Backroom inventory browsing.
 
 **Scope of this paper:** Observed Sortly product patterns and marketing UI signals, turned into rules Backroom can follow. Not an official Sortly brand system. Not implementation.
 
-**Backroom adaptation (north star):** Keep Sortly’s clarity and approachable visual browsing, but prioritize **physical spaces**, **actionable stock changes**, and **things needing attention**. Keep Backroom’s quiet teal/neutral chrome ([design system](design-system.md)); do not adopt Sortly’s red product chrome.
+**Backroom adaptation (north star):** Keep Sortly’s clarity and approachable visual browsing, but prioritize **physical spaces**, **actionable stock changes**, and **things needing attention**.
+
+> **Decision update (design system 3.1, November 2026):** Backroom now borrows Sortly’s *layout* as well as its browse patterns: a colored navigation rail, white cards on a cool gray canvas, a folder explorer, a dashboard Home and a photo-stage item page. The color is Backroom’s own **coral** (`--accent` `#C2331F`, rail `#D63F2A`), not Sortly’s red, and it still means only “act here” or “you are here”. The earlier rule “keep teal; don’t use a colored shell” is retired. Where this paper says *teal*, read *coral accent*. [Design system](design-system.md)
 
 ---
 
@@ -62,12 +64,12 @@ Observed from the public site and product screenshots (not recovered source toke
 
 | Role | Sortly signal | Backroom rule |
 | --- | --- | --- |
-| Brand / primary CTA | Strong red | Keep **`--accent` teal** — one accent, one meaning |
-| Canvas | White / near-white | Keep `--bg` / `--surface` |
-| Chrome | Red sidebar in product; white content | Keep gray/white chrome; accent only for act/here |
-| Feedback | Clear success / warning / alert | Keep success / warning / danger soft pairs |
+| Brand / primary CTA | Strong red | **`--accent` coral** — one accent, one meaning |
+| Canvas | White / near-white | Cool gray `--bg` behind white `--surface` cards |
+| Chrome | Red sidebar in product; white content | **Coral rail** on desktop and coral top bar on phones; white header search; content stays neutral |
+| Feedback | Clear success / warning / alert | Keep success / warning / danger soft pairs; danger is plum so it never reads as the coral primary |
 
-**Do not** repaint Backroom red to “look like Sortly.” Borrow structure and browsing, not the brand color.
+Borrow Sortly’s structure and its colored-rail feel, but in Backroom coral rather than Sortly’s red, and never as a copy of its brand or marketing.
 
 ### Typography & density
 
@@ -201,7 +203,7 @@ Do not lead with SKU grids or settings. Lead with quantity, place, and what to d
 | **List row** | Small thumb + name + key facts | Same; chevron for navigation; Update for in-place stock when inside a space |
 | **View toggle** | Grid / list icons in toolbar | Same; `aria-pressed`; label the group |
 | **Breadcrumb** | Path above content | Locations trail; Inventory root on catalog |
-| **Toolbar** | Search + filters + add + view | One toolbar band; primary Add stays teal once |
+| **Toolbar** | Search + filters + add + view | One toolbar band; one filled coral Add, companions in coral outline |
 | **Detail hero** | Large photo + facts | Visual + on hand / SKU / unit / status |
 | **Add sheet** | Short create | Name + unit; optional SKU collapsed |
 | **Attention list** | Need restocking | Low stock + request status side by side |
@@ -248,7 +250,7 @@ Do not lead with SKU grids or settings. Lead with quantity, place, and what to d
 
 ## 8. Screen checklist
 
-Status after [Phase 6](phase-6.md). Real item photos shipped; location photos are deferred.
+Status after [Phase 6](phase-6.md), [Phase 7](phase-7.md) and the 3.x explorer redesign (folder cards, summary strips, Show folders, item sort, dashboard Home, item hero). Real item photos shipped; location photos are deferred.
 
 Use this when designing or reviewing a surface — not a build ticket list.
 
@@ -291,7 +293,7 @@ Use this when designing or reviewing a surface — not a build ticket list.
 
 | Keep from Backroom | Take from Sortly |
 | --- | --- |
-| Teal accent, neutral canvas, AA contrast | Photo-first browse |
+| One accent (now coral), neutral content, AA contrast | Photo-first browse, colored rail, folder explorer |
 | Bottom tabs + sidebar shell | Folder/space navigation + breadcrumbs |
 | Verb+noun copy, stock message patterns | Grid/list switching |
 | Parent › child location labels | Short add + optional advanced |
@@ -317,4 +319,4 @@ When rules conflict: **Backroom tokens, accessibility, and stock truth win**. So
 
 ## 11. One-line brief
 
-**Backroom should feel as easy to *see and walk* as Sortly, while staying a stockroom tool: spaces first, stock actions second, attention always visible — in Backroom’s quiet teal system, not Sortly’s red.**
+**Backroom should feel as easy to *see and walk* as Sortly, while staying a stockroom tool: spaces first, stock actions second, attention always visible — in Backroom’s coral system, not Sortly’s red.**

@@ -1,5 +1,7 @@
 # Backroom UX audit · Employee shifts and owner oversight
 
+> **Status: implemented and archived (November 13, 2026).** Every finding below shipped in `9d99249` (direct stock actions, role-based Home, contextual return navigation, Download a label, invitation copy) and is covered by the browser suite. The interface has moved on since this audit: Phases 6–7 added browse, photos, sales and CSV import, and design system 3.1 replaced the teal, gray-chrome look described under "Evidence" with a coral rail and Sortly-style explorer. Screenshots in `evidence/` show the audited build, not the current one. Current rules live in the [design system](../docs/design-system.md); the later brief and its outcome are in [the UI/UX overhaul brief](../docs/backroom-ui-ux-overhaul.md).
+
 **First change to ship:** Put **Record usage** directly on a stocked shelf row. Today, a worker looking at House espresso and its shelf must open **Update**, find **Record usage**, and only then enter the quantity. The existing form already receives the correct shelf. Removing the action menu cuts this path from two actions to one before entry, without changing stock accounting.
 
 [Current journeys by role](journeys.md) · [Redesign decisions and acceptance tests](redesign.md)

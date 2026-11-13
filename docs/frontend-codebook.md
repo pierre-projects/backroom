@@ -1,6 +1,6 @@
 # Backroom frontend codebook
 
-Version 2.0 · [Design system](design-system.md) · [Component reference](design-walkthrough.html)
+Version 3.1 · Coral · [Design system](design-system.md) · [Component reference](design-walkthrough.html)
 
 How the design system is implemented in the React, TypeScript and plain-CSS frontend, and the rules for extending it. The [Phase 1 contract](phase-1.md) governs data and permissions.
 
@@ -13,8 +13,11 @@ How the design system is implemented in the React, TypeScript and plain-CSS fron
 | [icons.tsx](../frontend/src/icons.tsx) | `Icon` component and the outline icon set. Add new glyphs here in the same 20 px / 1.75 stroke style. |
 | [components.tsx](../frontend/src/components.tsx) | `Brand`, `BrandMark`, `PageHeader`, `Field`, `Dialog`, `Badge`, `Empty`, `Loading`, `ErrorMessage`, `SuccessMessage`, `Pager`, plus the `useResource` / `useAll` data hooks. |
 | [stock.tsx](../frontend/src/stock.tsx) | Stock UI: `formatQuantity`, `locationPath`, `useStockLocations` (active leaves with parent labels), `StockDialog` (one sheet for receive/usage/waste/transfer/count/opening, with a per-sheet operation key reused on retry), `SlotSheet` (role-filtered actions for one location), `MovementList`, `ReverseDialog`. |
-| [workspace.tsx](../frontend/src/workspace.tsx) | Shell, the `destinations` array (one list drives both sidebar and tab bar, filtered by role), `AccountMenu`, Settings page. |
-| [catalog.tsx](../frontend/src/catalog.tsx), [locations.tsx](../frontend/src/locations.tsx), [people.tsx](../frontend/src/people.tsx), [auth.tsx](../frontend/src/auth.tsx), [App.tsx](../frontend/src/App.tsx) | Screens. Own their copy, pending states and navigation after success. |
+| [browse.tsx](../frontend/src/browse.tsx) | Browse and explorer building blocks: `useBrowseView` (Grid/List per surface, remembered per browser), `ViewToggle`, `VisualTile`, `FolderTile`, `BrowseCard`, `Breadcrumbs`, `StatsStrip` (summary strip), `SearchScanLink`, `useShowFolders` / `FolderSwitch`, `newBadge`, `spaceFacts`, and `resizePhoto` for uploads. |
+| [navigation.tsx](../frontend/src/navigation.tsx) | Contextual return: `RecordLink` stashes the origin (URL, label, scroll, focused row), and back links restore it. Hierarchy links stay separate. |
+| [workspace.tsx](../frontend/src/workspace.tsx) | Shell (coral rail, white header search, phone top bar and tab bar), the `destinations` array (one list drives both sidebar and tab bar, filtered by role), `AccountMenu`, Settings page. |
+| [api.ts](../frontend/src/api.ts), [types.ts](../frontend/src/types.ts) | Fetch wrapper (CSRF, JSON or raw `Blob` bodies with their own content type) and the API types. |
+| [home.tsx](../frontend/src/home.tsx), [catalog.tsx](../frontend/src/catalog.tsx), [locations.tsx](../frontend/src/locations.tsx), [scan.tsx](../frontend/src/scan.tsx), [codes.tsx](../frontend/src/codes.tsx), [labels.tsx](../frontend/src/labels.tsx), [requests.tsx](../frontend/src/requests.tsx), [search.tsx](../frontend/src/search.tsx), [imports.tsx](../frontend/src/imports.tsx), [exports.tsx](../frontend/src/exports.tsx), [people.tsx](../frontend/src/people.tsx), [auth.tsx](../frontend/src/auth.tsx), [App.tsx](../frontend/src/App.tsx) | Screens. Own their copy, pending states and navigation after success. |
 
 Rules:
 
@@ -26,31 +29,39 @@ Rules:
 
 ```css
 :root {
-  --bg: #f6f6f4;  --surface: #ffffff;  --surface-sunken: #efefec;  --surface-hover: #f3f3f1;
-  --text: #1c1d1f;  --text-muted: #5e6166;  --text-subtle: #8a8c90;
-  --border: #e3e3df;  --border-strong: #84868b;
-  --accent: #0e6b73;  --accent-hover: #0b5a61;  --accent-pressed: #094a50;  --accent-soft: #e6f1f2;
-  --on-accent: #ffffff;  --focus: #0e6b73;  --brand-mark: #e7af48;
+  --bg: #f4f5f7;  --surface: #ffffff;  --surface-sunken: #eef0f3;  --surface-hover: #f7f8fa;
+  --text: #111827;  --text-muted: #6b7280;  --text-subtle: #9ca3af;
+  --border: #e5e7eb;  --border-strong: #80868f;
+  --accent: #c2331f;  --accent-hover: #a82b1a;  --accent-pressed: #8e2415;  --accent-soft: #fdece8;
+  --on-accent: #ffffff;  --focus: #c2331f;
+  --sidebar-bg: #d63f2a;  --sidebar-surface-active: rgb(0 0 0 / .18);  --sidebar-surface-hover: rgb(0 0 0 / .1);
+  --sidebar-border: rgb(255 255 255 / .16);  --sidebar-text: #ffffff;  --sidebar-text-muted: rgb(255 255 255 / .9);
+  --brand-mark: #ffffff;  --brand-ink: #c2331f;
   --success: #1f6b3a;  --success-soft: #e7f3eb;
   --warning: #8a4b0f;  --warning-soft: #fcf0e0;
-  --danger: #b42318;  --danger-hover: #9a1e14;  --danger-soft: #fdecea;
+  --danger: #8f1d3f;  --danger-hover: #75162f;  --danger-soft: #fbe9ef;
 
   --text-xs: .75rem;  --text-sm: .8125rem;  --text-md: .875rem;  --text-lg: 1rem;  --text-xl: 1.25rem;  --text-2xl: 1.5rem;
   --space-1: .25rem;  --space-2: .5rem;  --space-3: .75rem;  --space-4: 1rem;  --space-5: 1.25rem;  --space-6: 1.5rem;  --space-8: 2rem;  --space-12: 3rem;
-  --radius-control: 6px;  --radius-panel: 8px;  --radius-sheet: 12px;  --radius-pill: 999px;
+  --radius-control: 8px;  --radius-panel: 10px;  --radius-sheet: 14px;  --radius-pill: 999px;
+  --shadow-card: 0 1px 2px rgb(17 24 39 / .05);  --shadow-overlay: 0 12px 32px rgb(17 24 39 / .16), 0 2px 6px rgb(17 24 39 / .08);
   --control-height: 2.25rem;   /* 2.75rem on touch and under 1024px */
   --duration-control: 120ms;  --duration-overlay: 160ms;
-  --sidebar-width: 15rem;  --topbar-height: 3.5rem;  --tabbar-height: 4rem;
+  --sidebar-width: 14.5rem;  --topbar-height: 3.5rem;  --tabbar-height: 4rem;
 }
 ```
+
+This block mirrors [`styles.css`](../frontend/src/styles.css); when they disagree, the stylesheet wins and this copy needs updating.
 
 ## Component API
 
 ```tsx
 <PageHeader
-  title="Espresso beans"
+  title="Shelf A"
   description="Optional one line"
-  back={{ to: root + '/items', label: 'Catalog' }}>
+  back={{ to: origin.url, label: 'House espresso' }}             {/* where you came from */}
+  trail={<Breadcrumbs trail={[{ label: 'All locations', to: root + '/locations' }, { label: 'Stockroom', to: … }, { label: 'Shelf A' }]} />}  {/* where this is */}
+  media={<VisualTile name="Shelf A" icon="shelf" size="lg" />}>
   <button className="button secondary">Edit item</button>
 </PageHeader>
 
@@ -109,13 +120,13 @@ Rules:
 
 - **Reading:** `useResource` gives `data`, `error`, `reload`. Show `<Loading variant="list" />` inside the panel while loading, `<ErrorMessage retry={reload} />` on failure, and the empty state only after a successful empty read.
 - **Saving:** disable the submit, rename it (**Saving…**, **Adding…**, **Archiving…**), keep the form values on failure, and confirm success with `SuccessMessage` (polite status) or by navigating to the result.
-- **Access:** all roles see Catalog and Locations; Owners and Managers edit and see Activity; Owners see People and Settings. Hide controls the role can't use, and still handle a server 403 gracefully.
+- **Access:** all roles see Home, Inventory, Scan, Requests and Locations and record everyday stock changes; Owners and Managers edit records, import, review requests and see Activity and Export data; Owners see People and Business settings. Hide controls the role can't use, and still handle a server 403 gracefully.
 - **Missing values:** "No SKU" on phones, an em dash with screen-reader text "No SKU" in desktop tables, "Not set" on detail pages.
 
 ## Verification checklist
 
 1. `npm --prefix frontend run build` (typecheck + build).
-2. `./scripts/e2e.ps1` — the Playwright flow covers onboarding, placements, invitations on a 390 px phone, role restrictions, archival and session expiry, and asserts no horizontal scroll on the phone.
+2. `./scripts/e2e.ps1` — the Playwright suite (seven spec files in `frontend/e2e`) covers onboarding, placements, invitations on a 390 px phone, role restrictions, archival and session expiry, stock movements, labels and scanning, restocking, Home and resets, browse (grid/list, breadcrumbs, photos, sales) and CSV import, and assert no horizontal scroll on the phone.
 3. Look at every screen at 375, 768 and 1280 px: tab bar visible and role-filtered, nothing hidden behind it, long names and SKUs wrap, dialogs become sheets.
 4. Keyboard only: skip link, sidebar/tab order, account menu (Escape returns focus), dialog trap, visible focus ring on rows and controls.
 5. Re-run the token contrast check when changing any color (pairs and minimums are listed in [design-system.md](design-system.md#color)).

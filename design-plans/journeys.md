@@ -1,4 +1,6 @@
-# Current journeys
+# Journeys at audit time (`bab50df`)
+
+> **Status: historical baseline.** These counts describe the app before `9d99249`. Since then the **Update** menu is gone (one-tap **Record usage** / **Receive stock** on rows), business entry lands on Home with work counts first, back links restore the origin, and **See stock history** focuses History. Use these tables to compare against, not as current behavior.
 
 **Counting rule.** A navigation action opens a destination or a sheet, including selecting a different list or submitting a search to reach results. Typing, choosing a form value, and confirming a transaction are work and are listed separately. Automatic redirects or reloads are not extra taps. Counts start at the named screen. Scroll is noted separately. Desktop uses its sidebar; phone uses the bottom navigation and account menu.
 

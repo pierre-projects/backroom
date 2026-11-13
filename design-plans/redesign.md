@@ -1,5 +1,7 @@
 # Redesign handoff · Make the next action visible
 
+> **Status: implemented (`9d99249`).** All three sections and their acceptance checks shipped; later work kept them intact (see the [design system](../docs/design-system.md) stock, Home and navigation patterns). The setup and action labels here are still current. Layout descriptions predate the coral explorer redesign.
+
 Applies to the Backroom React frontend at `bab50df` plus its current inventory and location layout changes. The underlying room, shelf, item, placement and movement records remain the source of truth. The priority is to shorten frequent work while keeping the context needed to change stock correctly.
 
 ## 1. Start stock work from the item or the shelf

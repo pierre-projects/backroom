@@ -2,6 +2,24 @@
 
 > **Purpose:** Improve UX on top of what already ships, and decide whether further backend work is justified. This is a product and implementation brief for an **evolving product**, not a greenfield rebuild and not a redo of work already landed.
 
+## Status (November 13, 2026): delivered
+
+This brief has been carried out. Read the rest as the record of what was asked, not as open work. Where a section below says something is "absent", "still open" or "teal", this table is the current truth.
+
+| Brief item | Outcome | Where |
+| --- | --- | --- |
+| Visual tiles, Grid/List toggle, location breadcrumbs, short add (optional SKU) | Shipped | [Phase 6](phase-6.md) |
+| Item photos | Shipped (JPEG in Postgres, 600 KB cap, cached by version) | [Phase 6](phase-6.md) |
+| **Sold** removal reason | Shipped as **Record sale**; no prices kept | [Phase 6](phase-6.md) |
+| Home space entry | Shipped: **Spaces** folder cards and metric cards | [Phase 6](phase-6.md), [design system](design-system.md#home-and-low-stock-patterns) |
+| Import / bulk upload | Shipped: CSV import with review, duplicates and idempotent apply | [Phase 7](phase-7.md) |
+| Sortly-style explorer | Shipped: folder cards, summary strip, Show folders switch, item sort (`?sort=`), dashboard Home, item hero with circular actions and metric grid | [Design system 3.1](design-system.md#folder-explorer-patterns) |
+| Visual identity | **Changed:** coral accent and coral rail replace the teal, gray-chrome rule in §2 and §6 | [Design system](design-system.md#color), [Sortly inspiration](sortly-inspiration.md) |
+| Equipment / assets, custody | Deferred honestly; no fake asset UI | [Architecture](architecture.md) |
+| Location photos, tags, custom fields, suppliers/POs/POS, email recovery | Not built | — |
+
+The role-based Home, direct stock row actions, shelf-choice rules, contextual back, **Download a label** and scan confirm-before-mutate from §2 all survived and are covered by the browser suite. Two follow-ups remain from the 3.1 audit: muted text on the gray canvas is 4.4∶1, just under AA (see [design system](design-system.md#color)), and `design-specimen.png` still shows the pre-coral UI.
+
 **Baseline commit context:** Phases 1–5 plus the frontend UX follow-up in `9d99249` (*direct stock actions, role-based Home and return navigation*). Re-read the live tree before proposing changes — do not treat older screenshots or pre-follow-up docs as current UI.
 
 **Read first (source of truth in this repo):**

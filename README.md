@@ -7,24 +7,35 @@ Spring Boot and PostgreSQL. Café operations and liquor-store inventory are
 reference workflows. The product emphasizes physical labels, practical recording
 effort, and trustworthy stock history.
 
-Phase 1 provides accounts, organizations, staff invitations and roles, nested
-locations, a catalog, expected item placements, and activity history. Stock
-quantities, inventory actions, scanning, and replenishment come in later phases.
+What ships today: accounts, businesses, staff invitations and three roles;
+nested locations; a catalog with item photos; per-shelf stock with an immutable
+movement history (receive, use, waste, sell, transfer, count, reverse); QR labels,
+product barcodes and phone scanning; internal restock requests and deliveries;
+low-stock minimums; search; CSV import and export; owner-issued password reset
+links; and activity history. The interface is a Sortly-style folder explorer in
+Backroom coral.
 
 - [PRD v1](backroom_prd_v1.md)
 - [Architecture and module boundaries](docs/architecture.md)
+- [Operations: deploying, backups, restore drill, logs and incidents](docs/operations.md)
+
+Product phases:
+
 - [Phase 1 behavior and API defaults](docs/phase-1.md)
 - [Phase 2 inventory quantities and stock operations](docs/phase-2.md)
 - [Phase 3 labels and scanning](docs/phase-3.md)
 - [Phase 4 restock requests and deliveries](docs/phase-4.md)
 - [Phase 5 Home, low stock, search, exports and password resets](docs/phase-5.md)
-- [Operations: deploying, backups, restore drill, logs and incidents](docs/operations.md)
 - [Phase 6 browse, photos and sales](docs/phase-6.md)
 - [Phase 7 CSV import](docs/phase-7.md)
-- [Design system and visual specimen](docs/design-system.md)
-- [Sortly inspiration: design system and UX rules](docs/sortly-inspiration.md)
-- [UI/UX overhaul brief (agent prompt)](docs/backroom-ui-ux-overhaul.md)
+
+Design:
+
+- [Design system 3.1 (coral)](docs/design-system.md) and its [component reference](docs/design-walkthrough.html)
 - [Frontend codebook](docs/frontend-codebook.md)
+- [Sortly inspiration: design system and UX rules](docs/sortly-inspiration.md)
+- [UI/UX overhaul brief and its outcome](docs/backroom-ui-ux-overhaul.md)
+- [UX audit and redesign handoff (implemented)](design-plans/README.md)
 
 ## Requirements
 
@@ -128,7 +139,9 @@ CSRF behavior, tenant isolation, role changes, archival, invitation races,
 concurrent ownership/hierarchy changes, transactional audit rollback, and the
 existing infrastructure guarantees.
 
-Flyway applies six domain migrations for access, catalog/locations, activity, inventory, resource codes, and restocking.
+Flyway applies eleven versioned migrations (V1–V11): access, catalog and locations,
+activity, inventory, resource codes, restocking, then low-stock minimums, password
+resets, sales, item photos and import batches.
 Existing Phase 0 database volumes upgrade without being reset. Hibernate validates
 the schema and never creates business tables.
 
@@ -227,8 +240,8 @@ Use `pwsh ./scripts/smoke-test.ps1` for the same production-container checks.
   Subsequent builds use the local cache.
 - **npm ci reports EPERM on a native binding:** stop the Vite development server
   in its terminal, then run setup or verification again.
-- **Flyway reports no migrations:** check that the current Phase 1 code/image is
-  running; six versioned migrations should be present.
+- **Flyway reports no migrations:** check that the current code/image is
+  running; eleven versioned migrations (V1–V11) should be present.
 - **Signed out after a restart:** sessions are in memory. Sign in again; database
   records are preserved. Accounts have no self-service recovery or verified email
   yet, so establish a recovery process before using real business data.
@@ -239,10 +252,12 @@ GitHub Actions runs frontend compilation, Maven integration tests, a
 production-container smoke test, and isolated Playwright browser checks. It does
 not publish images or deploy services.
 
-Phases 1–4 (foundation; stock quantities and movement history; QR labels,
-barcodes and phone scanning; restock requests and deliveries) are merged.
-Phase 5 adds Home, low-stock minimums, search, CSV exports and owner-issued
-password reset links; see [docs/phase-5.md](docs/phase-5.md).
+Phases 1–7 are merged: foundation; stock quantities and movement history; QR
+labels, barcodes and phone scanning; restock requests and deliveries; Home,
+low-stock minimums, search, CSV exports and password reset links; browse, item
+photos and sales; and CSV import. The coral explorer redesign (design system 3.1)
+and item sorting followed. Not built yet: hosting, email-based recovery, location
+photos and an equipment/assets model.
 
 Printed QR labels encode `BACKROOM_PUBLIC_URL` (default `http://localhost:8080`).
 Set it to Backroom's permanent HTTPS address before printing labels for real
