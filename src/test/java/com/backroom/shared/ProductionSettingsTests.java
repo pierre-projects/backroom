@@ -1,6 +1,7 @@
 package com.backroom.shared;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.logging.LoggingSystem;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -21,9 +22,14 @@ class ProductionSettingsTests {
         // The datasource points at a closed port: reaching it would fail with a connection error instead.
         var application = new org.springframework.boot.builder.SpringApplicationBuilder(com.backroom.BackroomApplication.class)
                 .profiles("prod").logStartupInfo(false);
-        assertThatThrownBy(() -> application.run("--backroom.public-base-url=", "--server.port=0",
-                "--spring.datasource.url=jdbc:postgresql://127.0.0.1:1/unreachable", "--spring.main.banner-mode=off"))
-                .isInstanceOf(IllegalStateException.class).hasMessageContaining("BACKROOM_PUBLIC_URL must be set");
+        try {
+            assertThatThrownBy(() -> application.run("--backroom.public-base-url=", "--server.port=0",
+                    "--spring.datasource.url=jdbc:postgresql://127.0.0.1:1/unreachable", "--spring.main.banner-mode=off"))
+                    .isInstanceOf(IllegalStateException.class).hasMessageContaining("BACKROOM_PUBLIC_URL must be set");
+        } finally {
+            // Prod enables ECS JSON console logging for this JVM; drop it so later tests see the default pattern again.
+            LoggingSystem.get(getClass().getClassLoader()).cleanUp();
+        }
     }
 
     @Test

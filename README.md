@@ -23,6 +23,7 @@ quantities, inventory actions, scanning, and replenishment come in later phases.
 - [Phase 7 CSV import](docs/phase-7.md)
 - [Design system and visual specimen](docs/design-system.md)
 - [Sortly inspiration: design system and UX rules](docs/sortly-inspiration.md)
+- [UI/UX overhaul brief (agent prompt)](docs/backroom-ui-ux-overhaul.md)
 - [Frontend codebook](docs/frontend-codebook.md)
 
 ## Requirements
